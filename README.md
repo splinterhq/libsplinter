@@ -36,7 +36,7 @@ speaks unless spoken to, but is always ready.
 - 🕰️ Built-in version tracking via atomic epoch counters
 - 🔧 Configurable slot count and max value size
 - 💾 Optional persistent mode via file-backed `mmap`
-- 🦕 Deno and Rust bindings included!
+- 🦕 Deno, Bun and Rust bindings included!
 - ⚙️ Embeddable and extendable; easy to build upon!
 - 🔎 Epoch-based semantics provides performant watches & easy pub/sub.
 
@@ -44,8 +44,6 @@ Splinter is _entirely self-contained_; it has no external dependencies other
 than the GNU C library. The CLI uses
 [line noise](https://github.com/antirez/linenoise) to manage history, completion
 and suggestions, but it ships in the repo with Splinter.
-
----
 
 ## System Requirements:
 
@@ -75,7 +73,7 @@ its test harnesses for tighter integration. It's not required, but highly
 recommended, especially if you intend to make major modifications to the
 library.
 
-## Quick Start:
+## Quick Orientation For Beginners via CLI:
 
 After downloading the code, run the following commands:
 
@@ -171,15 +169,12 @@ Sharing address space between languages (and entire workflows) is easier when
 you have something like splinter managing the guard rails you need to do it
 dynamically. Just figure out your key space naming and go!
 
----
-
 ## Programs Included:
 
 Splinter ships with (in addition to the shared and static objects) several
 programs to help illustrate how to use the C version of the library, as well as
 a comprehensive CLI for managing splinter stores in debugging / production
 monitoring.
-
 
 ### `splinter_cli` (and how it behaves when invoked as `splinterctl`):
 
@@ -282,34 +277,33 @@ exit the CLI, it resets. If you want to make it automatic, set the
 
 ### TypeScript Bindings
 
-In the `bindings/ts/` directory you'll find FFI bindings for Deno as well as a
-utility class and some simple tests to show you that the installation was
-successful.
+In the `bindings/ts/` directory you'll find FFI bindings for Deno and Bun. There
+are two shared files (the class, and types), and then `deno/` and `bun/` have the
+platform-specific FFI bindings & symbols as well as unit tests for each platform
+respectively.
 
 Splinter works perfectly fine on Deno Deploy using persistent mode;
 [here is a demo][8] that includes code running on Deploy now that you can 
-grab and begin using now. 
+grab and begin using now. I'm not sure what hosts are using Bun, but Splinter works
+very well on it.
 
 The _**primary driver**_ for this project was a ned to connect TypeScript (Deno)
 with Inference (in my case, llama.cpp) in a way that was close to bare-metal
 `select() / poll()` style latency. Sockets were the very first thing to get
 thrown out the window, and, well, here we are.
 
-There's always special 3> for Deno (the author used to work there).
+There's always special 3> for Deno (the author used to work there), and tight 
+Bun integration means it's available to the yarn/npm world too, with Bun.
+
+I don't use / can't support Node, but if you'd like to maintain bindings for
+it, I'm happy to see a PR `:)`
 
 ### Rust Bindings
 
-Feel free to include the generated bindings in `bindings/rust` (run `make world`
-or `make rust_bindings` to generate them) under whatever license your project
-uses. Libsplinter itself is Apache 2.0.
-
-> _**Help Wanted**_
-
-> I could really use someone's help in publishing / managing the Rust crate for
-> the project. If you'd like to help, please reach out to me at
-> `timthepost@protonmail.com` or through GH issues.
-
----
+Both persistent and in-memory versions are built for rust (see `bindings/rust` for the
+workgroup setup). I would really appreciate help maintaining proper crates; if you'd
+like to help out with it and know Rust well enough, please reach out to me via email
+at `timthepost@protonmail.com` or open an issue. 
 
 ## Building
 
@@ -326,16 +320,6 @@ This builds:
 - `libsplinter_p.so` : persistent file-backed variant
 - `libsplinter.a` : static version of the default bus
 - `libsplinter_p.a` : static version of the persistent bus
-
----
-
-## Tests
-
-Splinter is extensively tested with Valgrind, stress tests, unit tests and a fair
-amount of everyday use as gaffer's tape for DevOps in modern workflows.
-
-Run `make test` to see a selection (also look at `config.h` to enable tighter 
-Valgrind test integration). 
 
 ## Making Stores Persist (Persistence Mode) 
 
@@ -361,8 +345,6 @@ much slower.
 The MRSW stress tool will give you some indication of throughput, however you
 should scale it down thread-wise as well as payload or you'll just thrash the
 storage and accomplish little else.
-
----
 
 ## Network Synchronization
 
@@ -422,9 +404,7 @@ Use the Deno FFI bindings + Oak to make a very simple REST interface. I'll
 include a sample one at some point, but any LLM can roll this for you in a few
 seconds with the included FFI bindings and TS class for Splinter.
 
----
-
-### Next Version Major Feature Goals:
+### Next Sprint Major Goals:
 
 See the `CHANGELOG` file for plans for the next few versions, as well as changes already
 implemented (all managed in one place for convenience).
