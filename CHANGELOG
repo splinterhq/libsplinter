@@ -6,7 +6,6 @@ v0.9.5 "The Web We Weave" (Unreleased: Next Next Next Next Sprint) June 2026
  - Make MRSW test harness less cryptic about pass / fail metrics in results.
    Investigate write staggering -> torn read weird coupling (may be a short
    sighted writer design as it only happens with this harness).
- - Implement new Lume based website / documentation hub / blog & changelog
  - Implement GH discussions
  - Bugfix-only releases until 1.0.0 🎉 
 
@@ -35,21 +34,29 @@ v0.9.3 "Bits & Bolts" (Unreleased: Next Next Sprint) Feb / March 2026
    `decr_if_(eq|lt|gt)` operations.
  - Implement the ability to populate a watch for dispatching based
    on bloom filter content.
- - Implement shard plumbing (TBD)
- 
-v0.9.2 "The Restructuring" (Unreleased: Next Sprint) Jan 2026
- - Implement 16 (8 reserved / 8 user defined) flags per slot
- - Implement `born` epoch per-slot (automatically the first epoch of the slot)
- - Implement 64 bit per-slot bloom filter for ctags style scoping
- - Implement vector storage backing + offset in slot header 
- - Implement reserved and user defined feature flags (as planned in docs/). *
- - Implement atomic_uint_least64_t `ttl_ms` per-slot for expiry (doesn't
-   implement eviction, it only declares a shelf life eviction can use in the
-   absence of any other policy) (see also: `born`)
- - Implement minimal public-facing API changes required for the above to
-   work (might not yet include actually storing embeddings).
- - Implement CLI changes necessary for new feature flag / slot layout
  - Implement ctags per-slot inside CLI
+ - Implement shard plumbing (TBD)
+
+v0.9.2 "Bindings & Restructuring" (Unreleased: Next Sprint * = in-progress) Jan/Feb 2026 
+ - Note that this release is primarily focused on bus structure and the re-tooling 
+   of certain features in order to implement it without breaking anything. I had a
+   lot of FFI debt to pay off before I could streamline any public API changes.
+
+ - Re-organize and improved Deno TS bindings (done)
+ - Add support for Bun in TS bindings (done) 
+ - Rust bindings now support persistent mode (done)
+ - Rust bindings now build libsplinter / libsplinter-persistent separately (done)
+
+ - Implement reserved and user defined feature flags (as planned in docs/). *
+ - Implement 16 (8 reserved / 8 user defined) flags per slot *
+ - Implement `born` epoch per-slot (automatically the first epoch of the slot) *
+ - Implement 64 bit per-slot bloom filter for ctags style scoping *
+ - Implement atomic_uint_least64_t `ttl_ms` per-slot for expiry *
+ - Implement vector storage backing + offset in slot header *
+ 
+ - Implement minimal public-facing API changes to not break any existing functionality *
+ - Implement CLI changes necessary for new feature flag / slot layout *
+ - Implement new Lume based website / documentation hub / blog & changelog *
 
 v0.9.1 "Bugfix Release" Jan 2026
  - Fix oversight in `init` that could lead to inadvertent writes to the wrong
