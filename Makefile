@@ -2,6 +2,7 @@ CC ?= gcc
 AR ?= ar
 CFLAGS := -std=c11 -O2 -Wall -Wextra -D_GNU_SOURCE -fPIC -I3rdparty/
 PREFIX ?= /usr/local
+GIT ?= /usr/bin/git
 
 # Library objects
 SHARED_LIBS = libsplinter.so libsplinter_p.so
@@ -66,15 +67,6 @@ splinter_cli: $(CLI_SOURCES) $(CLI_HEADERS) splinter.o splinter.h
 splinterp_cli: $(CLI_SOURCES) $(CLI_HEADERS) splinter_p.o splinter.h
 	$(CC) $(CFLAGS) -DSPLINTER_PERSISTENT -o $@ $(CLI_SOURCES) splinter_p.o
 
-# Rust bindings - we only build against the in-memory version, not 
-# persistent,
-#
-# I'd love patches to help proper-ize this.
-.PHONY: rust_bindings
-
-rust_bindings: libsplinter.so
-	cd bindings/rust && cargo build
-
 # Better experience if non-root tries root targets
 .PHONY: be_root
 
@@ -120,10 +112,8 @@ clean:
 # Clean artifacts and bindings
 .PHONY: distclean
 
-distclean: clean
-	rm -rf bindings/rust/target
-	rm -f  bindings/rust/Cargo.lock
-	rm -f  bindings/rust/src/bindings.rs
+distclean:
+	@$(GIT) clean -fdx || false
 
 # Tests
 .PHONY: tests test valtest
@@ -158,4 +148,4 @@ valtest: splinter_test splinterp_test
 # Everything
 .PHONY: world
 
-world: all valtest rust_bindings
+world: all valtest
