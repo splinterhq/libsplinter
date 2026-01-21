@@ -1,0 +1,93 @@
+{{
+  await comp.alert({
+    divId: "page-feedback-alert",
+    type: "success",
+    message: locale.comp.feedback.success_message,
+  })
+}}
+<div id="page-feedback" data-basename="{{ basename }}">
+  <div class="card">
+    <div id="page-feedback-header" class="card__header">
+      <p>{{ locale.comp.feedback.prompt }}</p>
+    </div>
+    <form id="page-feedback-form">
+      <label
+        id="page-feedback-label"
+        for="page-feedback-comment"
+        name="page-feedback-comment"
+      >{{ locale.comp.feedback.cta }}</label>
+      <label
+        id="page-feedback-verify-label"
+        class="verify"
+        for="page-feedback-verify"
+        name="feedback-verify-field"
+      >Verify:</label>
+      <input type="text" class="verify" id="page-feedback-verify" />
+      <div class="feedback__bumper">
+        <p class="margin-right--none margin-left--sm margin-top--sm">
+          <strong>
+            {{ locale.comp.feedback.cta_optional }}
+          </strong>
+          {{ locale.comp.feedback.cta_remaining }}&nbsp;
+        </p>
+        <p
+          id="page-feedback-characters"
+          aria-label="Live update of remaining characters"
+        >
+        </p>
+      </div>
+      <textarea id="page-feedback-comment"></textarea>
+      <div class="feedback__bumper">
+        <button
+          id="page-feedback-clear"
+          class="button button--md button--outline button--secondary margin-top--xs margin-left--xs"
+        >
+          {{ locale.comp.feedback.clear }}
+        </button>
+        <button
+          id="page-feedback-submit"
+          class="button button--md button--primary margin-top--xs margin-left--sm margin-right--md"
+        >
+          {{ locale.comp.feedback.submit }}
+        </button>
+      </div>
+    </form>
+    <div class="card__footer">
+      <ul class="pills pills--block">
+        <li
+          class="pills__item page-feedback-vote"
+          data-vote="1"
+          title="{{ locale.comp.feedback.yes_vote_title }}"
+        >
+          <img
+            alt="Happy Face Icon"
+            title="{{ locale.comp.feedback.yes_vote_title }}"
+            src='{{ "face-smile"  |> icon("fontawesome") }}'
+          >
+        </li>
+        <li
+          class="pills__item page-feedback-vote"
+          data-vote="0"
+          title="{{ locale.comp.feedback.meh_vote_title }}"
+        >
+          <img
+            alt="Ambivalent Face Icon"
+            title="{{ locale.comp.feedback.meh_vote_title }}"
+            src='{{ "face-meh"  |> icon("fontawesome") }}'
+          >
+        </li>
+        <li
+          class="pills__item page-feedback-vote"
+          data-vote="-1"
+          title="{{ locale.comp.feedback.no_vote_title }}"
+        >
+          <img
+            alt="Frown Face"
+            title="{{ locale.comp.feedback.no_vote_title }}"
+            src='{{ "face-frown"  |> icon("fontawesome") }}'
+          >
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>

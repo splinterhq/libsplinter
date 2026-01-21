@@ -1,0 +1,246 @@
+/*
+ * Overrides are at the bottom.
+ * Top section is vars to control the themes (light / dark)
+ */
+@import "_includes/css/theme.css";
+@import "_includes/css/theme-variables.css";
+@import "_includes/css/opendyslexic.css";
+@import "_includes/css/forms.css";
+
+/* Light Mode Theme Palette */
+:root {
+  --ifm-color-primary: #184b9c;
+  --ifm-color-secondary: #abaeb3db;
+  /* 
+   * TODO: These are Infima defaults. 
+   * The vars color-success onward need to be darker along with
+   * hover states for accessibility; their contrast is a touch too 
+   * low. On the roadmap.
+   */
+  --ifm-color-success: #00a400;
+  --ifm-color-info: #54c7ec;
+  --ifm-color-warning: #ffba00;
+  --ifm-color-danger: #fa383e;
+}
+
+/* Dark Mode Overrides For Light Mode */
+[data-theme="dark"] {
+  --ifm-color-primary: steelblue;
+}
+
+/* Compensate for sticky nav height in anchor navigation */
+
+html {
+  scroll-behavior: smooth;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  scroll-margin-top: 90px;
+}
+
+/* Override for TOC list type */
+.table-of-contents,
+.table-of-contents ul {
+  list-style-type: square;
+  list-style-position: outside;
+}
+.table-of-contents li {
+  margin: 5px 0 5px 10px;
+}
+
+#toc {
+  display: block;
+}
+
+.toc-heading {
+  display: block;
+  margin: 1rem 0 0;
+}
+
+/* Wrapper or diagrams */
+
+.mermaid_wrapper {
+  background: #222;
+  border-radius: 1em;
+  margin: 1em 0;
+  padding: 1em;
+}
+
+/* Helper For Blog Images */
+.blog_image {
+  max-height: 675px;
+  width: auto;
+  text-align: center;
+  align-items: center;
+  border-radius: 1rem;
+  margin-bottom: 1rem;
+  padding: 0 5px 0;
+}
+
+/* Example of adapting design to a font-switch */
+.homepage_card {
+  min-height: 260px;
+}
+
+[data-font="user"] {
+  .homepage_card {
+    min-height: 340px;
+  }
+}
+
+/* Post tags (and example of flipping styles in dark mode) */
+.post-tags {
+  display: flex;
+  flex-flow: row wrap;
+  gap: 0.75em;
+  align-items: center;
+}
+
+/* Tags */
+.post-tag {
+  border: 1px solid var(--ifm-color-gray-400);
+  border-radius: 4px;
+  color: var(--ifm-color-content);
+  display: inline-block;
+  padding: 0.2em 0.6em;
+  text-decoration: none;
+}
+
+.post-tag:hover {
+  background-color: var(--ifm-color-secondary);
+  color: var(--ifm-color-black);
+  text-decoration: none;
+}
+
+[data-theme="dark"] {
+  .post-tag:hover {
+    border: 1px solid skyblue;
+    background-color: var(--ifm-color-info);
+  }
+}
+
+/* /archive utilities */
+.archive-fueller {
+  display: block;
+  margin-top: 2.5rem;
+  font-size: 145%;
+}
+
+.feed-links {
+  display: block;
+}
+
+.footer__item {
+  list-style-type: none;
+}
+
+/* Search Modal styles */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  color: #333;
+}
+
+.modal input[type="text"] {
+  color: #333;
+}
+
+.modal-content {
+  background: #fff;
+  color: #333;
+  margin: 8% auto;
+  padding: 20px;
+  border: 1px solid #888;
+  width: 65%;
+  height: 70%;
+  position: relative;
+  overflow: auto;
+}
+
+.modal-top {
+  display: block;
+  text-align: right;
+  align-items: right;
+  font-weight: bold;
+  font-size: 12pt;
+  margin-bottom: 8px;
+  padding-right: 8px;
+}
+
+/* And now overrides of some default Infima classes */
+
+.breadcrumbs {
+  margin-left: -10px;
+}
+
+.menu__link--active {
+  font-weight: bold;
+  text-decoration: underline;
+  margin: 1em 0 1em 0.75em;
+}
+
+.footer__links ul {
+  margin-left: 0;
+  padding-left: 0;
+}
+
+.tagWiki a {
+  color: navy;
+  text-decoration: underline;
+}
+
+.tagWiki a:hover {
+  text-decoration: none;
+  color: steelblue;
+}
+
+.button.button--info,
+.button.button--success,
+.button.button--warning,
+.button.button--danger {
+  color: var(--ifm-color-black);
+}
+
+.badge--info,
+.badge--warning,
+.badge--success,
+.badge--danger {
+  color: var(--ifm-color-black);
+}
+
+/* Lastly: consolidated media query for most things that need it. */
+@media (max-width: 976px) {
+  /* Top nav logo */
+  #navbar-logo {
+    display: none;
+  }
+
+  /* Feed links on blog and docs pages */
+  .feed-links {
+    display: none;
+  }
+
+  /* With feed links gone, TOC needs buffered */
+  .toc-heading {
+    margin: 2rem 0 0;
+  }
+
+  /* The bottom "more in the archive" is redundant when
+     the sidebar links it. */
+  .archive-fueller {
+    display: none;
+  }
+
+  /* Search modal needs a lot of room on small screens to be
+     useful */
+  .modal-content {
+    height: 75%;
+    width: 85%;
+  }
+}

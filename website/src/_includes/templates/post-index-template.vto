@@ -1,0 +1,103 @@
+{{
+  set pageSearch = search.pages(
+    `url^=${blog.basedir} menu.visible=true`,
+    "date=desc",
+    blog.recent + 1,
+  )
+}}
+<div class="row">
+  <div class="col col--9">
+    <h1
+      class="margin-top--md margin-bottom--none margin-left--md"
+      style="font-size: 12pt"
+    >
+      {{ locale.blog_index.latest_heading }} {{ blog.title }}:
+    </h1>
+    {{ for entry of pageSearch }}
+      {{ if entry.url != blog.basedir }}
+        {{ include "templates/post-index-item.vto" { entry: entry } }}
+      {{ /if }}
+    {{ /for }}
+    <p class="archive-fueller">
+      {{ locale.posts.archive_prompt }}
+      <a href="/archive">{{ locale.posts.archive_text }}</a>.
+    </p>
+  </div>
+  <div class="col col--3">
+    <div class="feed-links">
+      <h3 class="margin-top--md" style="font-size: 12pt">
+        {{ locale.blog_index.feeds }}
+      </h3>
+      <p>
+        <a
+          href="/feed.xml"
+          class="navbar__link"
+          aria-label="RSS Feed"
+          title="RSS Feed"
+        >
+          <span
+            class="badge badge--warning padding--sm"
+            style="font-size: 12pt"
+          >
+            <img
+              src='{{ "rss" |> icon("phosphor", "bold") }}'
+              style="height: 32px"
+              alt="RSS"
+              title="RSS Feed"
+            >
+          </span>
+        </a>
+        <span class="margin-horiz--md" aria-hidden="true"></span>
+        <a
+          href="/feed.json"
+          class="navbar__link"
+          aria-label="JSON Feed"
+          title="JSON Feed"
+        >
+          <span
+            class="badge badge--warning padding--sm"
+            style="font-size: 12pt"
+          >
+            <img
+              src='{{ "brackets-curly" |> icon("phosphor", "bold") }}'
+              style="height: 32px"
+              alt="JSON"
+              title="JSON Feed"
+            >
+          </span>
+        </a>
+      </p>
+    </div>
+    <h3 class="margin-top--md">{{ locale.blog_index.latest_posts }}</h3>
+    <ul class="menu__list">
+      {{ for entry of pageSearch }}
+        {{ if entry.url != blog.basedir }}
+          <li class="menu__list--item">
+            <a class="menu__link" href="{{ entry.url }}">{{ entry.title }}</a>
+          </li>
+        {{ /if }}
+      {{ /for }}
+    </ul>
+    <p class="margin-top--md">
+      <strong>{{ locale.blog_index.older_posts }}
+        <a href="/archive">{{
+          locale.blog_index.older_posts_link
+        }}</a></strong>.
+    </p>
+    <h3 class="margin-top--md">{{ locale.blog_index.top_tags }}</h3>
+    {{
+      set recentTags = search.pages(
+        "type=tag menu.visible=true",
+        "waypoint=%blog% tag date",
+        10,
+      )
+    }}
+    {{ if recentTags.length }}
+      <div class="post-tags">
+        {{ for tag of recentTags }}
+          <a href="{{ tag.url |> slugify }}" class="post-tag">{{ tag.tag }}</a>
+        {{ /for }}
+      </div>
+    {{ /if }}
+  </div>
+</div>

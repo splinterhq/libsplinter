@@ -1,0 +1,3 @@
+layout: layouts/page.vto
+type: pages
+waypoint: "%landing-pages%"

@@ -1,0 +1,79 @@
+{
+  "imports": {
+    "lume/": "https://cdn.jsdelivr.net/gh/lumeland/lume@3.1.4/",
+    "lume/cms/": "https://cdn.jsdelivr.net/gh/lumeland/cms@0.14.6/",
+    "lume/jsx-runtime": "https://cdn.jsdelivr.net/gh/oscarotero/ssx@0.1.14/jsx-runtime.ts"
+  },
+  "tasks": {
+    "lume": {
+      "description": "Run Lume command",
+      "command": "deno run -P=lume lume/cli.ts"
+    },
+    "build": {
+      "description": "Build the site for production",
+      "command": "deno task lume"
+    },
+    "serve": {
+      "description": "Run and serve the site for development",
+      "command": "deno task lume -s"
+    },
+    "dev": "LUME_DRAFTS=true deno task lume -s",
+    "mock": "deno run -A --watch src/_serve.ts",
+    "clean": "rm -rf _site || true; rm -rf _cache || true",
+    "update-deps": "deno run -A --quiet 'https://deno.land/x/nudd@v0.2.8/cli.ts' update plugins.ts deno.json",
+    "cms": "deno task lume cms"
+  },
+  "compilerOptions": {
+    "types": [
+      "lume/types.ts"
+    ],
+    "jsx": "react-jsx",
+    "jsxImportSource": "lume"
+  },
+  "lint": {
+    "exclude": [
+      "./_site"
+    ],
+    "rules": {
+      "tags": [
+        "recommended"
+      ],
+      "exclude": [
+        "no-import-prefix"
+      ]
+    },
+    "plugins": [
+      "https://cdn.jsdelivr.net/gh/lumeland/lume@3.1.4/lint.ts"
+    ]
+  },
+  "fmt": {
+    "exclude": [
+      "./_site"
+    ]
+  },
+  "unstable": [
+    "kv",
+    "temporal",
+    "fmt-component"
+  ],
+  "permissions": {
+    "lume": {
+      "read": true,
+      "write": [
+        "./"
+      ],
+      "import": [
+        "cdn.jsdelivr.net:443",
+        "jsr.io:443",
+        "deno.land:443",
+        "esm.sh:443"
+      ],
+      "net": true,
+      "env": true,
+      "run": true,
+      "ffi": true,
+      "sys": true
+    }
+  },
+  "lock": false
+}

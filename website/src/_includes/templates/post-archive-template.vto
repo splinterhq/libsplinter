@@ -1,0 +1,202 @@
+<div class="row">
+  <div class="col col--9">
+    <h1 class="margin-top--md">{{ title || locale.archive.heading }}</h1>
+    <nav aria-label="breadcrumbs">
+      <ul class="breadcrumbs">
+        <li class="breadcrumbs__item">
+          <a class="breadcrumbs__link" href="/blog/">{{
+            locale.blog_index.blog_home
+          }}</a>
+        </li>
+        <li class="breadcrumbs__item">
+          <a class="breadcrumbs__link" href="/archive/">{{
+            locale.posts.archive_text
+          }}</a>
+        </li>
+        <li class="breadcrumbs__item breadcrumbs__item--active">
+          <a class="breadcrumbs__link" href="{{ url }}">{{
+            title || locale.archive.heading
+          }}</a>
+        </li>
+      </ul>
+    </nav>
+    {{ if tag }}
+      {{ if tagWiki[tag] }}
+        <p class="margin-top--sm padding-top--md">
+          <img
+            src='{{ "rss" |> icon("phosphor", "bold") }}'
+            style="height: 18px"
+            alt="RSS"
+            title="RSS Feed"
+          >
+          &nbsp;
+          <a
+            href="/feeds/tag/{{ tag }}.xml"
+            class="tagWiki"
+            aria-label="{{ locale.archive.tag_rss_title }} {{ tag }}"
+            title="{{ locale.archive.tag_rss_title }} {{ tag }}"
+          >
+            "{{ tag }}" RSS
+          </a>
+          <span class="margin-horiz--md" aria-hidden="true"></span>
+          <img
+            src='{{ "brackets-curly" |> icon("phosphor", "bold") }}'
+            style="height: 18px"
+            alt="JSON"
+            title="JSON Feed"
+          >
+          &nbsp;
+          <a
+            href="/feeds/tag/{{ tag }}.json"
+            class="tagWiki"
+            title="{{ locale.archive.tag_json_title }} {{ tag }}"
+            aria-label="{{ locale.archive.tag_json_title }} {{ tag }}"
+          >
+            "{{ tag }}" JSON
+          </a>
+        </p>
+        <div class="tagInfo padding-vert--sm margin-horiz--md margin-vert--sm">
+          {{ tagWiki[tag].summary |> md }}
+        </div>
+      {{ else if tag.length && locale.archive.edit_wiki_url != false }}
+        <div class="tagInfo padding-vert--sm margin-horiz--md margin-vert--sm">
+          <p>
+            {{ locale.archive.edit_wiki_no_wiki }}
+          </p>
+        </div>
+      {{ /if }}
+      {{ if tag.length && tagWiki && locale.archive.edit_wiki_url }}
+        <a
+          target="_blank"
+          class="margin-horiz--md padding-vert--sm"
+          href="{{ locale.archive.edit_wiki_url }}"
+          aria-label="Open Github In A New Page To Edit This Wiki"
+        >{{ locale.archive.edit_wiki }}</a>
+        <h2 class="margin-top--lg">
+          {{ locale.archive.posts_tagged }} <em>{{ tag }}</em>:
+        </h2>
+      {{ /if }}
+    {{ /if }}
+    {{ if results }}
+      {{ for post of results }}
+        {{ if post.menu && post.menu.visible !== false }}
+          {{ include "templates/post-archive-item.vto" { post: post } }}
+        {{ /if }}
+      {{ /for }}
+    {{ /if }}
+    {{ if search_query }}
+      {{ for post of search.pages(search_query) }}
+        {{ if post.menu && post.menu.visible !== false }}
+          {{ include "templates/post-archive-item.vto" { post: post } }}
+        {{ /if }}
+      {{ /for }}
+    {{ /if }}
+    {{ if pagination && pagination.totalPages !== 1 }}
+      <p style="font-size: 135%; font-weight: bold">
+        {{ locale.archive.page }}:&nbsp;
+        {{ pagination.page }}
+        {{ locale.archive.page_of }}
+        {{ pagination.totalPages }}
+        &nbsp;&nbsp;({{ pagination.totalResults }}
+        {{ locale.archive.total_results }})
+      </p>
+      <nav class="pagination-nav margin-top--lg">
+        <div class="pagination-nav__item">
+          {{ if pagination.previous }}
+            <a class="pagination-nav__link" href="{{ pagination.previous }}">
+              <div class="pagination-nav__label">
+                {{ locale.archive.previous }}
+              </div>
+            </a>
+          {{ /if }}
+        </div>
+        <div class="pagination-nav__item pagination-nav__item--next">
+          {{ if pagination.next }}
+            <a class="pagination-nav__link" href="{{ pagination.next }}">
+              <div class="pagination-nav__label" style="text-align: right">
+                {{ locale.archive.next }}
+              </div>
+            </a>
+          {{ /if }}
+        </div>
+      </nav>
+    {{ /if }}
+  </div>
+  <div class="col col--3">
+    <div class="feed-links">
+      <h3 class="margin-top--md" style="font-size: 12pt">
+        {{ locale.blog_index.feeds }}
+      </h3>
+      <p>
+        <a
+          href="/feed.xml"
+          class="navbar__link"
+          aria-label="RSS Feed"
+          title="RSS Feed"
+        >
+          <span
+            class="badge badge--warning padding--sm"
+            style="font-size: 12pt"
+          >
+            <img
+              src='{{ "rss" |> icon("phosphor", "bold") }}'
+              style="height: 32px"
+              alt="RSS"
+              title="RSS Feed"
+            >
+          </span>
+        </a>
+        <span class="margin-horiz--md" aria-hidden="true"></span>
+        <a
+          href="/feed.json"
+          class="navbar__link"
+          aria-label="JSON Feed"
+          title="JSON Feed"
+        >
+          <span
+            class="badge badge--warning padding--sm"
+            style="font-size: 12pt"
+          >
+            <img
+              src='{{ "brackets-curly" |> icon("phosphor", "bold") }}'
+              style="height: 32px"
+              alt="JSON"
+              title="JSON Feed"
+            >
+          </span>
+        </a>
+      </p>
+    </div>
+    {{ if tagWiki[tag] && tagWiki[tag].related_tags }}
+      <h3 class="margin-top--md">Related Tags:</h3>
+      <div class="post-tags">
+        {{ for relatedTag of tagWiki[tag].related_tags }}
+          <a href="/archive/{{ relatedTag |> slugify }}" class="post-tag">{{
+            relatedTag
+          }}</a>
+        {{ /for }}
+      </div>
+    {{ /if }}
+    <h3 class="margin-top--md">{{ locale.archive.authors }}</h3>
+    {{ set authors = search.values("author") }}
+    {{ if authors.length }}
+      <ul class="menu__list">
+        {{ for author of authors }}
+          <li class="menu__list--item">
+            <a class="menu__link" href="/author/{{ author |> slugify }}"><strong
+              >{{ author }}</strong></a>
+          </li>
+        {{ /for }}
+      </ul>
+    {{ /if }}
+    <h3 class="margin-top--md">{{ locale.archive.tags }}</h3>
+    {{ set recentTags = search.pages("type=tag menu.visible=true", "tag") }}
+    {{ if recentTags.length }}
+      <div class="post-tags">
+        {{ for tag of recentTags }}
+          <a href="{{ tag.url |> slugify }}" class="post-tag">{{ tag.tag }}</a>
+        {{ /for }}
+      </div>
+    {{ /if }}
+  </div>
+</div>

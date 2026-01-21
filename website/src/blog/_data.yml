@@ -1,0 +1,10 @@
+layout: layouts/post.vto
+type: blog
+waypoint: "%blog%"
+tags: []
+
+blog:
+  basedir: /blog/
+  title: Your Brand New Blog
+  description: A short description of the blog instance
+  recent: 3

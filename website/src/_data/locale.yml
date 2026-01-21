@@ -1,0 +1,79 @@
+error_404:
+  title: "Content Not Found"
+  heading: "Content Not Found"
+  content: "The requested page does not exist."
+
+subnav:
+  return: "&larr; Back To Main"
+
+feeds:
+  rss: "RSS"
+  json: "JSON"
+
+posts:
+  has_tags: "Tagged:"
+  written_by: "By"
+  written_on: "On"
+  read_more: "Read More"
+  read_time: "Minute Read"
+  read_next: "Published Later"
+  read_prev: "&laquo; Published Previously"
+  archive_prompt: "More Posts Might Be Found In"
+  archive_text: "The Archive"
+
+documentation:
+  next_link: "Next:"
+  prev_link: "Previous:"
+  topics: "Available Topics:"
+  toc_heading: "In This Section:"
+  no_custom_sidebars: "Custom Sidebars Are Not Yet Implemented"
+  feeds: "Feeds:"
+
+archive:
+  heading: "All Posts"
+  posts_tagged: "All Posts Tagged "
+  tags: "Search By Tag:"
+  authors: "Search By Author:"
+  previous: "Previous:"
+  next: "Next:"
+  page: "Page"
+  page_of: "of"
+  total_results: "total results."
+  things_tagged: "Information About "
+  posts_by: "Posts By"
+  all_posts: "All Posts"
+  related_tags: "Related Tags:"
+  edit_wiki: "Edit This Tag Wiki On Github (Opens In A New Page)"
+  #un-comment and change the GITHUB_USERNAME and SITE_REPO placeholders
+  #to enable link that encourages community creation and edits of tag wikis.
+  #edit_wiki_url: "https://github.com/GITHUB_USERNAME/SITE_REPO/edit/main/src/_data/tagWiki.yml"
+  edit_wiki_url: false
+  edit_wiki_no_wiki: "This tag has no wiki yet, would you like to create it?"
+  tag_rss_title: "RSS Feed Exclusively For Posts Tagged:"
+  tag_json_title: "JSON Feed Exclusively For Posts Tagged:"
+
+blog_index:
+  blog_home: "Blog Home"
+  latest_heading: "Latest News &amp; Tutorials From "
+  latest_posts: "Latest Posts:"
+  feeds: "/blog Feeds:"
+  top_tags: "Recent Tags:"
+  older_posts: "Other posts are"
+  older_posts_link: "in the archive"
+  toc: "In This Article:"
+
+comp:
+  latestBlog:
+    heading: "Latest From The Blog:"
+
+  feedback:
+    prompt: "Was reading this article a good use of your time?"
+    cta: "How could this be better?"
+    cta_optional: "Optional! "
+    cta_remaining: "Chars left:"
+    clear: "Clear"
+    submit: "Send"
+    yes_vote_title: "Yes!"
+    meh_vote_title: "Meh ..."
+    no_vote_title: "No!"
+    success_message: "Feedback submitted, ***thank you***! We'll try not to ask you about this page again."

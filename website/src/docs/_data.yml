@@ -1,0 +1,14 @@
+layout: layouts/docs.vto
+waypoint: "%theme-docs%"
+type: docs
+menu:
+  visible: true
+  order: 0
+docs:
+  basedir: /docs/
+  title: "Your Docs Instance"
+  sidebar: auto
+  guest:
+    heading: "From Your Shiny New Blog:"
+    waypoint: "%blog%"
+    posts: 1

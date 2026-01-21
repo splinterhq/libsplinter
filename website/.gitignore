@@ -1,0 +1,6 @@
+_site
+_cache
+_reports/*.json
+.DS_Store
+.env*
+
