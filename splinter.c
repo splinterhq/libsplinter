@@ -26,65 +26,13 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
-#include <stdatomic.h>
 #include <stdio.h>
 #include <errno.h>
 #include <time.h>
 #include <stdint.h>
-#include <stdalign.h>
 #include "config.h"
 
 
-/**
- * @struct splinter_header
- * @brief Defines the header structure for the shared memory region.
- *
- * This header contains metadata for the entire splinter store, including
- * magic number for validation, version, and overall store configuration.
- *
- * NOTE: We add parse_failures/last_failure_epoch for diagnostics.
- */
-struct splinter_header {
-    /** @brief Magic number (SPLINTER_MAGIC) to verify integrity. */
-    uint32_t magic;
-    /** @brief Data layout version (SPLINTER_VER). */
-    uint32_t version;
-    /** @brief Total number of available key-value slots. */
-    uint32_t slots;
-    /** @brief Maximum size for any single value. */
-    uint32_t max_val_sz;
-    /** @brief Global epoch, incremented on any write. Used for change detection. */
-    atomic_uint_least64_t epoch;
-    /** @brief toggle for zeroing out the value region prior to writing there. */
-    atomic_uint_least32_t auto_vacuum;
-
-    /* Diagnostics: counts of parse failures reported by clients / harnesses */
-    atomic_uint_least64_t parse_failures;
-    atomic_uint_least64_t last_failure_epoch;
-};
-
-/**
- * @struct splinter_slot
- * @brief Defines a single key-value slot in the hash table.
- *
- * Each slot holds a key, its value's location and length, and metadata
- * for concurrent access and change tracking.
- *
- * We changed val_len to atomic to avoid tearing on platforms where a plain
- * 32-bit write could be observed partially by a reader.
- */
-struct splinter_slot {
-    /** @brief The FNV-1a hash of the key. 0 indicates an empty slot. */
-    alignas(64) atomic_uint_least64_t hash;
-    /** @brief Per-slot epoch, incremented on write to this slot. Used for polling. */
-    atomic_uint_least64_t epoch;
-    /** @brief Offset into the VALUES region where the value data is stored. */
-    uint32_t val_off;
-    /** @brief The actual length of the stored value data (atomic). */
-    atomic_uint_least32_t val_len;
-    /** @brief The null-terminated key string. */
-    char key[SPLINTER_KEY_MAX];
-};
 
 /** @brief Base pointer to the memory-mapped region. */
 static void *g_base = NULL;

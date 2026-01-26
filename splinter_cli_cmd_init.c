@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <getopt.h>
+#include <stdalign.h>
 
 #include "config.h"
 #include "splinter.h"
@@ -23,11 +24,13 @@ void help_cmd_init(unsigned int level) {
     printf("Usage: %s [store_name] [--slots num_slots] [--maxlen max_val_len]\n", modname);
     printf("%s creates a Splinter store to default or specific geometry.\n", modname);
     puts("If arguments are omitted, these compiled-in defaults are used:");
-    printf("\nname:  %s\nslots:  %lu\nmaxlen: %lu\n",
+    printf("\nname:  %s\nslots:  %lu\nmaxlen: %lu\nalignment: %zu\n",
         DEFAULT_BUS,
-        (unsigned long) DEFAULT_SLOTS, 
-        (unsigned long) DEFAULT_VAL_MAXLEN);
-    
+        (unsigned long) DEFAULT_SLOTS,
+        (unsigned long) DEFAULT_VAL_MAXLEN,
+	    alignof(struct splinter_slot)
+	);
+
     return;
 }
 
@@ -74,9 +77,10 @@ int cmd_init(int argc, char *argv[]) {
     if (! store[0])
         snprintf(store, sizeof(store) - 1, DEFAULT_BUS);
 
-    printf("Creating '%s' with %lu slots, each with a max value length of %lu bytes.\n",
+    printf("Creating '%s' with %lu slots (%zu byte-aligned), each with a max value length of %lu bytes.\n",
         store,
-        max_slots, 
+        max_slots,
+        alignof(struct splinter_slot), 
         max_val
     );
 

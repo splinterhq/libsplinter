@@ -8,6 +8,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdalign.h>
 #include "splinter_cli.h"
 
 static const char *modname = "config";
@@ -28,6 +29,7 @@ static void show_bus_config(void) {
     printf("magic:       %u\n", snap.magic);
     printf("version:     %u\n", snap.version);
     printf("slots:       %u\n", snap.slots);
+    printf("alignment:   %zu\n", alignof(struct splinter_slot));
     printf("max_val_sz:  %u\n", snap.max_val_sz);
     printf("epoch:       %lu\n", snap.epoch);
     printf("auto_vacuum: %u\n", snap.auto_vacuum);
