@@ -31,6 +31,7 @@
 #include <errno.h>
 #include <time.h>
 #include <stdint.h>
+#include <stdalign.h>
 #include "config.h"
 
 
@@ -74,7 +75,7 @@ struct splinter_header {
  */
 struct splinter_slot {
     /** @brief The FNV-1a hash of the key. 0 indicates an empty slot. */
-    atomic_uint_least64_t hash;
+    alignas(64) atomic_uint_least64_t hash;
     /** @brief Per-slot epoch, incremented on write to this slot. Used for polling. */
     atomic_uint_least64_t epoch;
     /** @brief Offset into the VALUES region where the value data is stored. */
@@ -455,6 +456,8 @@ int splinter_get(const char *key, void *buf, size_t buf_sz, size_t *out_sz) {
                 errno = EAGAIN;
                 return -1;
             }
+
+	    atomic_thread_fence(memory_order_acquire);
 
             /* load length atomically */
             size_t len = (size_t)atomic_load_explicit(&slot->val_len, memory_order_acquire);
