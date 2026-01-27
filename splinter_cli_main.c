@@ -246,7 +246,7 @@ void print_version_info(char *progname) {
 
 void print_usage(char *progname) {
     fprintf(stderr, 
-        "Usage:  %s [options] [aguments] *or*\n\t%s --no-repl <built in command> [arguments] *or*\n\t%s {no args for REPL}\n",
+        "Usage:  %s [options] [arguments] *or*\n\t%s --no-repl <built in command> [arguments] *or*\n\t%s {no args for REPL}\n",
         progname, 
         progname,
         progname
@@ -450,8 +450,9 @@ int main (int argc, char *argv[]) {
     // Modules must know what this is in order to be able to restore it
     tcgetattr(STDIN_FILENO, &thisuser.term);
 
-    // parse arguments here
     opterr = 0;
+    optind = 0;
+
     while ((opt = getopt_long(argc, argv, optstring, long_options, NULL)) != -1) {
         switch (opt) {
             // --help / -h
