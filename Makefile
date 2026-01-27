@@ -33,7 +33,7 @@ libsplinter.a: splinter.o
 	$(AR) rcs $@ $^
 
 # Persistent-mode object and shared object
-splinter_p.o: splinter.c splinter.h
+splinter_p.o: splinter.c splinter.h build.h
 	$(CC) $(CFLAGS) -DSPLINTER_PERSISTENT -c splinter.c -o $@
 
 libsplinter_p.so: splinter_p.o
