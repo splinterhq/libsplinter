@@ -77,12 +77,21 @@ int cmd_init(int argc, char *argv[]) {
     if (! store[0])
         snprintf(store, sizeof(store) - 1, DEFAULT_BUS);
 
-    printf("Creating '%s' with %lu slots (%zu byte-aligned), each with a max value length of %lu bytes.\n",
-        store,
+    
+    // Inside cmd_init after parsing options
+    size_t slot_sz = sizeof(struct splinter_slot); 
+    size_t arena_sz = max_slots * max_val;
+    size_t total_est = sizeof(struct splinter_header) + (max_slots * slot_sz) + arena_sz;
+
+    printf("Initializing store: %s\n", store);
+    printf("  - Slots: %lu (%zu bytes each, %zu byte alignment)\n", 
         max_slots,
-        alignof(struct splinter_slot), 
-        max_val
-    );
+        max_val,
+        alignof(struct splinter_slot));
+    printf("  - Value Arena: %lu bytes, SRS: %zu bytes (~%.2f MB)\n", 
+        arena_sz,
+        total_est, 
+        (double) total_est / 1048576.0);
 
     rc = splinter_create(store, max_slots, max_val);
 
