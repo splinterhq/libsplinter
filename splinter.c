@@ -16,7 +16,6 @@
  * Short-term (ephemeral) memory, IPC, KV Storage, pub/sub, caching, and more
  * are all great uses for libsplinter.
  */
-
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
@@ -31,8 +30,6 @@
 #include <time.h>
 #include <stdint.h>
 #include "config.h"
-
-
 
 /** @brief Base pointer to the memory-mapped region. */
 static void *g_base = NULL;
@@ -289,7 +286,6 @@ int splinter_unset(const char *key) {
     return -1; // didn't find it
 }
 
-
 /**
  * @brief Sets or updates a key-value pair in the store.
  *
@@ -434,7 +430,6 @@ int splinter_get(const char *key, void *buf, size_t buf_sz, size_t *out_sz) {
     return -1; // Not found
 }
 
-
 /**
  * @brief Lists all keys currently in the store.
  *
@@ -545,7 +540,6 @@ int splinter_get_header_snapshot(splinter_header_snapshot_t *snapshot) {
     return 0;
 }
 
-
 /**
  * @brief Copy the current atomic Splinter slot header to a corresponding client
  * structure.
@@ -652,4 +646,3 @@ int splinter_get_embedding(const char *key, float *embedding_out) {
     return -1;
 }
 #endif // SPLINTER_EMBEDDINGS
-
