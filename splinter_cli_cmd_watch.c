@@ -77,6 +77,8 @@ int cmd_watch(int argc, char *argv[]) {
     int rc = -1, opt = 0;
     unsigned int oneshot = 0;
 
+    optind = 0;
+
     while ((opt = getopt_long(argc, argv, optstring, long_options, NULL)) != -1) {
         switch (opt) {
             case 'h':
