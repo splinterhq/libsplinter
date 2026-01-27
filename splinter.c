@@ -553,31 +553,103 @@ int splinter_get_header_snapshot(splinter_header_snapshot_t *snapshot) {
  * @return -1 on failure, 0 on success.
  */
 int splinter_get_slot_snapshot(const char *key, splinter_slot_snapshot_t *snapshot) {
-    if (!H || !key) return -1;
+    if (!H || !key || !snapshot) return -1;
     uint64_t h = fnv1a(key);
-    size_t idx = slot_idx(h, H->slots);
-    struct splinter_slot *slot = NULL;
-    size_t i;
-
+    size_t idx = slot_idx(h, H->slots), i = 0;
+    
     for (i = 0; i < H->slots; ++i) {
-        struct splinter_slot *s = &S[(idx + i) % H->slots];
-        if (atomic_load_explicit(&s->hash, memory_order_acquire) == h &&
-            strncmp(s->key, key, SPLINTER_KEY_MAX) == 0) {
-            slot = s;
-            break;
+        struct splinter_slot *slot = &S[(idx + i) % H->slots];
+        if (atomic_load_explicit(&slot->hash, memory_order_acquire) == h &&
+            strncmp(slot->key, key, SPLINTER_KEY_MAX) == 0) {
+            
+            uint64_t start = 0, end = 0;
+            do {
+                start = atomic_load_explicit(&slot->epoch, memory_order_acquire);
+                if (start & 1) {
+                    // Writer active, spin briefly or return EAGAIN for the test to retry
+                    continue; 
+                }
+
+                // Copy all metadata
+                snapshot->hash = h;
+                snapshot->epoch = start;
+                snapshot->val_off = slot->val_off;
+                snapshot->val_len = atomic_load_explicit(&slot->val_len, memory_order_relaxed);
+                strncpy(snapshot->key, slot->key, SPLINTER_KEY_MAX);
+#ifdef SPLINTER_EMBEDDINGS                
+                // Copy the large vector (the high-risk area for tearing)
+                memcpy(snapshot->embedding, slot->embedding, sizeof(float) * SPLINTER_EMBED_DIM);
+#endif
+                atomic_thread_fence(memory_order_acquire);
+                end = atomic_load_explicit(&slot->epoch, memory_order_acquire);
+
+            } while (start != end); // Loop until we get a clean, non-torn read
+
+            return 0;
         }
     }
-
-    if (!slot) {
-        errno = EINVAL;
-        return -1;
-    }
-
-    strncpy(snapshot->key, slot->key, SPLINTER_KEY_MAX);
-    snapshot->val_off = slot->val_off;
-    snapshot->hash = atomic_load_explicit(&slot->hash, memory_order_acquire);
-    snapshot->epoch = atomic_load_explicit(&slot->epoch, memory_order_acquire);
-    snapshot->val_len = atomic_load_explicit(&slot->val_len, memory_order_acquire);
-
-    return 0;
+    return -1;
 }
+
+#ifdef SPLINTER_EMBEDDINGS
+int splinter_set_embedding(const char *key, const float *vec) {
+    if (!H || !key || !vec) return -1;
+    uint64_t h = fnv1a(key);
+    size_t idx = slot_idx(h, H->slots);
+
+    for (size_t i = 0; i < H->slots; ++i) {
+        struct splinter_slot *slot = &S[(idx + i) % H->slots];
+        if (atomic_load_explicit(&slot->hash, memory_order_acquire) == h &&
+            strncmp(slot->key, key, SPLINTER_KEY_MAX) == 0) {
+            
+            uint64_t e = atomic_load_explicit(&slot->epoch, memory_order_relaxed);
+            if (e & 1ull) return -1; // Writer already active
+
+            uint64_t want = e + 1;
+            if (!atomic_compare_exchange_strong(&slot->epoch, &e, want)) return -1;
+
+            // Perform the copy into the slot
+            memcpy(slot->embedding, vec, sizeof(float) * SPLINTER_EMBED_DIM);
+
+            /* RELEASE FENCE: Ensures all bytes of the embedding are written 
+               to memory before the epoch is set back to an even number. */
+            atomic_thread_fence(memory_order_release);
+
+            atomic_fetch_add_explicit(&slot->epoch, 1, memory_order_release);
+            
+            // Global epoch update for bus tracking
+            atomic_fetch_add_explicit(&H->epoch, 1, memory_order_relaxed);
+            return 0;
+        }
+    }
+    return -1;
+}
+
+int splinter_get_embedding(const char *key, float *embedding_out) {
+    if (!H || !key || !embedding_out) return -1;
+    uint64_t h = fnv1a(key);
+    size_t idx = slot_idx(h, H->slots);
+
+    for (size_t i = 0; i < H->slots; ++i) {
+        struct splinter_slot *slot = &S[(idx + i) % H->slots];
+        if (atomic_load_explicit(&slot->hash, memory_order_acquire) == h &&
+            strncmp(slot->key, key, SPLINTER_KEY_MAX) == 0) {
+            
+            uint64_t start = atomic_load_explicit(&slot->epoch, memory_order_acquire);
+            if (start & 1) { errno = EAGAIN; return -1; }
+
+            atomic_thread_fence(memory_order_acquire);
+
+            memcpy(embedding_out, slot->embedding, sizeof(float) * SPLINTER_EMBED_DIM);
+
+            uint64_t end = atomic_load_explicit(&slot->epoch, memory_order_acquire);
+            if (start == end) return 0;
+
+            errno = EAGAIN;
+            return -1;
+        }
+    }
+    return -1;
+}
+#endif // SPLINTER_EMBEDDINGS
+

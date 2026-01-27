@@ -31,6 +31,10 @@ extern "C" {
 #define SPLINTER_KEY_MAX        64
 /** @brief Nanoseconds per millisecond for time calculations. */
 #define NS_PER_MS      1000000ULL
+#ifdef SPLINTER_EMBEDDINGS
+/** @brief The number of dimensions Splinter should support (OpenAI style is 768) */
+#define SPLINTER_EMBED_DIM    768
+#endif
 
 /**
  * @struct splinter_header
@@ -81,6 +85,9 @@ struct splinter_slot {
     atomic_uint_least32_t val_len;
     /** @brief The null-terminated key string. */
     char key[SPLINTER_KEY_MAX];
+#ifdef SPLINTER_EMBEDDINGS
+    float embedding[SPLINTER_EMBED_DIM];
+#endif
 };
 
 /**
@@ -124,6 +131,9 @@ typedef struct splinter_slot_snapshot {
     uint32_t val_len;
     /** @brief The null-terminated key string. */
     char key[SPLINTER_KEY_MAX];
+#ifdef SPLINTER_EMBEDDINGS
+    float embedding[SPLINTER_EMBED_DIM];
+#endif
 } splinter_slot_snapshot_t;
 
 /**
@@ -229,6 +239,24 @@ int splinter_list(char **out_keys, size_t max_keys, size_t *out_count);
  * @return 0 if the value changed, -1 on timeout or if the key doesn't exist.
  */
 int splinter_poll(const char *key, uint64_t timeout_ms);
+
+#ifdef SPLINTER_EMBEDDINGS
+/**
+ * @brief Sets the embedding for a specific key.
+ * @param key The null-terminated key string.
+ * @param embedding Pointer to an array of 768 floats.
+ * @return 0 on success, -1 on failure.
+ */
+int splinter_set_embedding(const char *key, const float *embedding);
+
+/**
+ * @brief Retrieves the embedding for a specific key.
+ * @param key The null-terminated key string.
+ * @param embedding_out Pointer to a buffer to store 768 floats.
+ * @return 0 on success, -1 on failure.
+ */
+int splinter_get_embedding(const char *key, float *embedding_out);
+#endif // SPLINTER_EMBEDDINGS
 
 #ifdef __cplusplus
 }

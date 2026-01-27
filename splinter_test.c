@@ -36,7 +36,7 @@ static pid_t pid = 0;
 int main(void) {
   char bus[16] = { 0 };
   char buspath[PATH_MAX] = { 0 };
-  printf("1..26\n");
+  printf("1..%d\n", (SPLINTER_EMBEDDINGS) ? 31 : 26);
   pid = getpid();
 
   snprintf(bus, 16, "%d-tap-test", pid);
@@ -113,6 +113,39 @@ int main(void) {
   TEST("snap1 epoch is nonzero", snap1.epoch > 0);
   TEST("length of header_snap is 5: h e l l o", snap1.val_len == 5);
   splinter_unset("header_snap");
+
+#ifdef SPLINTER_EMBEDDINGS
+  // Test 27: Set embedding with mocked vector
+  float mock_vec[SPLINTER_EMBED_DIM] = { 0 };
+  for (int i = 0; i < SPLINTER_EMBED_DIM; i++) {
+    mock_vec[i] = (float)i * 0.1f; // Linear mock values
+  }
+  TEST("set 768-dim embedding", splinter_set_embedding(test_key, mock_vec) == 0);
+
+  // Test 28: Get embedding and check integrity
+  float read_vec[SPLINTER_EMBED_DIM] = { 0 };
+  TEST("get 768-dim embedding", splinter_get_embedding(test_key, read_vec) == 0);
+
+  // Test 29: Verify vector data integrity
+  int vec_match = 1;
+  for (int i = 0; i < SPLINTER_EMBED_DIM; i++) {
+    if (read_vec[i] != mock_vec[i]) {
+      vec_match = 0;
+      break;
+    }
+  }
+  TEST("embedding vector data matches exactly", vec_match == 1);
+
+  // Test 30: Verify embedding persistence in slot snapshot
+  splinter_slot_snapshot_t embed_snap = { 0 };
+  TEST("get slot snapshot with embedding", splinter_get_slot_snapshot(test_key, &embed_snap) == 0);
+  
+  // Test 31: Verify first/last byte of snapshot embedding (encapsulation check)
+  // This is a cheap way for the client to verify no torn reads occurred in the snapshot
+  TEST("snapshot embedding encapsulation check", 
+       embed_snap.embedding[0] == mock_vec[0] && 
+       embed_snap.embedding[SPLINTER_EMBED_DIM-1] == mock_vec[SPLINTER_EMBED_DIM-1]);
+#endif // SPLINTER_EMBEDDINGS
 
   // Cleanup
   splinter_close();

@@ -1,6 +1,6 @@
 CC ?= gcc
 AR ?= ar
-CFLAGS := -std=c11 -O2 -Wall -Wextra -D_GNU_SOURCE -fPIC -I3rdparty/
+CFLAGS := -std=c11 -O2 -Wall -Wextra -D_GNU_SOURCE -DSPLINTER_EMBEDDINGS -fPIC -I3rdparty/
 PREFIX ?= /usr/local
 GIT ?= /usr/bin/git
 
