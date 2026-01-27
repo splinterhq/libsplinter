@@ -220,7 +220,7 @@ static void print_stats(cfg_t *cfg, counters_t *c, long ms) {
     }
 #endif // HAVE_VALGRIND_H
     puts("===== MRSW STRESS RESULTS =====");
-    printf("Threads            : %d (readers=%d, writer=1)\n", cfg->num_threads, cfg->num_threads - 1);
+    printf("Threads            : %d (readers=%d, writer=1)\n", cfg->num_threads, cfg->num_threads - 2);
     printf("Duration           : %d ms\n", cfg->test_duration_ms);
     printf("Hot keys           : %d\n", cfg->num_keys);
     printf("Total ops          : %d (gets=%d, sets=%d)\n", gets + sets, gets, sets);
