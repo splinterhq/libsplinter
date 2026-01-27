@@ -116,32 +116,14 @@ distclean:
 	@$(GIT) clean -fdx || false
 
 # Tests
-.PHONY: tests test valtest
+.PHONY: tests valgrind
 
 tests: splinter_test splinter_stress splinterp_test splinterp_stress
-	./splinter_test
-	./splinterp_test
-	@echo ""
-	@echo "You can run ./splinter_stress / splinterp_stress to run stress tests."
-	@echo "See ./splinter_stress --help for more."
-	@echo ""
-	@echo "You can/should also run tests under valgrind if you have it installed."
-	@echo "Enable via HAVE_VALGRIND_H in config.h if you haven't already."
-
-test: splinter_test splinterp_test splinter_stress splinterp_stress 
-	@echo ""
-	@echo "Use 'make tests' to run Splinter's unit tests without Valgrind."
-	@echo "Use 'make valtest' to run Splinter's unit tests under Valgrind."
-	@echo ""
-	@echo "Use './splinter_stress or ./splinterp_stress to run torture tests,"
-	@echo "for in-memory and persistent stores respectively. Note that integrity"
-	@echo "failures are generally *expected* in this test due to highly-abnormal"
-	@echo "use; think of it like a break test."
-	@echo ""
-	@echo "If you have valgrind/valgrind.h installed, edit 'config.h' to enable"
-	@echo "tighter test-Valgrind integration." 
-
-valtest: splinter_test splinterp_test
+	@./splinter_test || false
+	@./splinterp_test || false
+	@./splinter_stress --duration-ms 3500 --threads 64 || false
+	
+valgrind: splinter_test splinterp_test
 	valgrind -s --leak-check=full ./splinter_test || false
 	valgrind -s --leak-check=full ./splinterp_test || false
 

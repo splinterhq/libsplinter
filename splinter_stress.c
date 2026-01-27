@@ -220,7 +220,7 @@ static void print_stats(cfg_t *cfg, counters_t *c, long ms) {
     }
 #endif // HAVE_VALGRIND_H
     puts("===== MRSW STRESS RESULTS =====");
-    printf("Threads            : %d (readers=%d, writer=1)\n", cfg->num_threads, cfg->num_threads - 2);
+    printf("Threads            : %d (readers=%d, writer=1)\n", cfg->num_threads, (cfg->num_threads - 1));
     printf("Duration           : %d ms\n", cfg->test_duration_ms);
     printf("Hot keys           : %d\n", cfg->num_keys);
     printf("Total ops          : %d (gets=%d, sets=%d)\n", gets + sets, gets, sets);
@@ -232,6 +232,7 @@ static void print_stats(cfg_t *cfg, counters_t *c, long ms) {
            retries,
            gets ? (100.0 * retries / gets) : 0.0,
            okg ? ((double)retries / okg) : 0.0);
+    if (bad) exit(bad);
 }
 
 static void prepopulate(shared_t *sh) {
@@ -364,7 +365,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    printf("+\n -> Readers - (%d): ", cfg.num_threads);
+    printf("+\n -> Readers - (%d): ", cfg.num_threads - 1);
     for (i = 1; i < cfg.num_threads; i++) {
         if (pthread_create(&th[i], NULL, reader_main, &sh) != 0) {
             perror("pthread_create reader");
@@ -421,6 +422,7 @@ int main(int argc, char **argv) {
 
 #ifdef HAVE_VALGRIND_H
     // always exit on error if valgrind detects access errors
+    // we previously exited erroneously if there were any integrity failures
     return VALGRIND_COUNT_ERRORS;
 #else
     return 0;
