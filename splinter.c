@@ -401,7 +401,7 @@ int splinter_get(const char *key, void *buf, size_t buf_sz, size_t *out_sz) {
                 return -1;
             }
 
-	    atomic_thread_fence(memory_order_acquire);
+	        atomic_thread_fence(memory_order_acquire);
 
             /* load length atomically */
             size_t len = (size_t)atomic_load_explicit(&slot->val_len, memory_order_acquire);
@@ -646,3 +646,148 @@ int splinter_get_embedding(const char *key, float *embedding_out) {
     return -1;
 }
 #endif // SPLINTER_EMBEDDINGS
+
+
+/**
+ * @brief Set a bus configuration value 
+ * @param hdr: a splinter  bus header structure
+ * @param mask: bitmask to apply
+ */
+void splinter_config_set(struct splinter_header *hdr, uint8_t mask) {
+    atomic_fetch_or(&hdr->core_flags, mask);
+}
+
+/**
+ * @brief Clear a bus configuration value 
+ * @param hdr: a splinter  bus header structure
+ * @param mask: bitmask to clear
+ */
+void splinter_config_clear(struct splinter_header *hdr, uint8_t mask) {
+    atomic_fetch_and(&hdr->core_flags, ~mask);
+}
+
+/**
+ * @brief Test a bus configuration value 
+ * @param hdr: a splinter  bus header structure
+ * @param mask: bitmask to test
+ */
+int splinter_config_test(struct splinter_header *hdr, uint8_t mask) {
+    return (atomic_load(&hdr->core_flags) & mask) != 0;
+}
+
+/**
+ * @brief Snapshot a bus configuration 
+ * @param hdr: a splinter  bus header structure
+ */
+uint8_t splinter_config_snapshot(struct splinter_header *hdr) {
+    return atomic_load(&hdr->core_flags);
+}
+
+/**
+ * @brief Set a user slot flag 
+ * @param slot Splinter slot structure
+ * @param mask bitmask to set
+ */
+void splinter_slot_usr_set(struct splinter_slot *slot, uint16_t mask) {
+  atomic_fetch_or(&slot->user_flag, mask);
+}
+
+/**
+ * @brief Clear a user slot flag 
+ * @param slot Splinter slot structure
+ * @param mask bitmask to clear
+ */
+void splinter_slot_usr_clear(struct splinter_slot *slot, uint16_t mask) {
+  atomic_fetch_and(&slot->user_flag, ~mask);
+}
+
+/**
+ * @brief Test a user slot flag 
+ * @param slot Splinter slot structure
+ * @param mask bitmask to test
+ */
+int splinter_slot_usr_test(struct splinter_slot *slot, uint16_t mask) {
+  return (atomic_load(&slot->user_flag) & mask) != 0;
+}
+
+/**
+ * @brief Get a user slot flag snapshot 
+ * @param slot Splinter slot structure
+ */
+uint16_t splinter_slot_usr_snapshot(struct splinter_slot *slot) {
+  return atomic_load(&slot->user_flag);
+}
+
+/**
+ * @brief Name (declare intent to) a type fo a slot
+ * @param key Name of the key to change
+ * @param mask Splinter type bitmask to apply (e.g SPL_SLOT_TYPE_BIGUINT)
+ * @return -1 or on error (sets errno), 0 on success
+ */
+int splinter_set_named_type(const char *key, uint16_t mask){
+  if (!H || !key) return -1;
+    uint64_t h = fnv1a(key);
+    size_t idx = slot_idx(h, H->slots), i;
+
+    for (i = 0; i < H->slots; ++i) {
+        struct splinter_slot *slot = &S[(idx + i) % H->slots];
+        if (atomic_load_explicit(&slot->hash, memory_order_acquire) == h &&
+            strncmp(slot->key, key, SPLINTER_KEY_MAX) == 0) {
+            uint64_t start = atomic_load_explicit(&slot->epoch, memory_order_acquire);
+            if (start & 1) {
+                // writer in progress
+                errno = EAGAIN;
+                return -1;
+            }
+            // Set memory fence
+	          atomic_thread_fence(memory_order_acquire);
+            atomic_store_explicit(&slot->type_flag, 0, memory_order_release);
+            atomic_fetch_or(&slot->type_flag, mask);
+            return 0;
+        }
+    }
+    errno = ENOENT;
+    return -1;
+}
+
+/**
+ * @brief Update a slot's ctime / atime
+ * @param key Name of the key to change
+ * @param mode (SPL_TIME_CTIME or SPL_TIME_ATIME)
+ * @param epoch client-supplied timestamp
+ * @param offset value to subtract from epoch due to update-after-write
+ * @return -1/-2 or on error (sets errno), 0 on success
+ */
+int splinter_set_slot_time(const char *key, unsigned short mode, uint64_t epoch, size_t offset) {
+  if (!H || !key) return -1;
+  uint64_t h = fnv1a(key);
+  size_t idx = slot_idx(h, H->slots), i;
+
+  for (i = 0; i < H->slots; ++i) {
+    struct splinter_slot *slot = &S[(idx + i) % H->slots];
+    if (atomic_load_explicit(&slot->hash, memory_order_acquire) == h &&
+      strncmp(slot->key, key, SPLINTER_KEY_MAX) == 0) {
+        uint64_t start = atomic_load_explicit(&slot->epoch, memory_order_acquire);
+        if (start & 1) {
+          // writer in progress
+          errno = EAGAIN;
+          return -1;
+        }
+        // Set memory fence
+	      atomic_thread_fence(memory_order_acquire);
+        switch (mode) {
+          case SPL_TIME_CTIME:
+            atomic_store_explicit(&slot->ctime, epoch - offset, memory_order_release);
+            return 0;
+          case SPL_TIME_ATIME:
+            atomic_store_explicit(&slot->atime, epoch - offset, memory_order_release);
+            return 0;
+          default:
+            errno = ENOTSUP;
+            return -2;
+        }
+    }
+  }
+  errno = ENOENT;
+  return -1;
+}

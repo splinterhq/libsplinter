@@ -36,6 +36,43 @@ extern "C" {
 #define SPLINTER_EMBED_DIM    768
 #endif
 
+
+/* System flags (0–3) */
+#define SPL_SYS_AUTO_SCRUB     (1u << 0)
+#define SPL_SYS_RESERVED_1     (1u << 1)
+#define SPL_SYS_RESERVED_2     (1u << 2)
+#define SPL_SYS_RESERVED_3     (1u << 3)
+
+/* User flags (4–7) */
+#define SPL_SUSR1              (1u << 4)
+#define SPL_SUSR2              (1u << 5)
+#define SPL_SUSR3              (1u << 6)
+#define SPL_SUSR4              (1u << 7)
+
+/* Slot Flags (system) 0 - 7 */
+#define SPL_SLOT_TYPE_VOID     (1u << 0)
+#define SPL_SLOT_TYPE_BIGINT   (1u << 1)
+#define SPL_SLOT_TYPE_BIGUINT  (1u << 2)
+#define SPL_SLOT_TYPE_JSON     (1u << 3)
+#define SPL_SLOT_TYPE_BINARY   (1u << 4)
+#define SPL_SLOT_TYPE_IMGDATA  (1u << 5)
+#define SPL_SLOT_TYPE_AUDIO    (1u << 6)
+#define SPL_SLOT_TYPE_VARTEXT  (1u << 7)
+
+/* Slot Flags (user) 0 - 7 */
+#define SPL_FUSR1              (1u << 0)
+#define SPL_FUSR2              (1u << 1)
+#define SPL_FUSR3              (1u << 2)
+#define SPL_FUSR4              (1u << 3)
+#define SPL_FUSR5              (1u << 4)
+#define SPL_FUSR6              (1u << 5)
+#define SPL_FUSR7              (1u << 6)
+#define SPL_FUSR8              (1u << 7)
+
+/* Time Update Mode */
+#define SPL_TIME_CTIME         0
+#define SPL_TIME_ATIME         1
+
 /**
  * @struct splinter_header
  * @brief Defines the header structure for the shared memory region.
@@ -56,7 +93,12 @@ struct splinter_header {
     uint32_t max_val_sz;
     /** @brief Global epoch, incremented on any write. Used for change detection. */
     atomic_uint_least64_t epoch;
-    /** @brief toggle for zeroing out the value region prior to writing there. */
+    /** @brief Core feature flags  */
+    atomic_uint_least8_t core_flags;
+    /** @brief User-defined feature flags */
+    atomic_uint_least8_t user_flags;
+
+    /** @brief DEPRECATED toggle for zeroing out the value region prior to writing there. */
     atomic_uint_least32_t auto_vacuum;
 
     /* Diagnostics: counts of parse failures reported by clients / harnesses */
@@ -83,6 +125,14 @@ struct splinter_slot {
     uint32_t val_off;
     /** @brief The actual length of the stored value data (atomic). */
     atomic_uint_least32_t val_len;
+    /** @brief The type-naming flags for slot typing */
+    atomic_uint_least8_t type_flag;
+    /** @brief The user-defined flags for slot features */
+    atomic_uint_least8_t user_flag;
+    /** @brief The time a slot was created (optional; must be set by the client) */
+    atomic_uint_least64_t ctime;
+    /** @brief The last time the slot was meaningfully accessed (optional; must be set by the client) */
+    atomic_uint_least64_t atime;
     /** @brief The null-terminated key string. */
     char key[SPLINTER_KEY_MAX];
 #ifdef SPLINTER_EMBEDDINGS
@@ -257,6 +307,79 @@ int splinter_set_embedding(const char *key, const float *embedding);
  */
 int splinter_get_embedding(const char *key, float *embedding_out);
 #endif // SPLINTER_EMBEDDINGS
+
+/**
+ * @brief Set a bus configuration value 
+ * @param hdr: a splinter  bus header structure
+ * @param mask: bitmask to apply
+ */
+void splinter_config_set(struct splinter_header *hdr, uint8_t mask);
+
+/**
+ * @brief Clear a bus configuration value 
+ * @param hdr: a splinter  bus header structure
+ * @param mask: bitmask to clear
+ */
+void splinter_config_clear(struct splinter_header *hdr, uint8_t mask);
+
+/**
+ * @brief Test a bus configuration value 
+ * @param hdr: a splinter  bus header structure
+ * @param mask: bitmask to test
+ */
+int splinter_config_test(struct splinter_header *hdr, uint8_t mask);
+
+/**
+ * @brief Snapshot a bus configuration 
+ * @param hdr: a splinter  bus header structure
+ */
+uint8_t splinter_config_snapshot(struct splinter_header *hdr);
+
+/**
+ * @brief Set a user slot flag 
+ * @param slot Splinter slot structure
+ * @param mask bitmask to set
+ */
+void splinter_slot_usr_set(struct splinter_slot *slot, uint16_t mask);
+
+/**
+ * @brief Clear a user slot flag 
+ * @param slot Splinter slot structure
+ * @param mask bitmask to clear
+ */
+void splinter_slot_usr_clear(struct splinter_slot *slot, uint16_t mask);
+
+/**
+ * @brief Test a user slot flag 
+ * @param slot Splinter slot structure
+ * @param mask bitmask to test
+ */
+int splinter_slot_usr_test(struct splinter_slot *slot, uint16_t mask);
+
+/**
+ * @brief Get a user slot flag snapshot 
+ * @param slot Splinter slot structure
+ */
+uint16_t splinter_slot_usr_snapshot(struct splinter_slot *slot);
+
+/**
+ * @brief Name (declare intent to) a type fo a slot
+ * @param key Name of the key to change
+ * @param mask Splinter type bitmask to apply (e.g SPL_SLOT_TYPE_BIGUINT)
+ * @return -1 or on error (sets errno), 0 on success
+ */
+int splinter_set_named_type(const char *key, uint16_t mask);
+
+/**
+ * @brief Update a slot's ctime / atime
+ * @param key Name of the key to change
+ * @param mode (SPL_TIME_CTIME or SPL_TIME_ATIME)
+ * @param epoch client-supplied timestamp
+ * @param offset value to subtract from epoch due to update-after-write
+ * @return -1/-2 or on error (sets errno), 0 on success
+ */
+int splinter_set_slot_time(const char *key, unsigned short mode, 
+    uint64_t epoch, size_t offset);
 
 #ifdef __cplusplus
 }
