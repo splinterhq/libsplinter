@@ -91,16 +91,15 @@ void cli_show_modules(void) {
 }
 
 char * cli_show_key_type(unsigned short flags) {
-    if (flags & SPL_SLOT_TYPE_VOID) return "SPL_SLOT_TYPE_VOID";
-    if (flags & SPL_SLOT_TYPE_BIGINT) return "SPL_SLOT_TYPE_BIGINT";
-    if (flags & SPL_SLOT_TYPE_BIGUINT) return "SPL_SLOT_TYPE_BIGUINT";
-    if (flags & SPL_SLOT_TYPE_BINARY) return "SPL_SLOT_TYPE_BINARY";
-    if (flags & SPL_SLOT_TYPE_IMGDATA) return "SPL_SLOT_TYPE_IMGDATA";
-    if (flags & SPL_SLOT_TYPE_VARTEXT) return "SPL_SLOT_TYPE_VARTEXT";
-    if (flags & SPL_SLOT_TYPE_AUDIO) return "SPL_SLOT_TYPE_AUDIO";
-    if (flags & SPL_SLOT_TYPE_JSON) return "SPL_SLOT_TYPE_JSON";
+    if ((flags & SPL_SLOT_TYPE_BIGINT)  != 0) return "SPL_SLOT_TYPE_BIGINT";
+    if ((flags & SPL_SLOT_TYPE_BIGUINT) != 0) return "SPL_SLOT_TYPE_BIGUINT";
+    if ((flags & SPL_SLOT_TYPE_BINARY)  != 0) return "SPL_SLOT_TYPE_BINARY";
+    if ((flags & SPL_SLOT_TYPE_IMGDATA) != 0) return "SPL_SLOT_TYPE_IMGDATA";
+    if ((flags & SPL_SLOT_TYPE_VARTEXT) != 0) return "SPL_SLOT_TYPE_VARTEXT";
+    if ((flags & SPL_SLOT_TYPE_AUDIO)   != 0) return "SPL_SLOT_TYPE_AUDIO";
+    if ((flags & SPL_SLOT_TYPE_JSON)    != 0) return "SPL_SLOT_TYPE_JSON";
 
-    return "SPL_SLOT_TYPE_VOID";
+    return "SPL_SLOT_TYPE_VOID"; // (1u << 0)
 }
 
 void cli_show_key_config(const char *key, const char *caller) {
