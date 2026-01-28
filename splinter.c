@@ -131,7 +131,8 @@ int splinter_create(const char *name_or_path, size_t slots, size_t max_value_sz)
     H->slots = (uint32_t)slots;
     H->max_val_sz = (uint32_t)max_value_sz;
     atomic_store_explicit(&H->epoch, 1, memory_order_relaxed);
-    splinter_config_set(H, SPL_SYS_AUTO_SCRUB);
+    atomic_store_explicit(&H->core_flags, 0, memory_order_relaxed);
+    //splinter_config_clear(H, SPL_SYS_AUTO_SCRUB);
     atomic_store_explicit(&H->parse_failures, 0, memory_order_relaxed);
     atomic_store_explicit(&H->last_failure_epoch, 0, memory_order_relaxed);
     
