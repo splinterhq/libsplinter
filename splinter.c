@@ -726,28 +726,31 @@ uint16_t splinter_slot_usr_snapshot(struct splinter_slot *slot) {
  */
 int splinter_set_named_type(const char *key, uint16_t mask){
   if (!H || !key) return -1;
-    uint64_t h = fnv1a(key);
-    size_t idx = slot_idx(h, H->slots), i;
+  uint64_t h = fnv1a(key);
+  size_t idx = slot_idx(h, H->slots), i;
 
-    for (i = 0; i < H->slots; ++i) {
-        struct splinter_slot *slot = &S[(idx + i) % H->slots];
-        if (atomic_load_explicit(&slot->hash, memory_order_acquire) == h &&
-            strncmp(slot->key, key, SPLINTER_KEY_MAX) == 0) {
-            uint64_t start = atomic_load_explicit(&slot->epoch, memory_order_acquire);
-            if (start & 1) {
-                // writer in progress
-                errno = EAGAIN;
-                return -1;
-            }
-            // Set memory fence
-	          atomic_thread_fence(memory_order_acquire);
-            atomic_store_explicit(&slot->type_flag, 0, memory_order_release);
-            atomic_fetch_or(&slot->type_flag, mask);
-            return 0;
+  for (i = 0; i < H->slots; ++i) {
+    struct splinter_slot *slot = &S[(idx + i) % H->slots];
+    if (atomic_load_explicit(&slot->hash, memory_order_acquire) == h &&
+      strncmp(slot->key, key, SPLINTER_KEY_MAX) == 0) {
+        uint64_t start = atomic_load_explicit(&slot->epoch, memory_order_acquire);
+        if (start & 1) {
+          // writer in progress
+          errno = EAGAIN;
+          return -1;
         }
+        
+        // Set memory fence
+        atomic_thread_fence(memory_order_acquire);
+        
+        // Now clear the flag and set the type
+        atomic_store_explicit(&slot->type_flag, 0, memory_order_release);
+        atomic_fetch_or(&slot->type_flag, mask);
+        return 0;
     }
-    errno = ENOENT;
-    return -1;
+  }
+  errno = ENOENT;
+  return -1;
 }
 
 /**
