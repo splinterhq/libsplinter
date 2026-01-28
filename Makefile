@@ -116,11 +116,13 @@ distclean:
 	@$(GIT) clean -fdx || false
 
 # Tests
-.PHONY: tests valgrind
+.PHONY: tests perf valgrind
 
-tests: splinter_test splinter_stress splinterp_test splinterp_stress
+tests: splinter_test splinterp_test
 	@./splinter_test || false
 	@./splinterp_test || false
+
+perf: splinter_stress splinterp_stress
 	@./splinter_stress --duration-ms 3500 --threads 64 || false
 	
 valgrind: splinter_test splinterp_test
@@ -130,4 +132,4 @@ valgrind: splinter_test splinterp_test
 # Everything
 .PHONY: world
 
-world: all valtest
+world: all valgrind perf
