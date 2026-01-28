@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <linux/limits.h>
+#include <time.h>
 #include "splinter.h"
 #include "config.h"
 
@@ -103,7 +104,7 @@ int main(void) {
   TEST("get header snapshot", splinter_get_header_snapshot(&snap) == 0);
   TEST("magic number greater than zero", snap.magic > 0);
   TEST("epoch greater than zero", snap.epoch > 0);
-  TEST("auto_vacuum is really on", snap.auto_vacuum == 1);
+  TEST("auto_vacuum is really off", snap.auto_vacuum == 0);
   TEST("slots are non-zero", snap.slots > 0);
   
   // Test 23 - 26: Slot Header Snapshot & Consistency
@@ -112,8 +113,17 @@ int main(void) {
   TEST("take snapshot of header_snap slot metadata", splinter_get_slot_snapshot("header_snap", &snap1) == 0);
   TEST("snap1 epoch is nonzero", snap1.epoch > 0);
   TEST("length of header_snap is 5: h e l l o", snap1.val_len == 5);
-  splinter_unset("header_snap");
 
+  // Test 27 - 30: Named Slot Types
+  TEST("name slot as text", splinter_set_named_type("header_snap", SPL_SLOT_TYPE_VARTEXT) == 0);
+  
+  // Test 31 - 33: User Slot Flags
+
+  // Test 35 - 38: Slot ctime / atime updates
+  time_t curtime = time(NULL);
+  TEST("set key creation time", splinter_set_slot_time("header_snap", SPL_TIME_CTIME, curtime, 0) == 0);
+  TEST("set key last access time", splinter_set_slot_time("header_snap", SPL_TIME_ATIME, curtime, 0) == 0);
+  splinter_unset("header_snap");
 #ifdef SPLINTER_EMBEDDINGS
   // Test 27: Set embedding with mocked vector
   float mock_vec[SPLINTER_EMBED_DIM] = { 0 };
