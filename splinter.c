@@ -132,6 +132,7 @@ int splinter_create(const char *name_or_path, size_t slots, size_t max_value_sz)
     H->max_val_sz = (uint32_t)max_value_sz;
     atomic_store_explicit(&H->epoch, 1, memory_order_relaxed);
     atomic_store_explicit(&H->core_flags, 0, memory_order_relaxed);
+    atomic_store_explicit(&H->user_flags, 0, memory_order_relaxed);
     atomic_store_explicit(&H->parse_failures, 0, memory_order_relaxed);
     atomic_store_explicit(&H->last_failure_epoch, 0, memory_order_relaxed);
     
@@ -140,6 +141,10 @@ int splinter_create(const char *name_or_path, size_t slots, size_t max_value_sz)
     for (i = 0; i < slots; ++i) {
         atomic_store_explicit(&S[i].hash, 0, memory_order_relaxed);
         atomic_store_explicit(&S[i].epoch, 0, memory_order_relaxed);
+        atomic_store_explicit(&S[i].ctime, 0, memory_order_relaxed);
+        atomic_store_explicit(&S[i].atime, 0, memory_order_relaxed);
+        atomic_store_explicit(&S[i].type_flag, 0, memory_order_relaxed);
+        atomic_store_explicit(&S[i].user_flag, 0, memory_order_relaxed);
         S[i].val_off = (uint32_t)(i * max_value_sz);
         atomic_store_explicit(&S[i].val_len, 0, memory_order_relaxed);
         S[i].key[0] = '\0';      
@@ -282,6 +287,10 @@ int splinter_unset(const char *key) {
             }
             
             atomic_store_explicit(&slot->val_len, 0, memory_order_release);
+            atomic_store_explicit(&slot->ctime, 0, memory_order_release);
+            atomic_store_explicit(&slot->atime, 0, memory_order_release);
+            atomic_store_explicit(&slot->user_flag, 0, memory_order_release);
+            atomic_store_explicit(&slot->type_flag, 0, memory_order_release);
 
             // Increment slot epoch to mark the change (leave even)
             atomic_fetch_add_explicit(&slot->epoch, 2, memory_order_release);
