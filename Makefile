@@ -1,6 +1,9 @@
 CC ?= gcc
 AR ?= ar
-CFLAGS := -std=c11 -O2 -Wall -Wextra -D_GNU_SOURCE -DSPLINTER_EMBEDDINGS -fPIC -I3rdparty/
+# Splinter strongly benefits from the unrolling gained via -O3 level of GCC optimization.
+# Up to around 100k ops/sec worth of benefit; think hard before changing if you really suspect
+# something delicate is being optimized away, and know you'll take a perf hit.
+CFLAGS := -std=c11 -O3 -Wall -Wextra -D_GNU_SOURCE -DSPLINTER_EMBEDDINGS -fPIC -I3rdparty/
 PREFIX ?= /usr/local
 GIT ?= /usr/bin/git
 

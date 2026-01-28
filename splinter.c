@@ -587,6 +587,10 @@ int splinter_get_slot_snapshot(const char *key, splinter_slot_snapshot_t *snapsh
                 snapshot->epoch = start;
                 snapshot->val_off = slot->val_off;
                 snapshot->val_len = atomic_load_explicit(&slot->val_len, memory_order_relaxed);
+                snapshot->type_flag = atomic_load_explicit(&slot->type_flag, memory_order_acquire);
+                snapshot->user_flag = atomic_load_explicit(&slot->user_flag, memory_order_acquire);
+                snapshot->ctime = atomic_load_explicit(&slot->ctime, memory_order_acquire);
+                snapshot->atime = atomic_load_explicit(&slot->atime, memory_order_acquire);
                 strncpy(snapshot->key, slot->key, SPLINTER_KEY_MAX);
 #ifdef SPLINTER_EMBEDDINGS                
                 // Copy the large vector (the high-risk area for tearing)

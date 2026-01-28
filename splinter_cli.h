@@ -69,6 +69,7 @@ char *cli_rejoin_args(char *const src[]);
 void cli_show_modules(void);
 void cli_show_key_config(const char *key, const char *caller);
 int cli_safer_atoi(const char *string);
+char * cli_show_key_type(unsigned short flags);
 
 // Prototypes for individual command entry points
 int cmd_help(int argc, char *argv[]);

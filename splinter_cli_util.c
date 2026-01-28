@@ -90,6 +90,19 @@ void cli_show_modules(void) {
     return;
 }
 
+char * cli_show_key_type(unsigned short flags) {
+    if (flags & SPL_SLOT_TYPE_VOID) return "SPL_SLOT_TYPE_VOID";
+    if (flags & SPL_SLOT_TYPE_BIGINT) return "SPL_SLOT_TYPE_BIGINT";
+    if (flags & SPL_SLOT_TYPE_BIGUINT) return "SPL_SLOT_TYPE_BIGUINT";
+    if (flags & SPL_SLOT_TYPE_BINARY) return "SPL_SLOT_TYPE_BINARY";
+    if (flags & SPL_SLOT_TYPE_IMGDATA) return "SPL_SLOT_TYPE_IMGDATA";
+    if (flags & SPL_SLOT_TYPE_VARTEXT) return "SPL_SLOT_TYPE_VARTEXT";
+    if (flags & SPL_SLOT_TYPE_AUDIO) return "SPL_SLOT_TYPE_AUDIO";
+    if (flags & SPL_SLOT_TYPE_JSON) return "SPL_SLOT_TYPE_JSON";
+
+    return "SPL_SLOT_TYPE_VOID";
+}
+
 void cli_show_key_config(const char *key, const char *caller) {
     splinter_slot_snapshot_t snap = { 0 };
 
@@ -103,6 +116,9 @@ void cli_show_key_config(const char *key, const char *caller) {
     printf("epoch:    %lu\n", snap.epoch);
     printf("val_off:  %u\n", snap.val_off);
     printf("val_len:  %u\n", snap.val_len);
+    printf("ctime:    %lu\n", snap.ctime);
+    printf("atime:    %lu\n", snap.atime);
+    printf("type:     %s\n", cli_show_key_type(snap.type_flag));
     printf("key:      %s\n", snap.key);
     puts("");
 

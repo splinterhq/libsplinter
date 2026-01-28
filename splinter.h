@@ -59,6 +59,9 @@ extern "C" {
 #define SPL_SLOT_TYPE_AUDIO    (1u << 6)
 #define SPL_SLOT_TYPE_VARTEXT  (1u << 7)
 
+/* Default type for new slot writes */
+#define SPL_SLOT_DEFAULT_TYPE SPL_SLOT_TYPE_VARTEXT
+
 /* Slot Flags (user) 0 - 7 */
 #define SPL_FUSR1              (1u << 0)
 #define SPL_FUSR2              (1u << 1)
@@ -178,6 +181,14 @@ typedef struct splinter_slot_snapshot {
     uint32_t val_off;
     /** @brief The actual length of the stored value data (atomic). */
     uint32_t val_len;
+    /** @brief The slot type flags */
+    uint8_t type_flag;
+    /** @brief The slot user flags */
+    uint8_t user_flag;
+    /** @brief Storage for creation time */
+    uint64_t ctime;
+    /** @brief Storage for access time */
+    uint64_t atime;
     /** @brief The null-terminated key string. */
     char key[SPLINTER_KEY_MAX];
 #ifdef SPLINTER_EMBEDDINGS
