@@ -132,7 +132,6 @@ int splinter_create(const char *name_or_path, size_t slots, size_t max_value_sz)
     H->max_val_sz = (uint32_t)max_value_sz;
     atomic_store_explicit(&H->epoch, 1, memory_order_relaxed);
     atomic_store_explicit(&H->core_flags, 0, memory_order_relaxed);
-    //splinter_config_clear(H, SPL_SYS_AUTO_SCRUB);
     atomic_store_explicit(&H->parse_failures, 0, memory_order_relaxed);
     atomic_store_explicit(&H->last_failure_epoch, 0, memory_order_relaxed);
     
@@ -274,12 +273,7 @@ int splinter_unset(const char *key) {
             }
 
             int ret = (int)atomic_load_explicit(&slot->val_len, memory_order_acquire);
-
-            // Mark the hash 0 → slot unused
             atomic_store_explicit(&slot->hash, 0, memory_order_release);
-
-            // Cleanup
-
             if (splinter_config_test(H, SPL_SYS_AUTO_SCRUB)) {
                 memset(VALUES + slot->val_off, 0, H->max_val_sz);
                 memset(slot->key, 0, SPLINTER_KEY_MAX);
@@ -541,14 +535,17 @@ int splinter_poll(const char *key, uint64_t timeout_ms) {
  */
 int splinter_get_header_snapshot(splinter_header_snapshot_t *snapshot) {
     if (!H) return -1;
+
     snapshot->magic = H->magic;
     snapshot->version = H->version;
     snapshot->slots = H->slots;
     snapshot->max_val_sz = H->max_val_sz;
+    
     snapshot->epoch = atomic_load_explicit(&H->epoch, memory_order_acquire);
-    snapshot->auto_vacuum = splinter_config_test(H, SPL_SYS_AUTO_SCRUB);
     snapshot->parse_failures = atomic_load_explicit(&H->parse_failures, memory_order_relaxed);
     snapshot->last_failure_epoch = atomic_load_explicit(&H->last_failure_epoch, memory_order_relaxed);
+    snapshot->auto_vacuum = splinter_config_test(H, SPL_SYS_AUTO_SCRUB);
+
     return 0;
 }
 
@@ -576,7 +573,6 @@ int splinter_get_slot_snapshot(const char *key, splinter_slot_snapshot_t *snapsh
                     continue; 
                 }
 
-                // Copy all metadata
                 snapshot->hash = h;
                 snapshot->epoch = start;
                 snapshot->val_off = slot->val_off;
