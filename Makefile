@@ -123,7 +123,7 @@ tests: splinter_test splinterp_test
 	@./splinterp_test || false
 
 perf: splinter_stress splinterp_stress
-	@./splinter_stress --duration-ms 3500 --threads 64 || false
+	@./splinter_stress --duration-ms 7000 --threads 64 || false
 	
 valgrind: splinter_test splinterp_test
 	valgrind -s --leak-check=full ./splinter_test || false
