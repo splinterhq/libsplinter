@@ -82,15 +82,15 @@ int main(void) {
   TEST("unset key", splinter_unset("key2") >= 0);
 
   int original_av = splinter_get_av();
-  TEST("set auto vacuum mode", splinter_set_av(0) == 0);
-  TEST("get auto vacuum mode", splinter_get_av() == 0);
+  TEST("set auto scrubbing mode", splinter_set_av(0) == 0);
+  TEST("get auto scrubbing mode", splinter_get_av() == 0);
   splinter_set_av((uint32_t) original_av);
 
   splinter_header_snapshot_t snap = { 0 };
   TEST("get header snapshot", splinter_get_header_snapshot(&snap) == 0);
   TEST("magic number greater than zero", snap.magic > 0);
   TEST("epoch greater than zero", snap.epoch > 0);
-  TEST("auto_vacuum is really off", snap.auto_vacuum == 0);
+  TEST("auto_scrubbing is really off", (snap.core_flags & SPL_SYS_AUTO_SCRUB) == 0 ? 1 : 0);
   TEST("slots are non-zero", snap.slots > 0);
   
   splinter_slot_snapshot_t snap1 = { 0 };

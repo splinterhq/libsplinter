@@ -81,7 +81,7 @@ v0.5.5 "Periodic Maintenance Release"
    splinterp_cli).
  - cli no longer pads length and keyval with spaces between colon 
    (3 : Fun -> 3:Fun)
- - The `config` command now sets auto_vacuum (config av (1/0)).
+ - The `config` command now sets auto_scrub (config av (1/0)).
  - Fixed bug that caused mrsw stress test results to not unlink 
    automatically (persistent)
  - Now warn that MRSW torture tests can wear older media prematurely.

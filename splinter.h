@@ -98,9 +98,6 @@ struct splinter_header {
     /** @brief User-defined feature flags */
     atomic_uint_least8_t user_flags;
 
-    /** @brief DEPRECATED toggle for zeroing out the value region prior to writing there. */
-    atomic_uint_least32_t auto_vacuum;
-
     /* Diagnostics: counts of parse failures reported by clients / harnesses */
     atomic_uint_least64_t parse_failures;
     atomic_uint_least64_t last_failure_epoch;
@@ -154,8 +151,10 @@ typedef struct splinter_header_snapshot {
     uint32_t max_val_sz;
     /** @brief Global epoch, incremented on any write. Used for change detection. */
     uint64_t epoch;
-    /** @brief toggle for zeroing out the value region prior to writing there. */
-    uint32_t auto_vacuum;
+    /** @Brief holds the slot type flags */
+    uint8_t core_flags;
+    /** @Brief holds the slot user flags */
+    uint8_t user_flags;
 
     /* Diagnostics: counts of parse failures reported by clients / harnesses */
     uint64_t parse_failures;
@@ -234,12 +233,12 @@ int splinter_create_or_open(const char *name_or_path, size_t slots, size_t max_v
 void splinter_close(void);
 
 /**
- * @brief Set the value of the auto_vacuum flag on the current bus. 
+ * @brief Set the value of the auto_scrub flag on the current bus. 
  */
  int splinter_set_av(unsigned int mode);
 
  /**
-  * @brief Get the value of the auto_vacuum flag on the current bus as integer.
+  * @brief Get the value of the auto_scrub flag on the current bus as integer.
   */
 int splinter_get_av(void);
 

@@ -550,10 +550,11 @@ int splinter_get_header_snapshot(splinter_header_snapshot_t *snapshot) {
     snapshot->slots = H->slots;
     snapshot->max_val_sz = H->max_val_sz;
     
+    snapshot->core_flags = atomic_load_explicit(&H->core_flags, memory_order_acquire);
+    snapshot->user_flags = atomic_load_explicit(&H->user_flags, memory_order_acquire);
     snapshot->epoch = atomic_load_explicit(&H->epoch, memory_order_acquire);
     snapshot->parse_failures = atomic_load_explicit(&H->parse_failures, memory_order_relaxed);
     snapshot->last_failure_epoch = atomic_load_explicit(&H->last_failure_epoch, memory_order_relaxed);
-    snapshot->auto_vacuum = splinter_config_test(H, SPL_SYS_AUTO_SCRUB);
 
     return 0;
 }

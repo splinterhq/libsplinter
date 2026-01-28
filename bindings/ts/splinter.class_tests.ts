@@ -107,7 +107,7 @@ Deno.test({
   }
 });
 
-// Monkeying around with auto_vacuum while doing stuff
+// Monkeying around with auto_scrub while doing stuff
 Deno.test({
   name: "Flip AV/Scrub Mode (9 Operations / 7 Tests)",
   fn: () => {

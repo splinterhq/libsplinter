@@ -30,7 +30,7 @@ speaks unless spoken to, but is always ready.
 - 🧠 Shared memory layout: low-overhead, mmap-based store
 - 📥 `set`, `unset`, `get`, `list`, and `poll` operations
 - 🔑 Lock-free atomic ops, seqlock for contention, EAGAIN for non-block i/o)
-- 🧹 Auto-vacuuming for hygienic memory mode; toggle on/off instantly.
+- 🧹 Auto-scrubbing for hygienic memory mode; toggle on/off instantly.
 - 🧵 Thread-safe single-writer, multi-reader semantics.
 - ✨ 100% Valgrind clean! Well-tested and easy to integrate.
 - 🕰️ Built-in version tracking via atomic epoch counters
@@ -133,14 +133,14 @@ operates in shared memory without persistence. But: _**not everyone needs "hyper
 scale LLM levels" of paranoia in their engineering**_, so Splinter gives you a
 choice:
 
-- **Sterile mode (`auto_vacuum=on`)** — every write zeroes old contents before
+- **Sterile mode (`auto_scrubbing=on`)** — every write zeroes old contents before
   reuse. Splinter uses static geometry, so there's no row reclamation needed.
   This is perfect for LLM scratchpads and training contexts where stale data
   must never leak back. It's like boiling a hotel room every time a new guest
   arrives (if only that were possible!!!). No contamination, but it takes time
   to write twice.
 
-- **Throughput mode (`auto_vacuum=off`)** — skips scrubbing for maximum raw
+- **Throughput mode (`auto_scrubbing=off`)** — skips scrubbing for maximum raw
   speed. Ideal for message buses, ephemeral caches, or event streams where
   under-reading will not happen (or matter). Reading past the atomic advertised
   value length (up to the max value length) could result in fetching random

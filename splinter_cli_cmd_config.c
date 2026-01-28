@@ -32,7 +32,7 @@ static void show_bus_config(void) {
     printf("alignment:   %zu\n", alignof(struct splinter_slot));
     printf("max_val_sz:  %u\n", snap.max_val_sz);
     printf("epoch:       %lu\n", snap.epoch);
-    printf("auto_vacuum: %u\n", snap.auto_vacuum);
+    printf("auto_scrub : %u\n", (snap.core_flags & SPL_SYS_AUTO_SCRUB) == 1 ? 1 : 0);
     puts("");
     
     return;

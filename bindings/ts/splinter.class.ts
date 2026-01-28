@@ -95,7 +95,7 @@ export class Splinter {
   }
 
   /**
-   * Toggle auto-vacuum mode on or off
+   * Toggle auto-scrub mode on or off
    * @param mode integer value (0 or 1) of what it should be
    * @retuns void
    */
@@ -108,7 +108,7 @@ export class Splinter {
   }
 
   /**
-   * Get the current auto-vacuum mode of the connected bus
+   * Get the current auto-scrub mode of the connected bus
    * @returns number
    * @throws if not connected
    */
@@ -378,7 +378,7 @@ export class Splinter {
     offset += 4;
     const epoch = view.getBigUint64(offset, true);
     offset += 8;
-    const auto_vacuum = view.getUint32(offset, true);
+    const auto_scrub = view.getUint32(offset, true);
     offset += 4;
     const parse_failures = view.getBigUint64(offset, true);
     offset += 8;
@@ -391,7 +391,7 @@ export class Splinter {
       slots,
       max_val_sz,
       epoch,
-      auto_vacuum,
+      auto_scrub,
       parse_failures,
       last_failure_epoch
     };
