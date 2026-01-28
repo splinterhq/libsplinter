@@ -131,7 +131,7 @@ int splinter_create(const char *name_or_path, size_t slots, size_t max_value_sz)
     H->slots = (uint32_t)slots;
     H->max_val_sz = (uint32_t)max_value_sz;
     atomic_store_explicit(&H->epoch, 1, memory_order_relaxed);
-    atomic_store_explicit(&H->auto_vacuum, 1, memory_order_relaxed);
+    splinter_config_set(H, SPL_SYS_AUTO_SCRUB);
     atomic_store_explicit(&H->parse_failures, 0, memory_order_relaxed);
     atomic_store_explicit(&H->last_failure_epoch, 0, memory_order_relaxed);
     
@@ -204,22 +204,33 @@ int splinter_open_or_create(const char *name_or_path, size_t slots, size_t max_v
 }
 
 /**
- * @brief Sets the auto_vacuum atomic feature flag of the current bus (0 or 1)
+ * @brief Sets the auto scrub atomic feature flag of the current bus (0 or 1)
  * @return -2 if the bus is unavailable, 0 otherwise.
  */
 int splinter_set_av(unsigned int mode) {
     if (!H) return -2;
-    atomic_store_explicit(&H->auto_vacuum, mode, memory_order_relaxed);
-    return 0;   
+
+    switch (mode) {
+        case 1:
+            splinter_config_set(H, SPL_SYS_AUTO_SCRUB);
+            return 0;
+        case 0:
+            splinter_config_clear(H, SPL_SYS_AUTO_SCRUB);
+            return 0;
+        default:
+            errno = ENOTSUP;
+            return -1;
+    }
 }
 
 /**
- * @brief Get the auto_vacuum atomic feature flag of the current bus, as int.
+ * @brief Get the auto scrub atomic feature flag of the current bus, as int.
  * @return -2 if the bus is unavailable, value of the (unsigned) flag otherwise. 
  */
 int splinter_get_av(void) {
     if (!H) return -2;
-    return (int) atomic_load_explicit(&H->auto_vacuum, memory_order_acquire);
+
+    return (int) splinter_config_test(H, SPL_SYS_AUTO_SCRUB);
 }
 
 /**
@@ -268,7 +279,7 @@ int splinter_unset(const char *key) {
 
             // Cleanup
 
-            if (atomic_load_explicit(&H->auto_vacuum, memory_order_relaxed) == 1) {
+            if (splinter_config_test(H, SPL_SYS_AUTO_SCRUB)) {
                 memset(VALUES + slot->val_off, 0, H->max_val_sz);
                 memset(slot->key, 0, SPLINTER_KEY_MAX);
             } else {
@@ -338,7 +349,7 @@ int splinter_set(const char *key, const void *val, size_t len) {
             uint8_t *dst = (uint8_t *)VALUES + slot->val_off;
 
             // Clear full slot value region (keeps old tail bytes from leaking).
-            if (atomic_load_explicit(&H->auto_vacuum, memory_order_relaxed) == 1) {
+            if (splinter_config_test(H, SPL_SYS_AUTO_SCRUB)) {
                 memset(VALUES + slot->val_off, 0, H->max_val_sz);
             }
             memcpy(dst, val, len);
@@ -347,7 +358,7 @@ int splinter_set(const char *key, const void *val, size_t len) {
             atomic_store_explicit(&slot->val_len, (uint32_t)len, memory_order_release);
 
             // Update key (write full key buffer so readers can't see a partial key)
-            if (atomic_load_explicit(&H->auto_vacuum, memory_order_relaxed) == 1) {
+            if (splinter_config_test(H, SPL_SYS_AUTO_SCRUB)) {
                 memset(slot->key, 0, SPLINTER_KEY_MAX);
             } else {
                 slot->key[0] = '\0';
@@ -534,7 +545,7 @@ int splinter_get_header_snapshot(splinter_header_snapshot_t *snapshot) {
     snapshot->slots = H->slots;
     snapshot->max_val_sz = H->max_val_sz;
     snapshot->epoch = atomic_load_explicit(&H->epoch, memory_order_acquire);
-    snapshot->auto_vacuum = atomic_load_explicit(&H->auto_vacuum, memory_order_acquire);
+    snapshot->auto_vacuum = splinter_config_test(H, SPL_SYS_AUTO_SCRUB);
     snapshot->parse_failures = atomic_load_explicit(&H->parse_failures, memory_order_relaxed);
     snapshot->last_failure_epoch = atomic_load_explicit(&H->last_failure_epoch, memory_order_relaxed);
     return 0;
@@ -740,10 +751,7 @@ int splinter_set_named_type(const char *key, uint16_t mask){
           return -1;
         }
         
-        // Set memory fence
         atomic_thread_fence(memory_order_acquire);
-        
-        // Now clear the flag and set the type
         atomic_store_explicit(&slot->type_flag, 0, memory_order_release);
         atomic_fetch_or(&slot->type_flag, mask);
         return 0;
@@ -776,8 +784,7 @@ int splinter_set_slot_time(const char *key, unsigned short mode, uint64_t epoch,
           errno = EAGAIN;
           return -1;
         }
-        // Set memory fence
-	      atomic_thread_fence(memory_order_acquire);
+	    atomic_thread_fence(memory_order_acquire);
         switch (mode) {
           case SPL_TIME_CTIME:
             atomic_store_explicit(&slot->ctime, epoch - offset, memory_order_release);
