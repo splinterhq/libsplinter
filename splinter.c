@@ -812,3 +812,66 @@ int splinter_set_slot_time(const char *key, unsigned short mode, uint64_t epoch,
   errno = ENOENT;
   return -1;
 }
+
+/**
+ * @brief Bitwise & arithmetic ops on keys named as big unsigned
+ * @param key Name of the key  to operate on
+ * @param op Operation you want to do
+ * @param mask What you want to do it with
+ * @return 0 on success, -1 / -2 on internal / caller errors respectively
+ */
+int splinter_integer_op(const char *key, splinter_integer_op_t op, const void *mask) {
+    if (!H || !key) return -2;
+
+    uint64_t h = fnv1a(key);
+    size_t idx = slot_idx(h, H->slots);
+    uint64_t m64 = *(const uint64_t *)mask;
+
+    // proactive fence for weak-memory hardware (e.g. chromebook consumer grade)
+    atomic_thread_fence(memory_order_acquire);
+
+    for (size_t i = 0; i < H->slots; ++i) {
+        struct splinter_slot *slot = &S[(idx + i) % H->slots];
+        
+        if (atomic_load_explicit(&slot->hash, memory_order_acquire) == h && 
+            strncmp(slot->key, key, SPLINTER_KEY_MAX) == 0) {
+            
+            // We expect a named type biguint
+            uint8_t type = atomic_load_explicit(&slot->type_flag, memory_order_relaxed);
+            if (!(type & SPL_SLOT_TYPE_BIGUINT)) {
+                errno = EPROTOTYPE; 
+                return -1;
+            }
+
+            uint64_t e = atomic_load_explicit(&slot->epoch, memory_order_relaxed);
+            if (e & 1ull) { errno = EAGAIN; return -1; }
+            
+            if (!atomic_compare_exchange_strong_explicit(&slot->epoch, &e, e + 1,
+                                                        memory_order_acquire, 
+                                                        memory_order_relaxed)) {
+                errno = EAGAIN;
+                return -1;
+            }
+
+            // fast-track for the 64 bit lane, smaller lengths would require 
+            // different handling (possible future TODO if it's absolutely
+            // ever needed)
+            uint64_t *val = (uint64_t *)(VALUES + slot->val_off);
+            switch (op) {
+                case SPL_OP_OR:  *val |= m64;  break;
+                case SPL_OP_AND: *val &= m64;  break;
+                case SPL_OP_XOR: *val ^= m64;  break;
+                case SPL_OP_NOT: *val = ~(*val); break;
+                case SPL_OP_INC: *val += m64;  break;
+                case SPL_OP_DEC: *val -= m64;  break;
+            }
+
+            // now make visible
+            atomic_fetch_add_explicit(&slot->epoch, 1, memory_order_release);
+            atomic_fetch_add_explicit(&H->epoch, 1, memory_order_relaxed);
+            return 0;
+        }
+    }
+    errno = ENOENT;
+    return -1;
+}

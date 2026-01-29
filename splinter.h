@@ -201,6 +201,18 @@ typedef struct splinter_slot_snapshot {
 } splinter_slot_snapshot_t;
 
 /**
+ * @brief for atomic integer operations
+ */
+typedef enum {
+    SPL_OP_AND,
+    SPL_OP_OR,
+    SPL_OP_XOR,
+    SPL_OP_NOT,
+    SPL_OP_INC,
+    SPL_OP_DEC
+} splinter_integer_op_t;
+
+/**
  * @brief Copy the current atomic Splinter slot header to a corresponding client
  * structure.
  * @param snapshot A splinter_slot_snaphshot_t structure to receive the values.
@@ -394,6 +406,15 @@ int splinter_set_named_type(const char *key, uint16_t mask);
  */
 int splinter_set_slot_time(const char *key, unsigned short mode, 
     uint64_t epoch, size_t offset);
+
+/**
+ * @brief Bitwise & arithmetic ops on keys named as big unsigned
+ * @param key Name of the key  to operate on
+ * @param op Operation you want to do
+ * @param mask What you want to do it with
+ * @return 0 on success, -1 / -2 on internal / caller errors respectively
+ */
+int splinter_integer_op(const char *key, splinter_integer_op_t op, const void *mask);
 
 #ifdef __cplusplus
 }

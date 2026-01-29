@@ -177,6 +177,52 @@ int main(void) {
        embed_snap.embedding[SPLINTER_EMBED_DIM-1] == mock_vec[SPLINTER_EMBED_DIM-1]);
 #endif // SPLINTER_EMBEDDINGS
 
+const char *int_key = "atomic_int";
+uint64_t initial_val = 0xF0F0F0F0F0F0F0F0ULL; // Alternating nibbles
+uint64_t op_val, result;
+
+TEST("set initial uint64 value", splinter_set(int_key, &initial_val, sizeof(uint64_t)) == 0);
+TEST("name slot as BIGUINT", splinter_set_named_type(int_key, SPL_SLOT_TYPE_BIGUINT) == 0);
+
+op_val = 0x0F0F0F0F0F0F0F0FUL;
+TEST("op: OR (0xF0.. | 0x0F..)", splinter_integer_op(int_key, SPL_OP_OR, &op_val) == 0);
+splinter_get(int_key, &result, sizeof(uint64_t), &out_sz);
+TEST("result is all Fs", result == 0xFFFFFFFFFFFFFFFFUL);
+
+op_val = 0xAAAAAAAAAAAAAAAAUL;
+TEST("op: AND (0xFF.. & 0xAA..)", splinter_integer_op(int_key, SPL_OP_AND, &op_val) == 0);
+splinter_get(int_key, &result, sizeof(uint64_t), &out_sz);
+TEST("result is 0xAA..", result == 0xAAAAAAAAAAAAAAAAUL);
+
+op_val = 0xAAAAAAAAAAAAAAAAUL;
+TEST("op: XOR (0xAA.. ^ 0xAA..)", splinter_integer_op(int_key, SPL_OP_XOR, &op_val) == 0);
+splinter_get(int_key, &result, sizeof(uint64_t), &out_sz);
+TEST("result is 0x00 (Identity)", result == 0x00UL);
+
+// Set to max of first byte to test carry-over to second byte
+initial_val = 0xFFUL; 
+splinter_set(int_key, &initial_val, sizeof(uint64_t));
+op_val = 1;
+TEST("op: INC (0xFF + 1 carry check)", splinter_integer_op(int_key, SPL_OP_INC, &op_val) == 0);
+splinter_get(int_key, &result, sizeof(uint64_t), &out_sz);
+TEST("carry successful (0x100)", result == 0x100UL);
+
+op_val = 1;
+TEST("op: DEC (0x100 - 1 borrow check)", splinter_integer_op(int_key, SPL_OP_DEC, &op_val) == 0);
+splinter_get(int_key, &result, sizeof(uint64_t), &out_sz);
+TEST("borrow successful (0xFF)", result == 0xFFUL);
+
+// mask is ignored for NOT, but we pass it to satisfy signature
+TEST("op: NOT (~0x00...0xFF)", splinter_integer_op(int_key, SPL_OP_NOT, &op_val) == 0);
+splinter_get(int_key, &result, sizeof(uint64_t), &out_sz);
+TEST("result is inverted (~0xFF)", result == 0xFFFFFFFFFFFFFF00UL);
+
+// our only real "opinion" is you can't bit-twiddle text
+const char *text_key = "text_only";
+splinter_set(text_key, "data", 4);
+splinter_set_named_type(text_key, SPL_SLOT_TYPE_VARTEXT);
+TEST("enforce EPROTOTYPE on non-BIGUINT slot", splinter_integer_op(text_key, SPL_OP_INC, &op_val) == -1 && errno == EPROTOTYPE);
+
 splinter_close();
 splinter_header_snapshot_t closed = { 0 };
 TEST("store actually closed", splinter_get_header_snapshot(&closed) != 0);
