@@ -46,6 +46,10 @@ int cmd_type(int argc, char *argv[]) {
         return 0;
     } else if (argc == 3) {
         bitmask = cli_type_to_bitmask(argv[2]);
+        if (!bitmask) {
+            fprintf(stderr, "%s: invalid bitmask alias: '%s'\n", modname, argv[2]);
+            return -1;
+        }
         return splinter_set_named_type(key, bitmask);
     }
 

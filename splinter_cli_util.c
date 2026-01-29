@@ -98,14 +98,14 @@ char * cli_show_key_type(unsigned short flags) {
     if ((flags & SPL_SLOT_TYPE_VARTEXT) != 0) return "SPL_SLOT_TYPE_VARTEXT";
     if ((flags & SPL_SLOT_TYPE_AUDIO)   != 0) return "SPL_SLOT_TYPE_AUDIO";
     if ((flags & SPL_SLOT_TYPE_JSON)    != 0) return "SPL_SLOT_TYPE_JSON";
+    if ((flags & SPL_SLOT_TYPE_VOID)    != 0) return "SPL_SLOT_TYPE_VOID";
 
-    return "SPL_SLOT_TYPE_VOID"; // (1u << 0)
+    return "UNNAMED";
 }
 
 // todo - replace this with a hash table since all type values are
 // known at compile time.
 uint16_t cli_type_to_bitmask(const char *type) {
-
     if (!strncmp(type, "bigint", 6)) return SPL_SLOT_TYPE_BIGINT;
     if (!strncmp(type, "biguint", 7)) return SPL_SLOT_TYPE_BIGUINT; 
     if (!strncmp(type, "binary", 6)) return SPL_SLOT_TYPE_BINARY;
@@ -113,8 +113,9 @@ uint16_t cli_type_to_bitmask(const char *type) {
     if (!strncmp(type, "vartext", 7)) return SPL_SLOT_TYPE_VARTEXT;
     if (!strncmp(type, "audio", 5)) return SPL_SLOT_TYPE_AUDIO;
     if (!strncmp(type, "json", 4)) return SPL_SLOT_TYPE_JSON;
+    if (!strncmp(type, "void", 4)) return SPL_SLOT_TYPE_VOID;
 
-    return SPL_SLOT_TYPE_VOID;
+    return 0; // not found
 }
 
 void cli_show_key_config(const char *key, const char *caller) {
