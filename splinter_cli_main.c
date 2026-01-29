@@ -175,6 +175,15 @@ cli_module_t command_modules[] = {
         &cmd_type, 
         &help_cmd_type
     },
+    {
+        15,
+        "math",
+        4,
+        "Perform incr/decr and bitwise ops on named biguint keys.",
+        -1,
+        &cmd_math,
+        &help_cmd_math
+    },
     // The last null-filled element 
     { 0, NULL, 0, NULL, -1,  NULL , NULL }
 };
@@ -187,6 +196,8 @@ cli_user_t thisuser = {
     0,
     { 0 },
     0,
+    0,
+    {},
     0
 };
 
@@ -307,6 +318,9 @@ static void completion(const char *buf, linenoiseCompletions *lc) {
         case 'l':
             linenoiseAddCompletion(lc, "list");
             break;
+        case 'm':
+            linenoiseAddCompletion(lc, "math");
+            break;
         case 's':
             linenoiseAddCompletion(lc, "set");
             break;
@@ -393,6 +407,12 @@ static char *hints(const char *buf, int *color, int *bold) {
         *color = 36;
         *bold = 1;
         return "p ";
+    }
+
+    if (!strncasecmp(buf, "m", 4)) {
+        *color = 36;
+        *bold = 1;
+        return "ath ";
     }
 
     if (!strncasecmp(buf, "s", 3)) {

@@ -37,6 +37,12 @@ typedef struct cli_module {
     mod_help_t help;
 } cli_module_t;
 
+// A utility to map "ctags-style" labels to bitmasks for bloom filtering
+typedef struct {
+    char name[32];
+    uint64_t mask;
+} label_map_t;
+
 // A utility class to store user session quirks
 typedef struct cli_user {
     // name of the store connected to
@@ -51,6 +57,10 @@ typedef struct cli_user {
     int lastexit;
     // errno after last run command
     int lasterrno;
+    // 64 assignable labels from .splinterrc
+    label_map_t labels[64];
+    // how many are actually there
+    int label_count;
 } cli_user_t;
 
 // We construct the user in cli_main
@@ -72,6 +82,7 @@ int cli_safer_atoi(const char *string);
 char * cli_show_key_type(unsigned short flags);
 uint16_t cli_type_to_bitmask(const char *type);
 unsigned int cli_key_is_printable_unserialized(unsigned short flags);
+void cli_load_config(void);
 
 // Prototypes for individual command entry points
 int cmd_help(int argc, char *argv[]);
@@ -115,6 +126,9 @@ void help_cmd_export(unsigned int level);
 
 int cmd_type(int argc, char *argv[]);
 void help_cmd_type(unsigned int level);
+
+int cmd_math(int argc, char *argv[]);
+void help_cmd_math(unsigned int level);
 
 // And finally an array of modules to hold them all
 extern cli_module_t command_modules[];

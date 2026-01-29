@@ -7,10 +7,11 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <errno.h>
 #include <string.h>
 #include <limits.h>
-
+#include <linux/limits.h>
 #include "splinter_cli.h"
 
 /**
@@ -179,4 +180,33 @@ int cli_safer_atoi(const char *string) {
         fprintf(stderr, "Value or argument would overflow an integer. Exiting.\n");
         exit(EXIT_FAILURE);
     }
+}
+
+/**
+ * @brief Parses ~/.splinterrc to populate the label map in thisuser.
+ * Format: LABEL_NAME 0xMASK (e.g., ANGRY 0x1)
+ */
+void cli_load_config(void) {
+    char path[PATH_MAX];
+    char *home = getenv("HOME");
+    if (!home) return;
+
+    snprintf(path, sizeof(path), "%s/.splinterrc", home);
+    FILE *fp = fopen(path, "r");
+    if (!fp) return;
+
+    char line[128];
+    while (fgets(line, sizeof(line), fp) && thisuser.label_count < 63) {
+        // Skip comments and empty lines
+        if (line[0] == '#' || line[0] == '\n' || line[0] == '\r') continue;
+
+        char name[32];
+        uint64_t mask;
+        if (sscanf(line, "%31s %li", name, &mask) == 2) {
+            strncpy(thisuser.labels[thisuser.label_count].name, name, 31 + 1);
+            thisuser.labels[thisuser.label_count].mask = mask;
+            thisuser.label_count++;
+        }
+    }
+    fclose(fp);
 }
