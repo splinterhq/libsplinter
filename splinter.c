@@ -875,3 +875,51 @@ int splinter_integer_op(const char *key, splinter_integer_op_t op, const void *m
     errno = ENOENT;
     return -1;
 }
+
+/**
+ * @brief Get a direct pointer to a value in shared memory.
+ * @warning Unsafe: The data at this pointer can change or be zeroed if a 
+ * writer modifies the slot. Use splinter_get_epoch to verify consistency.
+ * @param key The key to look up.
+ * @param out_sz Pointer to receive the actual length of the value.
+ * @param out_epoch Pointer to receive the epoch at the time of lookup.
+ * @return A const pointer to the data in SHM, or NULL if not found.
+ */
+const void *splinter_get_raw_ptr(const char *key, size_t *out_sz, uint64_t *out_epoch) {
+    if (!H || !key) return NULL;
+    uint64_t h = fnv1a(key);
+    size_t idx = slot_idx(h, H->slots);
+
+    for (size_t i = 0; i < H->slots; ++i) {
+        struct splinter_slot *slot = &S[(idx + i) % H->slots];
+        if (atomic_load_explicit(&slot->hash, memory_order_acquire) == h &&
+            strncmp(slot->key, key, SPLINTER_KEY_MAX) == 0) {
+            
+            uint64_t e = atomic_load_explicit(&slot->epoch, memory_order_acquire);
+            if (out_epoch) *out_epoch = e;
+            if (out_sz) *out_sz = (size_t)atomic_load_explicit(&slot->val_len, memory_order_relaxed);
+            
+            return (const void *)(VALUES + slot->val_off);
+        }
+    }
+    return NULL;
+}
+
+/**
+ * @brief Get the current epoch of a specific slot.
+ * @return The 64-bit epoch, or 0 if key not found.
+ */
+uint64_t splinter_get_epoch(const char *key) {
+    if (!H || !key) return 0;
+    uint64_t h = fnv1a(key);
+    size_t idx = slot_idx(h, H->slots);
+
+    for (size_t i = 0; i < H->slots; ++i) {
+        struct splinter_slot *slot = &S[(idx + i) % H->slots];
+        if (atomic_load_explicit(&slot->hash, memory_order_acquire) == h &&
+            strncmp(slot->key, key, SPLINTER_KEY_MAX) == 0) {
+            return atomic_load_explicit(&slot->epoch, memory_order_acquire);
+        }
+    }
+    return 0;
+}

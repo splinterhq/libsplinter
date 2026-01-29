@@ -416,6 +416,23 @@ int splinter_set_slot_time(const char *key, unsigned short mode,
  */
 int splinter_integer_op(const char *key, splinter_integer_op_t op, const void *mask);
 
+/**
+ * @brief Get a direct pointer to a value in shared memory.
+ * @warning Unsafe: The data at this pointer can change or be zeroed if a 
+ * writer modifies the slot. Use splinter_get_epoch to verify consistency.
+ * @param key The key to look up.
+ * @param out_sz Pointer to receive the actual length of the value.
+ * @param out_epoch Pointer to receive the epoch at the time of lookup.
+ * @return A const pointer to the data in SHM, or NULL if not found.
+ */
+const void *splinter_get_raw_ptr(const char *key, size_t *out_sz, uint64_t *out_epoch);
+
+/**
+ * @brief Get the current epoch of a specific slot.
+ * @return The 64-bit epoch, or 0 if key not found.
+ */
+uint64_t splinter_get_epoch(const char *key);
+
 #ifdef __cplusplus
 }
 #endif
