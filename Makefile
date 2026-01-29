@@ -124,6 +124,7 @@ distclean:
 tests: splinter_test splinterp_test
 	@./splinter_test || false
 	@./splinterp_test || false
+	@./splinterctl_tests.sh || false
 
 perf: splinter_stress splinterp_stress
 	@./splinter_stress --duration-ms 7000 --threads 64 || false
@@ -131,6 +132,7 @@ perf: splinter_stress splinterp_stress
 valgrind: splinter_test splinterp_test
 	valgrind -s --leak-check=full ./splinter_test || false
 	valgrind -s --leak-check=full ./splinterp_test || false
+	valgrind -s --leak-check=full ./splinterctl_tests.sh || false
 
 # Everything
 .PHONY: world
