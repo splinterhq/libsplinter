@@ -139,11 +139,11 @@ int splinter_create(const char *name_or_path, size_t slots, size_t max_value_sz)
     // Initialize slots
     size_t i;
     for (i = 0; i < slots; ++i) {
+        atomic_fetch_or(&S[i].type_flag, SPL_SLOT_DEFAULT_TYPE);
         atomic_store_explicit(&S[i].hash, 0, memory_order_relaxed);
         atomic_store_explicit(&S[i].epoch, 0, memory_order_relaxed);
         atomic_store_explicit(&S[i].ctime, 0, memory_order_relaxed);
         atomic_store_explicit(&S[i].atime, 0, memory_order_relaxed);
-        atomic_store_explicit(&S[i].type_flag, 0, memory_order_relaxed);
         atomic_store_explicit(&S[i].user_flag, 0, memory_order_relaxed);
         S[i].val_off = (uint32_t)(i * max_value_sz);
         atomic_store_explicit(&S[i].val_len, 0, memory_order_relaxed);
@@ -285,12 +285,16 @@ int splinter_unset(const char *key) {
             } else {
                 slot->key[0] = '\0';
             }
-            
+
+            // we first zero out the type flag, then set it to the default.
+            atomic_store_explicit(&slot->type_flag, 0, memory_order_release);
+            atomic_fetch_or(&slot->type_flag, SPL_SLOT_DEFAULT_TYPE);
+
+            // now the rest can be initialized
             atomic_store_explicit(&slot->val_len, 0, memory_order_release);
             atomic_store_explicit(&slot->ctime, 0, memory_order_release);
             atomic_store_explicit(&slot->atime, 0, memory_order_release);
             atomic_store_explicit(&slot->user_flag, 0, memory_order_release);
-            atomic_store_explicit(&slot->type_flag, 0, memory_order_release);
 
             // Increment slot epoch to mark the change (leave even)
             atomic_fetch_add_explicit(&slot->epoch, 2, memory_order_release);

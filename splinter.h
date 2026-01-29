@@ -60,7 +60,7 @@ extern "C" {
 #define SPL_SLOT_TYPE_VARTEXT  (1u << 7)
 
 /* Default type for new slot writes */
-#define SPL_SLOT_DEFAULT_TYPE SPL_SLOT_TYPE_VARTEXT
+#define SPL_SLOT_DEFAULT_TYPE SPL_SLOT_TYPE_VOID
 
 /* Slot Flags (user) 0 - 7 */
 #define SPL_FUSR1              (1u << 0)
