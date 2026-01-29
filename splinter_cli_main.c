@@ -184,6 +184,15 @@ cli_module_t command_modules[] = {
         &cmd_math,
         &help_cmd_math
     },
+    {
+        16,
+        "label",
+        5,
+        "Label a key with bits for its bloom filter",
+        -1,
+        &cmd_label,
+        &help_cmd_label
+    },
     // The last null-filled element 
     { 0, NULL, 0, NULL, -1,  NULL , NULL }
 };
@@ -317,6 +326,7 @@ static void completion(const char *buf, linenoiseCompletions *lc) {
             break;
         case 'l':
             linenoiseAddCompletion(lc, "list");
+            linenoiseAddCompletion(lc, "label");
             break;
         case 'm':
             linenoiseAddCompletion(lc, "math");
@@ -379,18 +389,6 @@ static char *hints(const char *buf, int *color, int *bold) {
         return "et ";
     }
 
-    if (!strncasecmp(buf, "i", 4)) {
-        *color = 36;
-        *bold = 1;
-        return "nit ";
-    }
-
-    if (!strncasecmp(buf, "l", 4)) {
-        *color = 36;
-        *bold = 1;
-        return "ist ";
-    }
-
     if (!strncasecmp(buf, "hi", 4)) {
         *color = 36;
         *bold = 1;
@@ -407,6 +405,24 @@ static char *hints(const char *buf, int *color, int *bold) {
         *color = 36;
         *bold = 1;
         return "p ";
+    }
+
+    if (!strncasecmp(buf, "i", 4)) {
+        *color = 36;
+        *bold = 1;
+        return "nit ";
+    }
+
+    if (!strncasecmp(buf, "li", 4)) {
+        *color = 36;
+        *bold = 1;
+        return "st ";
+    }
+
+    if (!strncasecmp(buf, "la", 5)) {
+        *color = 36;
+        *bold = 1;
+        return "bel ";
     }
 
     if (!strncasecmp(buf, "m", 4)) {
