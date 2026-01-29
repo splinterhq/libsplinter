@@ -99,7 +99,13 @@ struct splinter_header {
     atomic_uint_least8_t core_flags;
     /** @brief User-defined feature flags */
     atomic_uint_least8_t user_flags;
-
+    /** @brief Track the next-available value region */
+    atomic_uint_least32_t val_brk;
+    /** @brief Total size of the arena */
+    uint32_t val_sz;
+    /** @brief Memory alignment (e.g  64) */
+    uint32_t alignment;
+    
     /* Diagnostics: counts of parse failures reported by clients / harnesses */
     atomic_uint_least64_t parse_failures;
     atomic_uint_least64_t last_failure_epoch;

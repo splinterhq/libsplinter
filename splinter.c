@@ -126,6 +126,8 @@ int splinter_create(const char *name_or_path, size_t slots, size_t max_value_sz)
     H->version = SPLINTER_VER;
     H->slots = (uint32_t)slots;
     H->max_val_sz = (uint32_t)max_value_sz;
+    H->val_sz = total_sz;
+    atomic_store_explicit(&H->val_brk, 0, memory_order_relaxed);
     atomic_store_explicit(&H->epoch, 1, memory_order_relaxed);
     atomic_store_explicit(&H->core_flags, 0, memory_order_relaxed);
     atomic_store_explicit(&H->user_flags, 0, memory_order_relaxed);
@@ -746,30 +748,60 @@ uint16_t splinter_slot_usr_snapshot(struct splinter_slot *slot) {
  * @param mask Splinter type bitmask to apply (e.g SPL_SLOT_TYPE_BIGUINT)
  * @return -1 or on error (sets errno), 0 on success
  */
-int splinter_set_named_type(const char *key, uint16_t mask){
-  if (!H || !key) return -1;
-  uint64_t h = fnv1a(key);
-  size_t idx = slot_idx(h, H->slots), i;
+int splinter_set_named_type(const char *key, uint16_t mask) {
+    if (!H || !key) return -1;
+    uint64_t h = fnv1a(key);
+    size_t idx = slot_idx(h, H->slots);
 
-  for (i = 0; i < H->slots; ++i) {
-    struct splinter_slot *slot = &S[(idx + i) % H->slots];
-    if (atomic_load_explicit(&slot->hash, memory_order_acquire) == h &&
-      strncmp(slot->key, key, SPLINTER_KEY_MAX) == 0) {
-        uint64_t start = atomic_load_explicit(&slot->epoch, memory_order_acquire);
-        if (start & 1) {
-          // writer in progress
-          errno = EAGAIN;
-          return -1;
+    for (size_t i = 0; i < H->slots; ++i) {
+        struct splinter_slot *slot = &S[(idx + i) % H->slots];
+        if (atomic_load_explicit(&slot->hash, memory_order_acquire) == h &&
+            strncmp(slot->key, key, SPLINTER_KEY_MAX) == 0) {
+
+            // 1. Writer Check & Lock
+            uint64_t e = atomic_load_explicit(&slot->epoch, memory_order_relaxed);
+            if (e & 1) { errno = EAGAIN; return -1; }
+            if (!atomic_compare_exchange_strong(&slot->epoch, &e, e + 1)) {
+                errno = EAGAIN; return -1;
+            }
+
+            atomic_thread_fence(memory_order_acquire);
+
+            // 2. Expansion Logic for BIGUINT
+            uint32_t current_len = atomic_load(&slot->val_len);
+            if ((mask & SPL_SLOT_TYPE_BIGUINT) && current_len < 8) {
+                // Find fresh 8-byte space in arena
+                uint32_t new_off = atomic_fetch_add(&H->val_brk, 8);
+                
+                // Safety check for arena overflow
+                if (new_off + 8 > H->val_sz) {
+                    atomic_fetch_add(&slot->epoch, 1); // Unlock
+                    errno = ENOMEM;
+                    return -1;
+                }
+
+                uint8_t *old_ptr = VALUES + slot->val_off;
+                uint8_t *new_ptr = VALUES + new_off;
+                
+                // Move existing data and zero-fill the rest
+                memset(new_ptr, 0, 8);
+                memcpy(new_ptr, old_ptr, current_len);
+
+                slot->val_off = new_off;
+                atomic_store_explicit(&slot->val_len, 8, memory_order_relaxed);
+            }
+
+            // 3. Apply Type and Unlock
+            atomic_store_explicit(&slot->type_flag, mask, memory_order_release);
+            atomic_fetch_add_explicit(&slot->epoch, 1, memory_order_release);
+            
+            // Global epoch update
+            atomic_fetch_add(&H->epoch, 1); 
+            return 0;
         }
-        
-        atomic_thread_fence(memory_order_acquire);
-        atomic_store_explicit(&slot->type_flag, 0, memory_order_release);
-        atomic_fetch_or(&slot->type_flag, mask);
-        return 0;
     }
-  }
-  errno = ENOENT;
-  return -1;
+    errno = ENOENT;
+    return -1;
 }
 
 /**
@@ -825,7 +857,12 @@ int splinter_integer_op(const char *key, splinter_integer_op_t op, const void *m
 
     uint64_t h = fnv1a(key);
     size_t idx = slot_idx(h, H->slots);
-    uint64_t m64 = *(const uint64_t *)mask;
+    uint64_t m64 = 0;
+    // uint64_t m64 = *(const uint64_t *)mask;
+
+    if (mask) {
+        memcpy(&m64, mask, sizeof(uint64_t));
+    }
 
     // proactive fence for weak-memory hardware (e.g. chromebook consumer grade)
     atomic_thread_fence(memory_order_acquire);
