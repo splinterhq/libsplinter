@@ -17,6 +17,7 @@
 #include "splinter.h"
 #include "config.h"
 #include <fcntl.h>
+#include <stdalign.h>
 
 #ifdef HAVE_VALGRIND_H
 #include <valgrind/valgrind.h>
@@ -83,7 +84,7 @@ int main(void) {
   pid = getpid();
 
   snprintf(bus, 16, "%d-tap-test", pid);
-
+  TEST("splinter slot 64 byte alignment check", (alignof(struct splinter_slot) == 64));
   TEST("create splinter store", splinter_create_or_open(bus, 1000, 4096) == 0);
 
   const char *test_key = "test_key";
