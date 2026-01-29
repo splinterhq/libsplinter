@@ -133,6 +133,9 @@ void help_cmd_math(unsigned int level);
 int cmd_label(int argc, char *argv[]);
 void help_cmd_label(unsigned int level);
 
+int cmd_lua(int argc, char *argv[]);
+void help_cmd_lua(unsigned int level);
+
 // And finally an array of modules to hold them all
 extern cli_module_t command_modules[];
 

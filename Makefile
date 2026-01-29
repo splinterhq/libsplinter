@@ -6,6 +6,8 @@ AR ?= ar
 CFLAGS := -std=c11 -O3 -Wall -Wextra -D_GNU_SOURCE -DSPLINTER_EMBEDDINGS -fPIC -I3rdparty/
 PREFIX ?= /usr/local
 GIT ?= /usr/bin/git
+LUA_CFLAGS  := $(shell pkg-config --cflags lua5.4)
+LUA_LDFLAGS := $(shell pkg-config --libs lua5.4)
 
 # Library objects
 SHARED_LIBS = libsplinter.so libsplinter_p.so
@@ -64,11 +66,11 @@ splinterp_stress: splinter_stress.c splinter_p.o
 
 # A basic, but extensible CLI to navigate and manage stores
 splinter_cli: $(CLI_SOURCES) $(CLI_HEADERS) splinter.o splinter.h
-	$(CC) $(CFLAGS) -o $@ $(CLI_SOURCES) splinter.o
+	$(CC) $(CFLAGS) -o $@ $(CLI_SOURCES) splinter.o $(LUA_LDFLAGS)
 
 # Persistent version of the CLI (soon I hope to have only one)
 splinterp_cli: $(CLI_SOURCES) $(CLI_HEADERS) splinter_p.o splinter.h
-	$(CC) $(CFLAGS) -DSPLINTER_PERSISTENT -o $@ $(CLI_SOURCES) splinter_p.o
+	$(CC) $(CFLAGS) -DSPLINTER_PERSISTENT -o $@ $(CLI_SOURCES) splinter_p.o $(LUA_LDFLAGS)
 
 # Better experience if non-root tries root targets
 .PHONY: be_root

@@ -193,6 +193,15 @@ cli_module_t command_modules[] = {
         &cmd_label,
         &help_cmd_label
     },
+    {
+        17,
+        "lua",
+        3,
+        "Run a lua script",
+        -1,
+        &cmd_lua,
+        &help_cmd_lua
+    },
     // The last null-filled element 
     { 0, NULL, 0, NULL, -1,  NULL , NULL }
 };
@@ -327,6 +336,7 @@ static void completion(const char *buf, linenoiseCompletions *lc) {
         case 'l':
             linenoiseAddCompletion(lc, "list");
             linenoiseAddCompletion(lc, "label");
+            linenoiseAddCompletion(lc, "lua");
             break;
         case 'm':
             linenoiseAddCompletion(lc, "math");
@@ -423,6 +433,12 @@ static char *hints(const char *buf, int *color, int *bold) {
         *color = 36;
         *bold = 1;
         return "bel ";
+    }
+
+    if (!strncasecmp(buf, "lu", 3)) {
+        *color = 36;
+        *bold = 1;
+        return "a ";
     }
 
     if (!strncasecmp(buf, "m", 4)) {
