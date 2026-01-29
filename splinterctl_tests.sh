@@ -17,8 +17,7 @@ fail()
 {
 	echo "FAIL: ${@}"
 	tests_failed=$(($tests_failed + 1))
-	echo
-	# Could exit on any error here if needed
+	exit 1
 }
 
 pass()
