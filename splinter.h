@@ -101,11 +101,11 @@ struct splinter_header {
     atomic_uint_least8_t user_flags;
     /** @brief Track the next-available value region */
     atomic_uint_least32_t val_brk;
-    /** @brief Total size of the arena */
+    /** @brief Running total size of the arena */
     uint32_t val_sz;
     /** @brief Memory alignment (e.g  64) */
     uint32_t alignment;
-    
+
     /* Diagnostics: counts of parse failures reported by clients / harnesses */
     atomic_uint_least64_t parse_failures;
     atomic_uint_least64_t last_failure_epoch;
@@ -138,6 +138,8 @@ struct splinter_slot {
     atomic_uint_least64_t ctime;
     /** @brief The last time the slot was meaningfully accessed (optional; must be set by the client) */
     atomic_uint_least64_t atime;
+    /** @brief The 64-bit Bloom filter / Label mask */
+    atomic_uint_least64_t bloom;
     /** @brief The null-terminated key string. */
     char key[SPLINTER_KEY_MAX];
 #ifdef SPLINTER_EMBEDDINGS
@@ -438,6 +440,12 @@ const void *splinter_get_raw_ptr(const char *key, size_t *out_sz, uint64_t *out_
  * @return The 64-bit epoch, or 0 if key not found.
  */
 uint64_t splinter_get_epoch(const char *key);
+
+/**
+ * @brief Atomically apply a label mask to a slot's Bloom filter.
+ * @return 0 on success, -1 if key not found.
+ */
+int splinter_set_label(const char *key, uint64_t mask);
 
 #ifdef __cplusplus
 }

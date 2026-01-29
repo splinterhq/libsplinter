@@ -25,6 +25,7 @@
 #include <errno.h>
 #include <time.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include "config.h"
 
 /** @brief Base pointer to the memory-mapped region. */
@@ -287,13 +288,14 @@ int splinter_unset(const char *key) {
             // we first zero out the type flag, then set it to the default.
             atomic_store_explicit(&slot->type_flag, 0, memory_order_release);
             atomic_fetch_or(&slot->type_flag, SPL_SLOT_DEFAULT_TYPE);
-
-            // now the rest can be initialized
+            
+            atomic_store_explicit(&slot->epoch, 0, memory_order_release);
             atomic_store_explicit(&slot->val_len, 0, memory_order_release);
             atomic_store_explicit(&slot->ctime, 0, memory_order_release);
             atomic_store_explicit(&slot->atime, 0, memory_order_release);
             atomic_store_explicit(&slot->user_flag, 0, memory_order_release);
-
+            atomic_store_explicit(&slot->bloom, 0, memory_order_release);
+            
             // Increment slot epoch to mark the change (leave even)
             atomic_fetch_add_explicit(&slot->epoch, 2, memory_order_release);
             return ret;
@@ -770,22 +772,27 @@ int splinter_set_named_type(const char *key, uint16_t mask) {
             // 2. Expansion Logic for BIGUINT
             uint32_t current_len = atomic_load(&slot->val_len);
             if ((mask & SPL_SLOT_TYPE_BIGUINT) && current_len < 8) {
-                // Find fresh 8-byte space in arena
                 uint32_t new_off = atomic_fetch_add(&H->val_brk, 8);
-                
-                // Safety check for arena overflow
                 if (new_off + 8 > H->val_sz) {
-                    atomic_fetch_add(&slot->epoch, 1); // Unlock
-                    errno = ENOMEM;
-                    return -1;
+                    atomic_fetch_add(&slot->epoch, 1); 
+                    errno = ENOMEM; return -1;
                 }
 
                 uint8_t *old_ptr = VALUES + slot->val_off;
-                uint8_t *new_ptr = VALUES + new_off;
-                
-                // Move existing data and zero-fill the rest
-                memset(new_ptr, 0, 8);
-                memcpy(new_ptr, old_ptr, current_len);
+                uint64_t converted_val = 0;
+
+                // Check if it's a numeric string that needs parsing
+                if (current_len > 0 && old_ptr[0] >= '0' && old_ptr[0] <= '9') {
+                    char tmp_buf[16] = {0};
+                    memcpy(tmp_buf, old_ptr, (current_len < 15) ? current_len : 15);
+                    converted_val = strtoull(tmp_buf, NULL, 0);
+                } else {
+                    // Fallback: just move the raw bytes
+                    memcpy(&converted_val, old_ptr, (current_len < 8) ? current_len : 8);
+                }
+
+                uint64_t *new_ptr = (uint64_t *)(VALUES + new_off);
+                *new_ptr = converted_val; // Now it's a real 64-bit integer
 
                 slot->val_off = new_off;
                 atomic_store_explicit(&slot->val_len, 8, memory_order_relaxed);
@@ -959,4 +966,30 @@ uint64_t splinter_get_epoch(const char *key) {
         }
     }
     return 0;
+}
+
+/**
+ * @brief Atomically apply a label mask to a slot's Bloom filter.
+ * @return 0 on success, -1 if key not found.
+ */
+int splinter_set_label(const char *key, uint64_t mask) {
+    if (!H || !key) return -1;
+    uint64_t h = fnv1a(key);
+    size_t idx = slot_idx(h, H->slots);
+
+    for (size_t i = 0; i < H->slots; ++i) {
+        struct splinter_slot *slot = &S[(idx + i) % H->slots];
+        if (atomic_load_explicit(&slot->hash, memory_order_acquire) == h &&
+            strncmp(slot->key, key, SPLINTER_KEY_MAX) == 0) {
+            
+            // Atomic OR ensures we don't wipe existing labels
+            atomic_fetch_or_explicit(&slot->bloom, mask, memory_order_release);
+            
+            // Optional: Bump global epoch to alert watchers of metadata change
+            atomic_fetch_add_explicit(&H->epoch, 1, memory_order_relaxed);
+            return 0;
+        }
+    }
+    errno = ENOENT;
+    return -1;
 }
