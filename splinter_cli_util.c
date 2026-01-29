@@ -90,6 +90,10 @@ void cli_show_modules(void) {
     return;
 }
 
+/**
+ * See if a key is eligible to be printed out to the console without
+ * being serialized (and without creating a problem)
+ */
 unsigned int cli_key_is_printable_unserialized(unsigned short flags) {
     switch(flags) {
         case SPL_SLOT_TYPE_BIGINT:
@@ -101,6 +105,10 @@ unsigned int cli_key_is_printable_unserialized(unsigned short flags) {
     }
 }
 
+/**
+ * Take a given flag, and return a statically-allocated string representing
+ * its symbol.
+ */
 char * cli_show_key_type(unsigned short flags) {
     if ((flags & SPL_SLOT_TYPE_BIGINT)  != 0) return "SPL_SLOT_TYPE_BIGINT";
     if ((flags & SPL_SLOT_TYPE_BIGUINT) != 0) return "SPL_SLOT_TYPE_BIGUINT";
@@ -114,8 +122,10 @@ char * cli_show_key_type(unsigned short flags) {
     return "UNNAMED";
 }
 
-// todo - replace this with a hash table since all type values are
-// known at compile time.
+/**
+ * Take a string representing a type bitmask, and turn it into the appropriate
+ * bitmask.
+ */
 uint16_t cli_type_to_bitmask(const char *type) {
     if (!strncmp(type, "bigint", 6)) return SPL_SLOT_TYPE_BIGINT;
     if (!strncmp(type, "biguint", 7)) return SPL_SLOT_TYPE_BIGUINT; 
@@ -129,6 +139,9 @@ uint16_t cli_type_to_bitmask(const char *type) {
     return 0; // not found
 }
 
+/**
+ * Dump a key's configuration.
+ */
 void cli_show_key_config(const char *key, const char *caller) {
     splinter_slot_snapshot_t snap = { 0 };
 
@@ -151,7 +164,9 @@ void cli_show_key_config(const char *key, const char *caller) {
     return;
 }
 
-// halts execution if strtol would overflow an integer.
+/**
+ * Don't let atoi() ruin our day without having to call strtol each time.
+ */
 int cli_safer_atoi(const char *string) {
 
     char *buff;
