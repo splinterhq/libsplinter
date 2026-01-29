@@ -46,7 +46,7 @@ static int compare_slots_by_epoch(const void *a, const void *b) {
 static void print_json(const splinter_slot_snapshot_t *slots, size_t slot_count, 
                        const splinter_header_snapshot_t *snap) {
     size_t i;
-    
+
     printf("{\n");
     printf("  \"store\": {\n");
     printf("    \"total_slots\": %u,\n", snap->slots);
@@ -62,6 +62,7 @@ static void print_json(const splinter_slot_snapshot_t *slots, size_t slot_count,
         
         printf("    {\n");
         printf("      \"key\": \"%s\",\n", slots[i].key);
+        printf("      \"type\": \"%s\",\n", cli_show_key_type(slots[i].type_flag));
         printf("      \"epoch\": %lu,\n", slots[i].epoch);
         printf("      \"value_length\": %u\n", slots[i].val_len);
         

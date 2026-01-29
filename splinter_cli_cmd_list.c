@@ -115,20 +115,22 @@ int cmd_list(int argc, char *argv[]) {
         // Sort so the most-updated keys are at the top of the list
         qsort(slots, x, sizeof(splinter_slot_snapshot_t), compare_slots_by_epoch);
 
-        printf("%-33s | %-15s | %-15s\n",
+        printf("%-33s | %-10s | %-10s | %-15s\n",
             "Key Name",
             "Epoch",
-            "Value Length"
+            "Val Len",
+            "Named Type"
         );
-        for (i = 0; i < 66; i++)
+        for (i = 0; i < 85; i++)
             putchar('-');
         putchar('\n');
         
         for (i = 0; i < x && slots[i].epoch > 0; i++) {
-            printf("%-33s | %-15lu | %-15u\n", 
+            printf("%-33s | %-10lu | %-10u | %-15s\n", 
                 slots[i].key,
                 slots[i].epoch,
-                slots[i].val_len
+                slots[i].val_len,
+                cli_show_key_type(slots[i].type_flag)
             );
         }
 

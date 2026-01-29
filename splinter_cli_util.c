@@ -90,6 +90,17 @@ void cli_show_modules(void) {
     return;
 }
 
+unsigned int cli_key_is_printable_unserialized(unsigned short flags) {
+    switch(flags) {
+        case SPL_SLOT_TYPE_BIGINT:
+        case SPL_SLOT_TYPE_BIGUINT:
+        case SPL_SLOT_TYPE_VARTEXT:
+            return 1;
+        default:
+            return  0;
+    }
+}
+
 char * cli_show_key_type(unsigned short flags) {
     if ((flags & SPL_SLOT_TYPE_BIGINT)  != 0) return "SPL_SLOT_TYPE_BIGINT";
     if ((flags & SPL_SLOT_TYPE_BIGUINT) != 0) return "SPL_SLOT_TYPE_BIGUINT";

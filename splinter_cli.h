@@ -71,6 +71,7 @@ void cli_show_key_config(const char *key, const char *caller);
 int cli_safer_atoi(const char *string);
 char * cli_show_key_type(unsigned short flags);
 uint16_t cli_type_to_bitmask(const char *type);
+unsigned int cli_key_is_printable_unserialized(unsigned short flags);
 
 // Prototypes for individual command entry points
 int cmd_help(int argc, char *argv[]);
