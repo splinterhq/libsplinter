@@ -7,14 +7,10 @@
  *
  * libsplinter provides a high-performance, lock-free, shared-memory key-value
  * store and message bus. It is designed for efficient inter-process
- * communication (IPC), particularly for building microkernel-like process
- * communities around local Large Language Model (LLM) runtimes.
- *
- * Inspired in part by the Xen project & Keir's papers on practical lock-free
- * programming, and Xenstore (in concept, not so much implementation).
- *
- * Short-term (ephemeral) memory, IPC, KV Storage, pub/sub, caching, and more
- * are all great uses for libsplinter.
+ * communication (IPC), particularly for building process communities around 
+ * local Large Language Model (LLM) runtimes.
+ * 
+ * See docs for more.
  */
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
