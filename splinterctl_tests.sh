@@ -17,12 +17,14 @@ fail()
 {
 	echo "FAIL: ${@}"
 	tests_failed=$(($tests_failed + 1))
+	echo
 	# Could exit on any error here if needed
 }
 
 pass()
 {
 	tests_passed=$(($tests_passed + 1))
+	echo
 }
 
 test()
@@ -72,6 +74,10 @@ pass
 
 test "Get key type"
 ./splinterctl --use $TEST_STORE type test_key || fail "Could not get type of test_key"
+pass
+
+test "Lua script integration"
+./splinterctl --use $TEST_STORE lua test.lua || fail "Could not run lua script."
 pass
 
 test "Unset a key"
