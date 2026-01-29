@@ -20,7 +20,7 @@ extern "C" {
 #endif
 
 /** 
- * @brief (SLNT) Magic number to identify a splinter memory region. 
+ * @brief Magic number to identify a splinter memory region. 
  * Spoiler: bytes 53 4C 4E 54 -> ASCII "S L N T" (never speaks unless spoken to)
  */
 #define SPLINTER_MAGIC 0x534C4E54
@@ -36,20 +36,19 @@ extern "C" {
 #define SPLINTER_EMBED_DIM    768
 #endif
 
-
-/* System flags (0–3) */
+/** @brief Reserved store system flags */
 #define SPL_SYS_AUTO_SCRUB     (1u << 0)
 #define SPL_SYS_RESERVED_1     (1u << 1)
 #define SPL_SYS_RESERVED_2     (1u << 2)
 #define SPL_SYS_RESERVED_3     (1u << 3)
 
-/* User flags (4–7) */
+/** @brief User store flags for aliasing */
 #define SPL_SUSR1              (1u << 4)
 #define SPL_SUSR2              (1u << 5)
 #define SPL_SUSR3              (1u << 6)
 #define SPL_SUSR4              (1u << 7)
 
-/* Slot Flags (system) 0 - 7 */
+/** @brief Named type flags */
 #define SPL_SLOT_TYPE_VOID     (1u << 0)
 #define SPL_SLOT_TYPE_BIGINT   (1u << 1)
 #define SPL_SLOT_TYPE_BIGUINT  (1u << 2)
@@ -59,10 +58,10 @@ extern "C" {
 #define SPL_SLOT_TYPE_AUDIO    (1u << 6)
 #define SPL_SLOT_TYPE_VARTEXT  (1u << 7)
 
-/* Default type for new slot writes */
+/** @brief Default type for new slot writes */
 #define SPL_SLOT_DEFAULT_TYPE SPL_SLOT_TYPE_VOID
 
-/* Slot Flags (user) 0 - 7 */
+/** @brief Per-slot user flags for aliasing */
 #define SPL_FUSR1              (1u << 0)
 #define SPL_FUSR2              (1u << 1)
 #define SPL_FUSR3              (1u << 2)
@@ -72,7 +71,7 @@ extern "C" {
 #define SPL_FUSR7              (1u << 6)
 #define SPL_FUSR8              (1u << 7)
 
-/* Time Update Mode */
+/** @brief Modes for invoking slot timestamp updates */
 #define SPL_TIME_CTIME         0
 #define SPL_TIME_ATIME         1
 
@@ -141,6 +140,7 @@ struct splinter_slot {
 };
 
 /**
+ * @struct splinter_header_snapshot
  * @brief structure to hold splinter bus snapshots
  */
 typedef struct splinter_header_snapshot {
@@ -172,6 +172,10 @@ typedef struct splinter_header_snapshot {
  */
 int splinter_get_header_snapshot(splinter_header_snapshot_t *snapshot);
 
+/**
+ * @structure splinter_slot_snapshot
+ * @brief A structure to hold a snapshot of a single slot
+ */
 typedef struct splinter_slot_snapshot {
     /** @brief The FNV-1a hash of the key. 0 indicates an empty slot. */
     uint64_t hash;
