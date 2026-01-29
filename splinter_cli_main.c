@@ -166,6 +166,15 @@ cli_module_t command_modules[] = {
         &cmd_export,
         &help_cmd_export
     },
+    {
+        14,
+        "type",
+        4,
+        "Display or set the named slot type for a key.",
+        -1,
+        &cmd_type, 
+        &help_cmd_type
+    },
     // The last null-filled element 
     { 0, NULL, 0, NULL, -1,  NULL , NULL }
 };
@@ -301,6 +310,9 @@ static void completion(const char *buf, linenoiseCompletions *lc) {
         case 's':
             linenoiseAddCompletion(lc, "set");
             break;
+        case 't':
+            linenoiseAddCompletion(lc, "type");
+            break;
         case 'u':
             linenoiseAddCompletion(lc, "use");
             linenoiseAddCompletion(lc, "unset");
@@ -387,6 +399,14 @@ static char *hints(const char *buf, int *color, int *bold) {
         *color = 36;
         *bold = 1;
         return "et ";
+    }
+
+    // 'time' may be a command soon, leaving room for it.
+    
+    if (!strncmp(buf, "ty", 4)) {
+        *color = 36;
+        *bold = 1;
+        return "pe ";
     }
 
     if (!strncasecmp(buf, "un", 5)) {

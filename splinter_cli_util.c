@@ -102,6 +102,21 @@ char * cli_show_key_type(unsigned short flags) {
     return "SPL_SLOT_TYPE_VOID"; // (1u << 0)
 }
 
+// todo - replace this with a hash table since all type values are
+// known at compile time.
+uint16_t cli_type_to_bitmask(const char *type) {
+
+    if (!strncmp(type, "bigint", 6)) return SPL_SLOT_TYPE_BIGINT;
+    if (!strncmp(type, "biguint", 7)) return SPL_SLOT_TYPE_BIGUINT; 
+    if (!strncmp(type, "binary", 6)) return SPL_SLOT_TYPE_BINARY;
+    if (!strncmp(type, "imgdata", 7)) return SPL_SLOT_TYPE_IMGDATA;
+    if (!strncmp(type, "vartext", 7)) return SPL_SLOT_TYPE_VARTEXT;
+    if (!strncmp(type, "audio", 5)) return SPL_SLOT_TYPE_AUDIO;
+    if (!strncmp(type, "json", 4)) return SPL_SLOT_TYPE_JSON;
+
+    return SPL_SLOT_TYPE_VOID;
+}
+
 void cli_show_key_config(const char *key, const char *caller) {
     splinter_slot_snapshot_t snap = { 0 };
 

@@ -70,6 +70,7 @@ void cli_show_modules(void);
 void cli_show_key_config(const char *key, const char *caller);
 int cli_safer_atoi(const char *string);
 char * cli_show_key_type(unsigned short flags);
+uint16_t cli_type_to_bitmask(const char *type);
 
 // Prototypes for individual command entry points
 int cmd_help(int argc, char *argv[]);
@@ -110,6 +111,9 @@ void help_cmd_init(unsigned int level);
 
 int cmd_export(int argc, char *argv[]);
 void help_cmd_export(unsigned int level);
+
+int cmd_type(int argc, char *argv[]);
+void help_cmd_type(unsigned int level);
 
 // And finally an array of modules to hold them all
 extern cli_module_t command_modules[];
