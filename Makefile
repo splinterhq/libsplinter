@@ -26,7 +26,7 @@ TESTS = splinter_test splinterp_test
 all: $(SHARED_LIBS) $(STATIC_LIBS) $(BIN_PROGS) $(TESTS)
 
 # Object build
-splinter.o: splinter.c splinter.h build.h
+splinter.o: splinter.c splinter.h build.h config.h
 	$(CC) $(CFLAGS) -c splinter.c -o $@
 
 # Memory-backed shared object
@@ -38,7 +38,7 @@ libsplinter.a: splinter.o
 	$(AR) rcs $@ $^
 
 # Persistent-mode object and shared object
-splinter_p.o: splinter.c splinter.h build.h
+splinter_p.o: splinter.c splinter.h build.h config.h
 	$(CC) $(CFLAGS) -DSPLINTER_PERSISTENT -c splinter.c -o $@
 
 libsplinter_p.so: splinter_p.o
@@ -58,11 +58,11 @@ splinterp_test: splinter_test.c splinter_p.o
 
 # Useful for actually testing libsplinter performance
 splinter_stress: splinter_stress.c splinter.o
-	$(CC) $(CFLAGS) -o $@ splinter_stress.c splinter.o
+	$(CC) $(CFLAGS) -o $@ splinter_stress.c splinter.o 
 
 # Persistent version of the performance test (here be dragons!)
 splinterp_stress: splinter_stress.c splinter_p.o
-	$(CC) $(CFLAGS) -DSPLINTER_PERSISTENT -o $@ splinter_stress.c splinter_p.o
+	$(CC) $(CFLAGS) -DSPLINTER_PERSISTENT -o $@ splinter_stress.c splinter_p.o 
 
 # A basic, but extensible CLI to navigate and manage stores
 splinter_cli: $(CLI_SOURCES) $(CLI_HEADERS) splinter.o splinter.h
