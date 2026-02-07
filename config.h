@@ -14,6 +14,11 @@
 #define DEFAULT_SLOTS 1024
 #define DEFAULT_VAL_MAXLEN 4096
 
+// un-comment to enable NUMA
+//#ifndef SPLINTER_NUMA_AFFINITY
+//#define SPLINTER_NUMA_AFFINITY
+//#endif
+
 // do we have the valgrind development headers?
 // comment out (undefine) if not.
 //#define HAVE_VALGRIND_H 1

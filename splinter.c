@@ -15,6 +15,7 @@
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
+#include "config.h"
 #include "splinter.h"
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -26,7 +27,10 @@
 #include <time.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include "config.h"
+#ifdef SPLINTER_NUMA_AFFINITY
+#include <numa.h>
+#include <numaif.h>
+#endif // SPLINTER_NUMA_AFFINITY
 
 /** @brief Base pointer to the memory-mapped region. */
 static void *g_base = NULL;
@@ -177,6 +181,35 @@ int splinter_open(const char *name_or_path) {
     return 0;
 }
 
+#ifdef SPLINTER_NUMA_AFFINITY
+/**
+ * @brief Opens the Splinter bus and binds it to a specific NUMA node.
+ * This ensures all memory pages for the VALUES arena and slots 
+ * stay local to the target socket's memory controller.
+ */
+void* splinter_open_numa(const char *name, int target_node) {
+    if (numa_available() < 0) return NULL; // No NUMA support
+
+    // Open as usual
+    int fd = shm_open(name, O_RDWR, 0666);
+    struct stat st;
+    fstat(fd, &st);
+    void *addr = mmap(NULL, st.st_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+
+    // Prepare the nodemask for mbind
+    unsigned long mask = (1UL << target_node);
+    unsigned long maxnode = numa_max_node() + 1;
+
+    // Bind the memory region to the specific physical node
+    // MPOL_BIND: Forces allocation strictly on these nodes
+    // MPOL_MF_STRICT: Fail if pages are already elsewhere
+    if (mbind(addr, st.st_size, MPOL_BIND, &mask, maxnode, MPOL_MF_STRICT | MPOL_MF_MOVE) != 0) {
+        perror("mbind failed");
+    }
+
+    return addr;
+}
+#endif //SPLINTER_NUMA_AFFINITY
 /**
  * @brief Creates a new splinter store, or opens it if it already exists.
  *

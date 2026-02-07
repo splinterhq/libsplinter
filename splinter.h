@@ -244,6 +244,15 @@ int splinter_create(const char *name_or_path, size_t slots, size_t max_value_sz)
  */
 int splinter_open(const char *name_or_path);
 
+#ifdef SPLINTER_NUMA_AFFINITY
+/**
+ * @brief Opens the Splinter bus and binds it to a specific NUMA node.
+ * This ensures all memory pages for the VALUES arena and slots 
+ * stay local to the target socket's memory controller.
+ */
+void* splinter_open_numa(const char *name, int target_node);
+#endif // SPLINTER_NUMA_AFFINITY
+
 /**
  * @brief Opens an existing splinter store, or creates it if it does not exist.
  * @param name_or_path The name of the shared memory object or path to the file.
@@ -446,6 +455,9 @@ uint64_t splinter_get_epoch(const char *key);
  * @return 0 on success, -1 if key not found.
  */
 int splinter_set_label(const char *key, uint64_t mask);
+
+
+// Splinter client functions (combined library calls for convenience)
 
 /**
  * @brief Client-side helper to write multiple orders of a key.
