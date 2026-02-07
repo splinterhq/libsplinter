@@ -2,7 +2,6 @@
  * @file splinter_cli_cmd_label.c
  * @brief Implements the CLI 'label' command to tag keys via Bloom filter.
  */
-
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -12,13 +11,78 @@
 #include <lua5.4/lauxlib.h>
 #include "splinter_cli.h"
 
+/**
+ * @brief Batch-retrieves a tandem set (key, key.1, key.2, etc) into a Lua table.
+ */
+static int lua_splinter_get_tandem(lua_State *L) {
+    const char *base_key = luaL_checkstring(L, 1);
+    int max_orders = (int)luaL_optinteger(L, 2, 64); // Safety cap
+    char tandem_name[SPLINTER_KEY_MAX];
+    char buf[4096]; // Use a larger buffer or H->max_val_sz if accessible
+    size_t received = 0;
+
+    lua_newtable(L);
+
+    for (int i = 0; i < max_orders; i++) {
+        if (i == 0) {
+            strncpy(tandem_name, base_key, SPLINTER_KEY_MAX - 1);
+        } else {
+            snprintf(tandem_name, sizeof(tandem_name), "%s.%d", base_key, i);
+        }
+
+        if (splinter_get(tandem_name, buf, sizeof(buf), &received) == 0) {
+            // Push the index (1-based for Lua) and the value
+            lua_pushinteger(L, i + 1);
+            lua_pushlstring(L, buf, received);
+            lua_settable(L, -3);
+        } else {
+            // Stop at the first missing order
+            break;
+        }
+    }
+
+    return 1;
+}
+
+/**
+ * @brief Batch-pushes a Lua table of values as a tandem set.
+ * Expects a table where index 1 is the base key, index 2 is order 1, etc.
+ */
+static int lua_splinter_set_tandem(lua_State *L) {
+    const char *base_key = luaL_checkstring(L, 1);
+    luaL_checktype(L, 2, LUA_TTABLE);
+    
+    char tandem_name[SPLINTER_KEY_MAX];
+    int n = (int)lua_rawlen(L, 2);
+
+    for (int i = 1; i <= n; i++) {
+        lua_rawgeti(L, 2, i);
+        size_t len;
+        const char *val = lua_tolstring(L, -1, &len);
+
+        if (i == 1) {
+            strncpy(tandem_name, base_key, SPLINTER_KEY_MAX - 1);
+        } else {
+            snprintf(tandem_name, sizeof(tandem_name), "%s.%d", base_key, i - 1);
+        }
+
+        if (val && splinter_set(tandem_name, val, len) != 0) {
+            lua_pushboolean(L, 0);
+            return 1;
+        }
+        lua_pop(L, 1);
+    }
+
+    lua_pushboolean(L, 1);
+    return 1;
+}
+
 static int lua_splinter_math(lua_State *L) {
     const char *key = luaL_checkstring(L, 1);
     const char *op_str = luaL_checkstring(L, 2);
     uint64_t val = (uint64_t)luaL_optinteger(L, 3, 0);
     splinter_integer_op_t op;
 
-    // 1. Resolve Operation (Surgical string-to-enum)
     if (strcasecmp(op_str, "inc") == 0) op = SPL_OP_INC;
     else if (strcasecmp(op_str, "dec") == 0) op = SPL_OP_DEC;
     else if (strcasecmp(op_str, "and") == 0) op = SPL_OP_AND;
@@ -27,14 +91,11 @@ static int lua_splinter_math(lua_State *L) {
     else if (strcasecmp(op_str, "not") == 0) op = SPL_OP_NOT;
     else return luaL_error(L, "invalid math operation: %s", op_str);
 
-    // 2. Execute Atomic Operation
-    // The C core handles the 64-bit fast-track and seqlock.
     if (splinter_integer_op(key, op, &val) == 0) {
         lua_pushboolean(L, 1);
         return 1;
     }
 
-    // 3. Handle Failure Modes (Schema mismatch / Missing key)
     if (errno == EPROTOTYPE) {
         return luaL_error(L, "key '%s' is not a BIGUINT slot", key);
     }
@@ -105,7 +166,6 @@ static int lua_splinter_set(lua_State *L) {
 static int lua_splinter_unset(lua_State *L) {
     const char *key = luaL_checkstring(L, 1);
     
-    // reset everything: hash, epoch, bloom, and type
     int deleted_len = splinter_unset(key);
     if (deleted_len >= 0) {
         lua_pushinteger(L, deleted_len);
@@ -145,25 +205,20 @@ void help_cmd_lua(unsigned int level) {
     puts("");
 }
 
-/**
- * @brief Entry point for the Lua module.
- * Maps C functions to the 'bus' global.
- */
+// This may end up being shared across modules
+// Hence, not static. But not prototyped publicly either, yet.
 int luaopen_splinter(lua_State *L) {
-    // 1. Define the library methods
     static const struct luaL_Reg bus_funcs[] = {
-        {"get",    lua_splinter_get},
-        {"set",    lua_splinter_set},
-        {"math",   lua_splinter_math},
-        {"label",  lua_splinter_label},
-        {"unset",  lua_splinter_unset},
+        {"get",        lua_splinter_get},
+        {"get_tandem", lua_splinter_get_tandem},
+        {"set",        lua_splinter_set},
+        {"set_tandem", lua_splinter_set_tandem},
+        {"math",       lua_splinter_math},
+        {"label",      lua_splinter_label},
+        {"unset",      lua_splinter_unset},
         {NULL, NULL}
     };
-
-    // 2. Create the 'bus' table
     luaL_newlib(L, bus_funcs);
-    
-    // 3. Return the table to Lua
     return 1;
 }
 
@@ -176,11 +231,9 @@ int cmd_lua(int argc, char *argv[]) {
     lua_State *L = luaL_newstate();
     luaL_openlibs(L);
 
-    // Register our surgical splinter module
     luaL_requiref(L, "splinter", luaopen_splinter, 1);
     lua_pop(L, 1);
 
-    // Run the script
     if (luaL_dofile(L, argv[1]) != LUA_OK) {
         fprintf(stderr, "Lua Error: %s\n", lua_tostring(L, -1));
         lua_close(L);
