@@ -196,12 +196,11 @@ static int lua_splinter_label(lua_State *L) {
     return 1;
 }
 
-static const char *modname = "label";
+static const char *modname = "lua";
 
 void help_cmd_lua(unsigned int level) {
     (void) level;
-    printf("Usage: %s <key> <label_name>\n", modname);
-    printf("Labels are defined in ~/.splinterrc and apply to the 64-bit Bloom filter.\n");
+    printf("Usage: %s <script.lua>\n", modname);
     puts("");
 }
 

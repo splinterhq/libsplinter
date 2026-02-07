@@ -15,6 +15,13 @@ option(WITH_LUA        "Enable Lua CLI integration" ON)
 # --- Dependency Detection ---
 find_package(PkgConfig REQUIRED)
 
+# Find the Valgrind executable
+find_program(VALGRIND_EXEC NAMES valgrind)
+
+if(VALGRIND_EXEC)
+    message(STATUS "Found Valgrind: ${VALGRIND_EXEC}")
+endif()
+
 # Detect Lua
 if(WITH_LUA)
     pkg_check_modules(LUA lua5.4)
@@ -169,6 +176,16 @@ add_custom_command(
 )
 add_custom_target(copy_test_lua ALL DEPENDS "${LUA_TEST_BINARY}")
 
+set(SPLINTERCTL_TEST_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/splinterctl_tests.sh")
+set(SPLINTERCTL_TEST_BINARY "${CMAKE_CURRENT_BINARY_DIR}/splinterctl_tests.sh")
+add_custom_command(
+    OUTPUT "${SPLINTERCTL_TEST_BINARY}"
+    COMMAND ${CMAKE_COMMAND} -E create_symlink "${SPLINTERCTL_TEST_SOURCE}" "${SPLINTERCTL_TEST_BINARY}"
+    DEPENDS "${SPLINTERCTL_TEST_SOURCE}"
+    COMMENT "Symlinking splinterctl_tests.sh to build directory"
+)
+add_custom_target(copy_test_splinterctl ALL DEPENDS "${SPLINTERCTL_TEST_BINARY}")
+
 # --- Test and Stress Tools ---
 
 # splinter_test: Verifies basic functionality and integrity 
@@ -196,7 +213,24 @@ enable_testing()
 
 add_test(NAME "Core_Functionality" COMMAND splinter_test)
 add_test(NAME "Persistent_Functionality" COMMAND splinterp_test)
-add_test(NAME "CLI_Regression_Suite" COMMAND /bin/bash ${CMAKE_CURRENT_SOURCE_DIR}/splinterctl_tests.sh)
+add_test(NAME "CLI_Regression_Suite" COMMAND /bin/bash splinterctl_tests.sh)
+add_test(NAME "MRSW_Perf" COMMAND splinter_stress --duration-ms 3500)
+
+# Valgrind Tests (only added if valgrind is found)
+if(VALGRIND_EXEC)
+    # Replicate your Makefile's flags: -s (silent) and --leak-check=full
+    set(VALGRIND_ARGS "-s" "--leak-check=full" "--error-exitcode=1")
+
+    add_test(NAME "MemCheck_Core" 
+             COMMAND ${VALGRIND_EXEC} ${VALGRIND_ARGS} ./splinter_test)
+             
+    add_test(NAME "MemCheck_Persistent" 
+             COMMAND ${VALGRIND_EXEC} ${VALGRIND_ARGS} ./splinterp_test)
+
+    add_test(NAME "MemCheck_CLI_Regression"
+            COMMAND ${VALGRIND_EXEC} /bin/bash ./splinterctl_tests.sh)
+
+endif()
 
 # --- Final Install update ---
 install(TARGETS splinter_test splinter_stress splinterp_test splinterp_stress 
