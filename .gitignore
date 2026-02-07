@@ -12,3 +12,4 @@ bindings/rust/src/bindings.rs
 bindings/rust/target
 *-tap-test
 mrsw_test_*
+build/*
