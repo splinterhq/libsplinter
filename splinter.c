@@ -993,3 +993,42 @@ int splinter_set_label(const char *key, uint64_t mask) {
     errno = ENOENT;
     return -1;
 }
+
+/**
+ * @brief Client-side helper to write multiple orders of a key.
+ * * Since we've backed out library-side linking, this helper manages
+ * the naming convention for the caller.
+ */
+int splinter_client_set_tandem(const char *base_key, const void **vals, 
+                               const size_t *lens, uint8_t orders) {
+    char tandem_name[SPLINTER_KEY_MAX];
+    
+    // Write Order 0 (The base key)
+    if (splinter_set(base_key, vals[0], lens[0]) != 0) return -1;
+
+    // Write subsequent orders using ".n" notation
+    for (uint8_t i = 1; i < orders; i++) {
+        snprintf(tandem_name, sizeof(tandem_name), "%s.%u", base_key, i);
+        if (splinter_set(tandem_name, vals[i], lens[i]) != 0) {
+            return -1;
+        }
+    }
+    return 0;
+}
+
+/**
+ * @brief Client-side helper to delete a key and its known orders.
+ */
+void splinter_client_unset_tandem(const char *base_key, uint8_t orders) {
+    char tandem_name[SPLINTER_KEY_MAX];
+    
+    // Unset the base
+    splinter_unset(base_key);
+
+    // Unset the orders
+    for (uint8_t i = 1; i < orders; i++) {
+        snprintf(tandem_name, sizeof(tandem_name), "%s.%u", base_key, i);
+        splinter_unset(tandem_name);
+    }
+}
+

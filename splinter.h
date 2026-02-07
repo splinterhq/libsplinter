@@ -447,6 +447,19 @@ uint64_t splinter_get_epoch(const char *key);
  */
 int splinter_set_label(const char *key, uint64_t mask);
 
+/**
+ * @brief Client-side helper to write multiple orders of a key.
+ * * Since we've backed out library-side linking, this helper manages
+ * the naming convention for the caller.
+ */
+int splinter_client_set_tandem(const char *base_key, const void **vals, 
+                               const size_t *lens, uint8_t orders);
+
+/**
+ * @brief Client-side helper to delete a key and its known orders.
+ */
+void splinter_client_unset_tandem(const char *base_key, uint8_t orders);
+
 #ifdef __cplusplus
 }
 #endif
