@@ -1,4 +1,5 @@
 # Shim Makefile - CMake now handles the build for the most part.
+GIT := /bin/git
 
 .PHONY: all clean distclean install uninstall tests help
 
