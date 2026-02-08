@@ -148,6 +148,13 @@ int splinter_create(const char *name_or_path, size_t slots, size_t max_value_sz)
         atomic_store_explicit(&S[i].ctime, 0, memory_order_relaxed);
         atomic_store_explicit(&S[i].atime, 0, memory_order_relaxed);
         atomic_store_explicit(&S[i].user_flag, 0, memory_order_relaxed);
+        atomic_store_explicit(&S[i].watcher_mask, 0, memory_order_relaxed);
+        // we don't want brand new slots getting pulsed due to garbage in the bloom
+        // auto_scrub doesn't fully solve for this alone (and is optional,) so we
+        // do it here at the cost of a small loop.
+        for (int b = 0; b < 64; b++) {
+            atomic_store_explicit(&H->bloom_watches[b], 0xFF, memory_order_relaxed);
+        }
         S[i].val_off = (uint32_t)(i * max_value_sz);
         atomic_store_explicit(&S[i].val_len, 0, memory_order_relaxed);
         S[i].key[0] = '\0';      
@@ -327,6 +334,7 @@ int splinter_unset(const char *key) {
             atomic_store_explicit(&slot->ctime, 0, memory_order_release);
             atomic_store_explicit(&slot->atime, 0, memory_order_release);
             atomic_store_explicit(&slot->user_flag, 0, memory_order_release);
+            atomic_store_explicit(&slot->watcher_mask, 0, memory_order_release);
             atomic_store_explicit(&slot->bloom, 0, memory_order_release);
             
             // Increment slot epoch to mark the change (leave even)
@@ -415,7 +423,10 @@ int splinter_set(const char *key, const void *val, size_t len) {
 
             // End seqlock: bump epoch to even (writer done). Use release to publish writes.
             atomic_fetch_add_explicit(&slot->epoch, 1, memory_order_release);
-
+            
+            // Make sure watchers know we did something
+            splinter_pulse_watchers(slot);
+            
             // Update global epoch (best-effort, relaxed).
             atomic_fetch_add_explicit(&H->epoch, 1, memory_order_relaxed);
 
@@ -1063,5 +1074,146 @@ void splinter_client_unset_tandem(const char *base_key, uint8_t orders) {
         snprintf(tandem_name, sizeof(tandem_name), "%s.%u", base_key, i);
         splinter_unset(tandem_name);
     }
+}
+
+// HERE BE DRAGONS!
+// splinter_poll() is okay for devOps workflows and smarter shell scripts, but
+// it's too pedestrian for orchestrating real signal processing. We may need
+// to watch the whole vector space of a Rank 2 tensor 'simultaneously', so 
+// we need to set up signal groups that can coordinate with client-backed 
+// eventfd / epoll() assistance from the kernel. This is the only place 
+// where Splinter deliberately talks to Linux, and it's only to ask for 
+// wake-up service, not arbitration or sockets :)
+//
+// To pull this off, we have to be able to pulse FD references based on bitmask
+// subscription (and unsubscription) within the time that we can 'stand' on
+// the seqlock with a syscall. If we stand on it *too* long, other writers will
+// spin in EAGAIN loops unless they have exponential backoff logic, and readers
+// are way more likely to see torn reads even with deliberate and defensive 
+// atomic fencing.
+//
+// It is 99.9% bitmask traversal and .1% write() (as a process). If you try
+// to cram any more into it than what's here, expect subtle problems. 
+
+/**
+ * @brief Register the current process's interest in a key's group signal.
+ * @param key The key to watch.
+ * @param group_id The signal group index (0-63).
+ * @return 0 on success, -1 if key not found, -2 if invalid group.
+ */
+int splinter_watch_register(const char *key, uint8_t group_id) {
+    if (!H || !key) return -1;
+    if (group_id >= SPLINTER_MAX_GROUPS) {
+        errno = EINVAL;
+        return -2;
+    }
+
+    uint64_t h = fnv1a(key);
+    size_t idx = slot_idx(h, H->slots);
+
+    for (size_t i = 0; i < H->slots; ++i) {
+        struct splinter_slot *slot = &S[(idx + i) % H->slots];
+        
+        // Find the target slot
+        if (atomic_load_explicit(&slot->hash, memory_order_acquire) == h &&
+            strncmp(slot->key, key, SPLINTER_KEY_MAX) == 0) {
+            
+            // Atomically set the bit for the desired group
+            // This ensures we don't wipe out other watchers in different groups.
+            atomic_fetch_or_explicit(&slot->watcher_mask, (1ULL << group_id), memory_order_release);
+            
+            return 0;
+        }
+    }
+
+    return -1; // Key not found
+}
+
+/**
+ * @brief Maps a Bloom label (bitmask) to a signal group.
+ * @param bloom_mask A 64-bit mask where each set bit represents a label.
+ * @param group_id The signal group (0-63) to pulse when this label matches.
+ * @return 0 on success, -1 on invalid group.
+ */
+int splinter_watch_label_register(uint64_t bloom_mask, uint8_t group_id) {
+    if (!H || group_id >= SPLINTER_MAX_GROUPS) return -1;
+
+    // Iterate through all 64 possible bloom bits
+    for (int i = 0; i < 64; i++) {
+        // If the bit is set in the provided mask, map it to the group_id
+        if (bloom_mask & (1ULL << i)) {
+            atomic_store_explicit(&H->bloom_watches[i], group_id, memory_order_release);
+        }
+    }
+
+    return 0;
+}
+
+/**
+ * @brief pulse the watchers of a slot 
+ */
+void splinter_pulse_watchers(struct splinter_slot *slot) {
+    // Pulse based on specific key watches (Direct bitmask)
+    uint64_t mask = atomic_load_explicit(&slot->watcher_mask, memory_order_acquire);
+    for (int i = 0; i < SPLINTER_MAX_GROUPS; i++) {
+        if (mask & (1ULL << i)) {
+            atomic_fetch_add_explicit(&H->signal_groups[i].counter, 1, memory_order_release);
+        }
+    }
+
+    // Pulse based on Bloom Label matches
+    // We assume the slot stores the bloom filter calculated at set-time
+    uint64_t bloom = slot->bloom; 
+    for (int b = 0; b < 64; b++) {
+        if (bloom & (1ULL << b)) {
+            uint8_t g = atomic_load_explicit(&H->bloom_watches[b], memory_order_acquire);
+            // 0xFF (255) typically represents "no watch" for this bit
+            if (g < SPLINTER_MAX_GROUPS) {
+                atomic_fetch_add_explicit(&H->signal_groups[g].counter, 1, memory_order_release);
+            }
+        }
+    }
+}
+
+/**
+ * @brief Unregister interest in a key's group signal.
+ * @param key The key to stop watching.
+ * @param group_id The signal group index (0-63).
+ * @return 0 on success, -1 if key not found or invalid group.
+ */
+int splinter_watch_unregister(const char *key, uint8_t group_id) {
+    if (!H || !key || group_id >= SPLINTER_MAX_GROUPS) return -1;
+
+    uint64_t h = fnv1a(key);
+    size_t idx = slot_idx(h, H->slots);
+
+    for (size_t i = 0; i < H->slots; ++i) {
+        struct splinter_slot *slot = &S[(idx + i) % H->slots];
+        
+        // Find the slot matching the key
+        if (atomic_load_explicit(&slot->hash, memory_order_acquire) == h &&
+            strncmp(slot->key, key, SPLINTER_KEY_MAX) == 0) {
+            
+            // Atomically clear ONLY the bit for this specific group_id
+            // We use bitwise AND with the bitwise NOT of our group bit
+            atomic_fetch_and_explicit(&slot->watcher_mask, ~(1ULL << group_id), memory_order_release);
+            
+            return 0;
+        }
+    }
+
+    return -1; // Key not found
+}
+
+/**
+ * @brief Safely retrieve the current pulse count for a signal group. Good for debugging.
+ * @param group_id The signal group (0-63).
+ * @return The 64-bit pulse count, or 0 if invalid.
+ */
+uint64_t splinter_get_signal_count(uint8_t group_id) {
+    if (!H || group_id >= SPLINTER_MAX_GROUPS) return 0;
+    
+    // Explicitly load with acquire semantics to ensure we see the latest pulses
+    return atomic_load_explicit(&H->signal_groups[group_id].counter, memory_order_acquire);
 }
 

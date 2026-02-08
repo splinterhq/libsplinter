@@ -36,6 +36,9 @@ extern "C" {
 #define SPLINTER_EMBED_DIM    768
 #endif
 
+/** @brief The maximum number of watch signal groups for a slot */
+#define SPLINTER_MAX_GROUPS 64
+
 /** @brief Reserved store system flags */
 #define SPL_SYS_AUTO_SCRUB     (1u << 0)
 #define SPL_SYS_RESERVED_1     (1u << 1)
@@ -76,6 +79,13 @@ extern "C" {
 #define SPL_TIME_ATIME         1
 
 /**
+ * @brief Individual signal lane, aligned to prevent false sharing.
+ */
+struct splinter_signal_node {
+    alignas(64) atomic_uint_least64_t counter;
+};
+
+/**
  * @struct splinter_header
  * @brief Defines the header structure for the shared memory region.
  *
@@ -109,7 +119,15 @@ struct splinter_header {
     /* Diagnostics: counts of parse failures reported by clients / harnesses */
     atomic_uint_least64_t parse_failures;
     atomic_uint_least64_t last_failure_epoch;
+
+    // Maps each of the 64 bloom bits to a specific Signal Group (0-63)
+    // 0xFF indicates no watch for that bit.
+    atomic_uint_least8_t bloom_watches[64];
+
+    // The Signal Arena for epoll-backed notifications
+    alignas(64) struct splinter_signal_node signal_groups[SPLINTER_MAX_GROUPS];
 };
+
 
 /**
  * @struct splinter_slot
@@ -134,6 +152,8 @@ struct splinter_slot {
     atomic_uint_least8_t type_flag;
     /** @brief The user-defined flags for slot features */
     atomic_uint_least8_t user_flag;
+    /** @brief Watcher signal group for multi-watching */
+    atomic_uint_least64_t watcher_mask;
     /** @brief The time a slot was created (optional; must be set by the client) */
     atomic_uint_least64_t ctime;
     /** @brief The last time the slot was meaningfully accessed (optional; must be set by the client) */
@@ -471,6 +491,33 @@ int splinter_client_set_tandem(const char *base_key, const void **vals,
  * @brief Client-side helper to delete a key and its known orders.
  */
 void splinter_client_unset_tandem(const char *base_key, uint8_t orders);
+
+/**
+ * @brief Registers interest in a key's group signal.
+ */
+int splinter_watch_register(const char *key, uint8_t group_id);
+
+/**
+ * @brief Unregisters interest in a key's group signal.
+ */
+int splinter_watch_unregister(const char *key, uint8_t group_id);
+
+/**
+ * @brief Maps a Bloom label (bitmask) to a signal group.
+ */
+int splinter_watch_label_register(uint64_t bloom_mask, uint8_t group_id);
+
+/**
+ * @brief Internal helper to pulse the Signal Arena for a slot.
+ */
+void splinter_pulse_watchers(struct splinter_slot *slot);
+
+/**
+ * @brief Safely retrieve the current pulse count for a signal group. Good for debugging.
+ * @param group_id The signal group (0-63).
+ * @return The 64-bit pulse count, or 0 if invalid.
+ */
+uint64_t splinter_get_signal_count(uint8_t group_id);
 
 #ifdef __cplusplus
 }
