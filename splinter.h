@@ -434,6 +434,32 @@ uint16_t splinter_slot_usr_snapshot(struct splinter_slot *slot);
 int splinter_set_named_type(const char *key, uint16_t mask);
 
 /**
+ * @brief A helper to get the 64-bit cycle counter in order to 
+ * set a demarcation point for elapsed time to calculate jitter 
+ * in timestamp backfill. Accessing a wall clock isn't something
+ * we can reasonably do in a seqlock; so we backfill the ctime
+ * and atime stamps only if we need them.
+ * 
+ * waypoint = spointer_now();
+ * splinter_set("foo", value);
+ * time_t time = time(NULL); // syscalls take time (har har har)
+ * now = splinter_now();
+ * splinter_set_slot_time("foo", SPL_TIME_CTIME, time, now - waypoint);
+ * 
+ * The result is a timestamp that's more accurate than had the
+ * syscall happened during (or before) the write, so it's preferable,
+ * if also a tiny bit imperfect.
+ * @return uint64
+ */
+inline uint64_t splinter_now(void) {
+    uint32_t lo, hi;
+    // 'rdtsc' reads the 64-bit cycle counter into EDX:EAX
+    // USUALLY (watch out on older throttled mobile CPUs, ask me how I know!)
+    __asm__ __volatile__ ("rdtsc" : "=a" (lo), "=d" (hi));
+    return ((uint64_t)hi << 32) | lo;
+}
+
+/**
  * @brief Update a slot's ctime / atime
  * @param key Name of the key to change
  * @param mode (SPL_TIME_CTIME or SPL_TIME_ATIME)

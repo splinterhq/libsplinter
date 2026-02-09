@@ -202,6 +202,15 @@ cli_module_t command_modules[] = {
         &cmd_lua,
         &help_cmd_lua
     },
+    {
+        18,
+        "orders",
+        6,
+        "Manage standard vector orders of a key",
+        -1,
+        &cmd_orders,
+        &help_cmd_orders
+    },
     // The last null-filled element 
     { 0, NULL, 0, NULL, -1,  NULL , NULL }
 };
@@ -274,6 +283,11 @@ enum mode select_mode(const char *argv0) {
     return MODE_REPL;
 }
 
+// cmake shim
+#ifndef SPLINTER_VERSION
+#define SPLINTER_VERSION 0XDEADBEEF
+#endif
+
 void print_version_info(char *progname) {
     fprintf(stderr,  "%s version %s build %s\n",
         progname, 
@@ -340,6 +354,9 @@ static void completion(const char *buf, linenoiseCompletions *lc) {
             break;
         case 'm':
             linenoiseAddCompletion(lc, "math");
+            break;
+        case 'o':
+            linenoiseAddCompletion(lc, "orders");
             break;
         case 's':
             linenoiseAddCompletion(lc, "set");
@@ -447,6 +464,12 @@ static char *hints(const char *buf, int *color, int *bold) {
         return "ath ";
     }
 
+    if (!strncmp(buf, "or", 6)) {
+        *color = 36;
+        *bold = 1;
+        return "ders ";
+    }
+    
     if (!strncasecmp(buf, "s", 3)) {
         *color = 36;
         *bold = 1;

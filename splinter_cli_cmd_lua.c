@@ -11,6 +11,37 @@
 #include <lua5.4/lauxlib.h>
 #include "splinter_cli.h"
 
+
+/**
+ * @brief Register a Lua script's interest in a Signal Group.
+ */
+static int lua_splinter_watch(lua_State *L) {
+    const char *key = luaL_checkstring(L, 1);
+    uint8_t group_id = (uint8_t)luaL_checkinteger(L, 2);
+
+    if (splinter_watch_register(key, group_id) == 0) {
+        lua_pushboolean(L, 1);
+        return 1;
+    }
+    lua_pushboolean(L, 0);
+    return 1;
+}
+
+/**
+ * @brief Unregister from a Signal Group.
+ */
+static int lua_splinter_unwatch(lua_State *L) {
+    const char *key = luaL_checkstring(L, 1);
+    uint8_t group_id = (uint8_t)luaL_checkinteger(L, 2);
+
+    if (splinter_watch_unregister(key, group_id) == 0) {
+        lua_pushboolean(L, 1);
+        return 1;
+    }
+    lua_pushboolean(L, 0);
+    return 1;
+}
+
 /**
  * @brief Batch-retrieves a tandem set (key, key.1, key.2, etc) into a Lua table.
  */
@@ -213,6 +244,8 @@ int luaopen_splinter(lua_State *L) {
         {"set",        lua_splinter_set},
         {"set_tandem", lua_splinter_set_tandem},
         {"math",       lua_splinter_math},
+        {"watch",      lua_splinter_watch},
+        {"unwatch",    lua_splinter_unwatch},
         {"label",      lua_splinter_label},
         {"unset",      lua_splinter_unset},
         {NULL, NULL}

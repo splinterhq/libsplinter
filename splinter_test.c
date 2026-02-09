@@ -227,6 +227,32 @@ splinter_set(text_key, "data", 4);
 splinter_set_named_type(text_key, SPL_SLOT_TYPE_VARTEXT);
 TEST("enforce EPROTOTYPE on non-BIGUINT slot", splinter_integer_op(text_key, SPL_OP_INC, &op_val) == -1 && errno == EPROTOTYPE);
 
+/* --- Tandem / Multi-Order Key Tests --- */
+const char *base_key = "multi_part_sensor";
+const char *val0 = "part_zero";
+const char *val1 = "part_one";
+const char *val2 = "part_two";
+
+const void *vals[] = { val0, val1, val2 };
+size_t lens[] = { strlen(val0), strlen(val1), strlen(val2) };
+uint8_t orders = 3;
+
+TEST("client_set_tandem (3 orders)", 
+     splinter_client_set_tandem(base_key, vals, lens, orders) == 0);
+
+char buf_verify[64];
+size_t out_verify;
+
+TEST("verify base key exists", splinter_get(base_key, buf_verify, 64, &out_verify) == 0);
+TEST("verify order .1 exists", splinter_get("multi_part_sensor.1", buf_verify, 64, &out_verify) == 0);
+TEST("verify order .2 exists", splinter_get("multi_part_sensor.2", buf_verify, 64, &out_verify) == 0);
+
+splinter_client_unset_tandem(base_key, orders);
+
+TEST("verify base key was unset", splinter_get(base_key, buf_verify, 64, &out_verify) != 0);
+TEST("verify order .1 was unset", splinter_get("multi_part_sensor.1", buf_verify, 64, &out_verify) != 0);
+TEST("verify order .2 was unset", splinter_get("multi_part_sensor.2", buf_verify, 64, &out_verify) != 0);
+
 // --- Signal Arena Verification via Snapshots ---
 const char *sig_key = "signal_test";
 splinter_set(sig_key, "data", 4);
