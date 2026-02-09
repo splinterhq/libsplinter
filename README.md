@@ -34,8 +34,8 @@ narrative backfills.
   high-resolution event markers.
 - **Temporal Compensation**: Update timestamps (`ctime`, `atime`) independently
   to compensate for temporal jitter during ingestion.
-  
-  **Toggle-able Auto Scrub**: One config call causes splinter to zero-out the max
+
+- **Toggle-able Auto Scrub**: One config call causes splinter to   zero-out the max
   length of each slot arena offset on every new wr ite or update, at the cost of a 
   memset during the sequence lock. 
   
