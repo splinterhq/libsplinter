@@ -393,7 +393,7 @@ int main(int argc, char **argv) {
     }
 
     puts("");
-    puts("Test is now running! Dots indicate progress...");
+    puts("Test is now running ...");
     long start = now_ms();
     int seq = 0;
     char kibble[3] = { 0 };
@@ -410,8 +410,8 @@ int main(int argc, char **argv) {
                 fflush(stdout);
             }
             if (seq %3000 == 0) {
-                fprintf(stdout, "\nPssst .... The dots only really indicate the passage of time while threads rip on a store.\n");
-                fprintf(stdout, "I have to be honest you know; I *am* a test, after all!\n\n");
+                fprintf(stdout, "\nThese dots indicate the passage of time while %d threads rip on a store.\n", cfg.num_threads);
+                fprintf(stdout, "Thanks for your patience! The test was set to run for %d seconds total.\n\n", cfg.test_duration_ms / 1000);
                 fflush(stdout);
             }
         }
