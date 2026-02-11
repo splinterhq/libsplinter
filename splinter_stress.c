@@ -29,6 +29,7 @@ typedef struct {
     int test_duration_ms;
     int num_keys;
     int writer_period_us;
+    int scrub;
 } cfg_t;
 
 typedef struct {
@@ -66,7 +67,6 @@ static void *writer_main(void *arg) {
     cfg_t *cfg = sh->cfg;
     char *buf = malloc(cfg->max_value_size);
     if (!buf) { perror("malloc"); return NULL; }
-
     unsigned ver = 1;
     size_t payload_len = cfg->max_value_size / 2;
     if (payload_len < 64) payload_len = 64;
@@ -223,8 +223,10 @@ static void print_stats(cfg_t *cfg, counters_t *c, long ms) {
     printf("Threads            : %d (readers=%d, writer=1)\n", cfg->num_threads, (cfg->num_threads - 1));
     printf("Duration           : %d ms\n", cfg->test_duration_ms);
     printf("Hot keys           : %d\n", cfg->num_keys);
+    printf("Writer Backoff     : %d us\n", cfg->writer_period_us);
     printf("Total ops          : %d (gets=%d, sets=%d)\n", gets + sets, gets, sets);
     printf("Throughput         : %.0f ops/sec\n", ops);
+    printf("Auto Scrub         : %s\n", (cfg->scrub == 1) ? "Yes" : "No");
     printf("Get                : ok=%d fail=%d (miss=%d, oversize=%d)\n", okg, fget, gmiss, goversize);
     printf("Set                : ok=%d fail=%d (full=%d, too_big=%d)\n", oks, fset, sfull, stbig);
     printf("Integrity failures : %d\n", bad);
@@ -248,9 +250,15 @@ static void prepopulate(shared_t *sh) {
 
 static void usage(const char *prog) {
     fprintf(stderr,
-        "usage: %s [--threads N] [--duration-ms D] [--keys K] [--store NAME]\n"
-        "          [--slots S] [--max-value B] [--writer-us U]\n"
-        "          [--quiet] [--keep-test-store]\n", prog);
+        "\nUsage: %s [arguments]\nWhere arguments are:\n\t  [--threads N] [--duration-ms D] [--keys K]\n"
+        "\t  [--slots S] [--max-value B] [--writer-us U]\n"
+        "\t  [--quiet] [--keep-test-store] [--scrub] [--store NAME]\n", prog);
+    fprintf(stderr,
+        "\nNote: --scrub suggests --writer-us set at 125 - 300us, or you just grind the seqlock.\n");
+    fprintf(stderr,
+        "Using --scrub writes zeros to the entire slot value region prior to writing data, on every write.\n");
+    fprintf(stderr, "It is not recommended unless needed for research hygiene and forces slower use.\n\n");    
+    fprintf(stderr, "Please do not file bug reports for integrity failures if using this tool with --scrub.\n\n");
 }
 
 int main(int argc, char **argv) {
@@ -264,6 +272,9 @@ int main(int argc, char **argv) {
         return 1;
     }
     snprintf(store, sizeof(store) -1, "mrsw_test_%u", pid);
+    int i, quiet = 0;
+    unsigned int scrub = 0;
+    
 #ifndef SPLINTER_PERSISTENT
     // We're abusing an in-memory store.
     cfg_t cfg = {
@@ -284,10 +295,9 @@ int main(int argc, char **argv) {
         .test_duration_ms = 30000,
         .num_keys = 192000,
         .writer_period_us = 0,
+        .scrub = 0,
     };
 #endif /* SPLINTER_PERSISTENT */
-
-    int i, quiet = 0;
 
     for (i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "--threads") && i+1 < argc) cfg.num_threads = atoi(argv[++i]);
@@ -299,8 +309,12 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--writer-us") && i+1 < argc) cfg.writer_period_us = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--quiet")) quiet = 1;
         else if (!strcmp(argv[i], "--keep-test-store")) keep_store = 1;
+        else if (!strcmp(argv[i], "--scrub")) scrub = 1;
         else { usage(argv[0]); return 2; }
     }
+    
+    cfg.scrub = scrub;
+
     if (cfg.num_threads < 2) cfg.num_threads = 2;
 
     if (splinter_create_or_open(cfg.store_name, cfg.slots, cfg.max_value_size) != 0) {
@@ -308,7 +322,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    splinter_set_av(0);
+    splinter_set_av(scrub);
 
     char **keys = calloc((size_t)cfg.num_keys, sizeof(char*));
     if (!keys) { perror("calloc"); return 1; }
@@ -331,11 +345,12 @@ int main(int argc, char **argv) {
 
     puts("===== MRSW STRESS TEST PLAN =====");
     printf(
-        "Store    : %s\nThreads  : %d\nDuration : %d ms\nSlots    : %d\nHot Keys : %d\nW/Backoff: %d ms\nMax Val  : %d bytes\n",
+        "Store    : %s\nThreads  : %d\nDuration : %d ms\nSlots    : %d\nScrub    : %s\nHot Keys : %d\nW/Backoff: %d ms\nMax Val  : %d bytes\n",
         cfg.store_name,
         cfg.num_threads, 
         cfg.test_duration_ms, 
-        cfg.slots, 
+        cfg.slots,
+        (cfg.scrub == 1) ? "Yes" : "No", 
         cfg.num_keys, 
         cfg.writer_period_us,
         cfg.max_value_size
@@ -392,6 +407,11 @@ int main(int argc, char **argv) {
             fflush(stdout);
             if (seq %500 == 0) {
                 fputc('\n', stdout);
+                fflush(stdout);
+            }
+            if (seq %3000 == 0) {
+                fprintf(stdout, "\nPssst .... The dots only really indicate the passage of time while threads rip on a store.\n");
+                fprintf(stdout, "I have to be honest you know; I *am* a test, after all!\n\n");
                 fflush(stdout);
             }
         }
