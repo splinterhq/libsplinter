@@ -1,4 +1,4 @@
-# Splinter 🐀 (v1.0.0)
+# Splinter
 
 **Splinter** is a minimalist, high-speed lock-free message bus and subscribable
 KV store. It operates in shared memory (`memfd`) or uses memory-mapped files for
