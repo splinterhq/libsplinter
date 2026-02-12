@@ -7,8 +7,8 @@ data between processes faster than the Linux kernel usually wants to let you.
 
 As a vector store, Splinter is approximately **16x faster than Redis** and **33x
 faster than SQLite3** `:memory:`. On production-grade hardware, Splinter 1.0.0
-pushes **3.39 million ops/sec** under extreme contention (128 threads) with
-**zero integrity failures**.
+pushes **3.39 million ops/sec** on a throttled i3 under extreme contention 
+(128 threads) with **zero integrity failures**.
 
 ## 🚀 1.0.0 Performance Benchmarks
 
