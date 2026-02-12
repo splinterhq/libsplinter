@@ -226,7 +226,7 @@ static void print_stats(cfg_t *cfg, counters_t *c, long ms) {
     printf("Writer Backoff     : %d us\n", cfg->writer_period_us);
     printf("Total ops          : %d (gets=%d, sets=%d)\n", gets + sets, gets, sets);
     printf("Throughput         : %.0f ops/sec\n", ops);
-    printf("Auto Scrub         : %s\n", (cfg->scrub == 1) ? "Yes" : "No");
+    printf("Hybrid Scrub       : %s\n", (cfg->scrub == 1) ? "Yes" : "No");
     printf("Get                : ok=%d fail=%d (miss=%d, oversize=%d)\n", okg, fget, gmiss, goversize);
     printf("Set                : ok=%d fail=%d (full=%d, too_big=%d)\n", oks, fset, sfull, stbig);
     printf("Integrity failures : %d\n", bad);
@@ -322,7 +322,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    splinter_set_av(scrub);
+    if (cfg.scrub) splinter_set_hybrid_av();
 
     char **keys = calloc((size_t)cfg.num_keys, sizeof(char*));
     if (!keys) { perror("calloc"); return 1; }
@@ -345,7 +345,7 @@ int main(int argc, char **argv) {
 
     puts("===== MRSW STRESS TEST PLAN =====");
     printf(
-        "Store    : %s\nThreads  : %d\nDuration : %d ms\nSlots    : %d\nScrub    : %s\nHot Keys : %d\nW/Backoff: %d ms\nMax Val  : %d bytes\n",
+        "Store    : %s\nThreads  : %d\nDuration : %d ms\nSlots    : %d\nH-Scrub  : %s\nHot Keys : %d\nW/Backoff: %d ms\nMax Val  : %d bytes\n",
         cfg.store_name,
         cfg.num_threads, 
         cfg.test_duration_ms, 

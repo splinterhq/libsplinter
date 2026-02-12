@@ -296,6 +296,43 @@ int splinter_create_or_open(const char *name_or_path, size_t slots, size_t max_v
  */
 void splinter_close(void);
 
+
+// About Splinter AV / Auto Scrub
+// Because splinter has static geometry, there's no 'row level' cleanup required.
+// We only have key -> value, where value can be up to max_val_sz.
+//
+// 99.999% of people will never have to think about this. Unless you're doing LLM 
+// training, high-signal runtimes, or verifiable scientific research, you can 
+// probably ignore the sanitation stuff.
+//
+// If your store has a max_val_sz of 1024, and you always write 1024 bytes, 
+// there's no chance old data could creep into new reads. However, if your 
+// max len is 1024 and you first write 900 bytes, then later only 100 bytes, 
+// a reader using raw pointers (bypassing the library's length-checking) 
+// stands a chance of over-reading up to 800 bytes of stale data.
+//
+// To prevent this while respecting the "Centerline" of performance, it offers
+// three modes of "Auto Scrubbing":
+//
+// 1. None (Default): Behavior similar to a file system. Fastest throughput 
+//    (3.3M+ ops/sec on old HW) with zero energetic waste.
+//
+// 2. Hybrid (Fast Mop): Zero out the incoming length plus a 64-byte aligned 
+//    "slop" region. This prevents SIMD/Vectorized loads from seeing stale 
+//    data without the cost of a full boil.
+//
+// 3. Full (Boil): Zero out the entire max_val_sz assigned to that slot. 
+//    This ensures absolute hygiene for LLM memory and forensics, but 
+//    it "squats" on the seqlock longer.
+//
+// Hybrid is more than sufficient for most needs (and is the default for 
+// MRSW stress tests if scrubbing is enabled). Full boil is only recommended 
+// if you ABSOLUTELY require verifiable zero-contamination.
+//
+// Purge: Can be run during backfill runs or maintenance to zero out lingering 
+// orphan data in empty slots or active tails. This doesn't reclaim space; 
+// it only ensures the manifold is clean.
+
 /**
  * @brief Set the value of the auto_scrub flag on the current bus. 
  */
