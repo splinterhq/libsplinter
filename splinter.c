@@ -254,17 +254,18 @@ int splinter_open_or_create(const char *name_or_path, size_t slots, size_t max_v
 int splinter_set_av(unsigned int mode) {
     if (!H) return -2;
 
-    switch (mode) {
-        case 1:
-            splinter_config_set(H, SPL_SYS_AUTO_SCRUB);
-            return 0;
-        case 0:
-            splinter_config_clear(H, SPL_SYS_AUTO_SCRUB);
-            return 0;
-        default:
-            errno = ENOTSUP;
-            return -1;
+    if (mode == 1) {
+        splinter_config_set(H, SPL_SYS_AUTO_SCRUB);
+        return 0;
+    } else if (mode == 0) {
+        // Clear both flags simultaneously 
+        atomic_fetch_and(&H->core_flags, ~(SPL_SYS_AUTO_SCRUB | SPL_SYS_HYBRID_SCRUB));
+        return 0;
     }
+
+    // The only reason this fails is mode being unexpected.
+    errno = ENOTSUP;
+    return -1;
 }
 
 /**
@@ -275,6 +276,62 @@ int splinter_get_av(void) {
     if (!H) return -2;
 
     return (int) splinter_config_test(H, SPL_SYS_AUTO_SCRUB);
+}
+
+/**
+ * @brief Just like splinter_set_av(), but also engages the hybrid bit atomically / simultaneously
+ * @return int
+ */
+int splinter_set_hybrid_av(void) {
+    if (!H) return -2;
+
+    // Set both bits simultaneously. This opens the gate AND 
+    // selects the 64-byte mop in one atomic cycle.
+    atomic_fetch_or(&H->core_flags, SPL_SYS_AUTO_SCRUB | SPL_SYS_HYBRID_SCRUB); //
+    
+    return 0;
+}
+
+/**
+ * @brief Check if the bus has hybrid scrub enabled
+ * @return int
+ */
+int splinter_get_hybrid_av(void) {
+    if (!H) return -2;
+
+    return (int) splinter_config_test(H, SPL_SYS_HYBRID_SCRUB);
+}
+
+/**
+ * @brief Performs a high-efficiency hygiene sweep.
+ */
+void splinter_purge(void) {
+    if (!H || !S || !VALUES) return;
+
+    for (uint32_t i = 0; i < H->slots; ++i) {
+        struct splinter_slot *slot = &S[i];
+        
+        // 1. Snapshot the state to avoid 'squatting' on a busy slot
+        uint64_t e = atomic_load_explicit(&slot->epoch, memory_order_acquire);
+        if (e & 1ull) continue; // Strike was already in progress
+
+        // 2. Acquire the seqlock
+        if (!atomic_compare_exchange_strong(&slot->epoch, &e, e + 1)) continue;
+
+        uint32_t len = atomic_load_explicit(&slot->val_len, memory_order_relaxed);
+        uint8_t *dst = VALUES + slot->val_off;
+
+        // 3. The Sweep: If active, mop the tail; if empty, boil the slot.
+        if (atomic_load_explicit(&slot->hash, memory_order_acquire) == 0) {
+            memset(dst, 0, H->max_val_sz);
+        } else if (len < H->max_val_sz) {
+            // Only mop the 'dirty' remainder beyond current data
+            memset(dst + len, 0, H->max_val_sz - len);
+        }
+
+        // 4. Release and return to silence
+        atomic_fetch_add_explicit(&slot->epoch, 1, memory_order_release);
+    }
 }
 
 /**
@@ -360,80 +417,64 @@ int splinter_unset(const char *key) {
  */
 int splinter_set(const char *key, const void *val, size_t len) {
     if (!H || !key) return -1;
-    if (len == 0 || len > H->max_val_sz) return -1; // require non-zero len
+    if (len == 0 || len > H->max_val_sz) return -1;
 
     uint64_t h = fnv1a(key);
     size_t idx = slot_idx(h, H->slots);
     const size_t arena_sz = (size_t)H->slots * (size_t)H->max_val_sz;
 
-    size_t i;
-    for (i = 0; i < H->slots; ++i) {
+    for (size_t i = 0; i < H->slots; ++i) {
         struct splinter_slot *slot = &S[(idx + i) % H->slots];
         uint64_t slot_hash = atomic_load_explicit(&slot->hash, memory_order_acquire);
 
         if (slot_hash == 0 || (slot_hash == h && strncmp(slot->key, key, SPLINTER_KEY_MAX) == 0)) {
-            // Try to acquire the slot's seqlock: flip epoch from even -> odd.
             uint64_t e = atomic_load_explicit(&slot->epoch, memory_order_relaxed);
-            if (e & 1ull) {
-                // writer already in progress for this slot; skip and continue probing
-                continue;
-            }
-            // attempt to CAS epoch: e -> e+1 (make odd)
-            uint64_t want = e + 1;
-            if (!atomic_compare_exchange_weak_explicit(&slot->epoch, &e, want,
+            if (e & 1ull) continue;
+
+            if (!atomic_compare_exchange_weak_explicit(&slot->epoch, &e, e + 1,
                                                       memory_order_acq_rel, memory_order_relaxed)) {
-                // CAS failed (epoch changed), retry next slot
                 continue;
             }
 
-            // We have the slot in "writer active" (odd epoch) state.
-            // Now validate the offset/range before touching memory.
             if ((size_t)slot->val_off >= arena_sz || (size_t)slot->val_off + len > arena_sz) {
-                // leave epoch balanced (make it even again) and fail safely
                 atomic_fetch_add_explicit(&slot->epoch, 1, memory_order_release);
                 return -1;
             }
 
-            // Perform the write: value -> val_len -> key -> publish hash -> complete epoch
             uint8_t *dst = (uint8_t *)VALUES + slot->val_off;
 
-            // Clear full slot value region (keeps old tail bytes from leaking).
             if (splinter_config_test(H, SPL_SYS_AUTO_SCRUB)) {
-                memset(VALUES + slot->val_off, 0, H->max_val_sz);
+                // Determine if we do a full scrub or a fast cache-line scrub
+                if (splinter_config_test(H, SPL_SYS_HYBRID_SCRUB)) {
+                    // Round up to next 64-byte boundary: (len + 63) & ~63
+                    size_t scrub_len = (len + 63) & ~63;
+                    if (scrub_len > H->max_val_sz) scrub_len = H->max_val_sz;
+                    memset(dst, 0, scrub_len);
+                } else {
+                    // Full boil mode: I wish hotels could do this!
+                    memset(dst, 0, H->max_val_sz);
+                }
             }
+            
             memcpy(dst, val, len);
-
-            // Publish length atomically (release so readers see full bytes)
             atomic_store_explicit(&slot->val_len, (uint32_t)len, memory_order_release);
 
-            // Update key (write full key buffer so readers can't see a partial key)
-            if (splinter_config_test(H, SPL_SYS_AUTO_SCRUB)) {
-                memset(slot->key, 0, SPLINTER_KEY_MAX);
-            } else {
-                slot->key[0] = '\0';
-            }
+            // Update key and publish
+            slot->key[0] = '\0';
             strncpy(slot->key, key, SPLINTER_KEY_MAX - 1);
             slot->key[SPLINTER_KEY_MAX - 1] = '\0';
 
-            // Ensure prior stores are visible before publishing hash
             atomic_thread_fence(memory_order_release);
-
-            // Only now publish the hash so readers will match only once value+key are in place.
             atomic_store_explicit(&slot->hash, h, memory_order_release);
-
-            // End seqlock: bump epoch to even (writer done). Use release to publish writes.
             atomic_fetch_add_explicit(&slot->epoch, 1, memory_order_release);
             
-            // Make sure watchers know we did something
             splinter_pulse_watchers(slot);
-            
-            // Update global epoch (best-effort, relaxed).
             atomic_fetch_add_explicit(&H->epoch, 1, memory_order_relaxed);
 
             return 0;
         }
     }
-    return -1; // store full / no suitable slot
+    return -1;
 }
 
 /**

@@ -41,7 +41,7 @@ extern "C" {
 
 /** @brief Reserved store system flags */
 #define SPL_SYS_AUTO_SCRUB     (1u << 0)
-#define SPL_SYS_RESERVED_1     (1u << 1)
+#define SPL_SYS_HYBRID_SCRUB   (1u << 1)
 #define SPL_SYS_RESERVED_2     (1u << 2)
 #define SPL_SYS_RESERVED_3     (1u << 3)
 
@@ -300,6 +300,25 @@ void splinter_close(void);
  * @brief Set the value of the auto_scrub flag on the current bus. 
  */
  int splinter_set_av(unsigned int mode);
+
+ /**
+  * @brief Engage hybrid auto scrub 
+  * @return int (sets errno) 
+  */
+int splinter_set_hybrid_av(void);
+
+/**
+ * @brief Check hybrid status of auto scrub engagement
+ * @return int
+ */
+int splinter_get_hybrid_av(void);
+
+/**
+ * @brief Check each key, and zero out memory past the value length to the 
+ * allocated slot length (essentially sweep out any old data). Designed to be
+ * used as part of backfill runs when I/O slamming has stopped.
+ */
+void splinter_purge(void);
 
  /**
   * @brief Get the value of the auto_scrub flag on the current bus as integer.

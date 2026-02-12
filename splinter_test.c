@@ -303,6 +303,48 @@ splinter_get_header_snapshot(&b_after);
 
 TEST("label watch triggered pulse (global epoch check)", b_after.epoch > b_before.epoch);
 
+/* --- Hybrid Auto-Scrub & Hygiene Tests --- */
+
+// Test the "One Fell Swoop" transition
+TEST("set hybrid av mode (combined gate + mop)", splinter_set_hybrid_av() == 0);
+TEST("get hybrid av mode returns 1", splinter_get_hybrid_av() == 1);
+TEST("hybrid av automatically enabled regular av gate", splinter_get_av() == 1);
+
+splinter_header_snapshot_t hybrid_snap = { 0 };
+splinter_get_header_snapshot(&hybrid_snap);
+TEST("header snapshot confirms both bits (AUTO | HYBRID) are set",
+      (hybrid_snap.core_flags & SPL_SYS_AUTO_SCRUB) &&
+      (hybrid_snap.core_flags & SPL_SYS_HYBRID_SCRUB));
+
+// Verify the "Wing Chun" reset: one motion to clear the path
+TEST("set_av(0) clears both bits in one motion", splinter_set_av(0) == 0);
+TEST("get hybrid av returns 0 after full reset", splinter_get_hybrid_av() == 0);
+TEST("get regular av returns 0 after full reset", splinter_get_av() == 0);
+
+/* --- Purge / Centerline Sweep Tests --- */
+
+// Setup the bus for a sweep: one active key, one empty slot
+const char *active_key = "survivor_key";
+const char *purge_key = "ghost_key";
+splinter_set(active_key, "data_to_keep", 12);
+splinter_set(purge_key, "temporary_data", 14);
+
+// Unset the ghost key so the purge has an empty slot to boil
+splinter_unset(purge_key);
+splinter_purge(); 
+
+// if we get here without access violations, it worked.
+TEST("splinter_purge execution completed", 1); 
+
+// Verify that the 'passive substrate' still holds valid data for active keys
+char verify_buf[64];
+size_t verify_sz;
+TEST("active data survives hygiene sweep", 
+      splinter_get(active_key, verify_buf, sizeof(verify_buf), &verify_sz) == 0);
+
+verify_buf[verify_sz] = '\0';
+TEST("verified content integrity after purge", strcmp(verify_buf, "data_to_keep") == 0);
+
 splinter_close();
 splinter_header_snapshot_t closed = { 0 };
 TEST("store actually closed", splinter_get_header_snapshot(&closed) != 0);
