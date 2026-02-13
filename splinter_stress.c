@@ -253,12 +253,6 @@ static void usage(const char *prog) {
         "\nUsage: %s [arguments]\nWhere arguments are:\n\t  [--threads N] [--duration-ms D] [--keys K]\n"
         "\t  [--slots S] [--max-value B] [--writer-us U]\n"
         "\t  [--quiet] [--keep-test-store] [--scrub] [--store NAME]\n", prog);
-    fprintf(stderr,
-        "\nNote: --scrub suggests --writer-us set at 125 - 300us, or you just grind the seqlock.\n");
-    fprintf(stderr,
-        "Using --scrub writes zeros to the entire slot value region prior to writing data, on every write.\n");
-    fprintf(stderr, "It is not recommended unless needed for research hygiene and forces slower use.\n\n");    
-    fprintf(stderr, "Please do not file bug reports for integrity failures if using this tool with --scrub.\n\n");
 }
 
 int main(int argc, char **argv) {
@@ -409,6 +403,7 @@ int main(int argc, char **argv) {
                 fputc('\n', stdout);
                 fflush(stdout);
             }
+
             if (seq %3000 == 0) {
                 fprintf(stdout, "\nThese dots indicate the passage of time while %d threads rip on a store.\n", cfg.num_threads);
                 fprintf(stdout, "Thanks for your patience! The test was set to run for %d seconds total.\n\n", cfg.test_duration_ms / 1000);
