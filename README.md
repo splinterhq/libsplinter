@@ -30,6 +30,9 @@ main things that set it apart (_**aka: why Splinter is do damn fast**_):
   uses standard portable atomic sequence locks.
 - **In-Place Atomic Operations**: `INCR/DECR` as well as `AND`, `OR`, `XOR` and
   `NOT` happen in-place, atomically.
+- **NUMA Compatible**: Splinter can optionally utilize NUMA pinning on more 
+  modern hardware that, if combined with writers using the same affinity, could
+  reach write speeds of near 500MM ops/sec.
 - **Persistent or RAM-only**: Splinter persists easily to/from disk using the
   included CLI or just regular Unix tools like `dd`.
 - **Lua Integration**: `splinter_cli` and `splinterctl` both feature easy lua
@@ -49,21 +52,51 @@ with `O_DIRECT` or complex paging logic. It provides the metadata (`ctime`,
 for engineers who would rather spend their thermal budget on the math, not the
 management.
 
+Relational databases attempt to shield themselves from the kernel trying to be
+the kernel. Splinter goes out of its way to not bother the kernel unless it 
+must, and its logic shards inform the kernel of how the memory is intended for
+use at every step of the way.
+
+Here's [more about why Splinter and Linux are great friends](/splinter_and_linux/),
+which also touches on why Splinter gets along so well with even weaker CPUs and 
+memory models.
+
 ### Comparison: The Anti-Database Edge
 
 | Feature        | Splinter               | Traditional Vector DBs   |
 | -------------- | ---------------------- | ------------------------ |
-| **Transport**  | `mmap()` (Local)       | TCP/gRPC (Network Stack) |
+| **Transport**  | `memfd()` that degrades gracefully to `mmap()` (L3 Speed) | TCP/gRPC (Network Stack) |
 | **Daemon**     | None (Passive)         | Active Service (Heavy)   |
 | **Footprint**  | Static & Deterministic | Dynamic & Volatile       |
-| **Complexity** | 874 Lines of C         | 100k+ Lines of Code      |
+| **Complexity** | ~ 875 Lines of obsessively-optimized C (Will never exceed 999)  | 100k+ Lines of Code      |
+
+### Supported Platforms:
+
+Splinter is designed to work on any modern GNU/Linux flavor. Windows users could 
+consider using WSL with a slight penalty; MacOS would require some questionable
+shimming around the lack of `memfd` (You'd have to somehow force anonymous file 
+descriptors to work), but it *should* otherwise work perfectly.
+
+### Optional Linkage
+
+These are _not_ required - but Splinter can use them if they're installed and you 
+enable them during the build:
+
+ - NUMA (`libnuma-dev`) for NUMA affinity | `WITH_NUMA=1` during build
+ - LUA (`lua5.4-dev`) for LUA integration | `WITH_LUA=1` during build
+ - llama.cpp ([Github](#)) if you want to enable the nomic inference shard | `WITH_LLAMA=1` during  build
+ - Valgrind (`libvalgrind-dev`) for tighter Valgrind test integration | `WITH_VALGRIND=1` during build
+
+Splinter can be configured to just be KV (no space partitioned for embeddings) by
+passing `WITH_EMBEDDINGS=0` to the build command (for very lean configurations).
 
 ### Exhaustive Feature Overview
 
 #### 1. Performance & Scale
 
 - **Throughput**: Validated at **3.2M+ ops/sec** on early-gen, throttled
-  consumer hardware.
+  consumer hardware commonly found in data loggers and underfunded physics labs,
+  which are the majority of physics labs.
 - **Latency**: Resolves at L3 cache speeds by utilizing `memfd() / mmap()` for
   the primary transport.
 - **Scalability**: Supports disjointed MRMW (Multiple Reader, Multiple Writer)
@@ -155,6 +188,12 @@ loads.
 Splinter's epochs and feature flags lend very well to application configuration
 on Linux systems, and you can wrap REST endpoints around them to expose it to
 management tools like Configu or others.
+
+#### Just a KV Store
+
+You can compile splinter to not even reserve space for embeddings to just use it
+as a local socket-less cache server. The author uses splinter to trickle into 
+Redis based on key activity.  
 
 #### Embedded Use
 
