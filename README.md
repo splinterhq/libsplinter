@@ -130,7 +130,7 @@ computational thermodynamics:
 - **Bloom Labeling**: High-performance key tagging allows watchers to filter for
   specific signal "vibrations" without scanning the entire store.
 
-#### 5. Extensibility (Loadable Shards)
+#### 5. Extensibility (Loadable Shards (coming end of Feb 2026))
 
 - **Modular Logic**: Side-load specialized C logic (DSP, ANN search, Inference)
   via `insmod`.
