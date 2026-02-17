@@ -279,6 +279,7 @@ int main(int argc, char **argv) {
         .test_duration_ms = 60000,
         .num_keys = 20000,
         .writer_period_us = 0,
+        .scrub = 0,
     };
 #else
     cfg_t cfg = {
@@ -287,7 +288,7 @@ int main(int argc, char **argv) {
         .max_value_size = 2048,
         .num_threads = 16, // 15 readers + 1 writer
         .test_duration_ms = 30000,
-        .num_keys = 192000,
+        .num_keys = 10000,
         .writer_period_us = 0,
         .scrub = 0,
     };
@@ -339,7 +340,7 @@ int main(int argc, char **argv) {
 
     puts("===== MRSW STRESS TEST PLAN =====");
     printf(
-        "Store    : %s\nThreads  : %d\nDuration : %d ms\nSlots    : %d\nH-Scrub  : %s\nHot Keys : %d\nW/Backoff: %d ms\nMax Val  : %d bytes\n",
+        "Store    : %s\nThreads  : %d\nDuration : %d ms\nSlots    : %d\nH-Scrub  : %s\nHot Keys : %d\nW/Backoff: %d us\nMax Val  : %d bytes\n",
         cfg.store_name,
         cfg.num_threads, 
         cfg.test_duration_ms, 
