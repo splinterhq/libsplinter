@@ -1,11 +1,13 @@
 # Splinter: A Vector Anti-Database & Shared-Memory Substrate
 
-Splinter is a minimalist, lock-free key-value manifold designed to facilitate
-high-frequency data ingestion and retrieval across disjointed runtimes. It is
-built on the belief that for local inter-process communication (IPC), the
-kernel’s networking stack is an expensive and unnecessary middleman.
+Splinter is a minimalist, lock-free key-value vector substrate designed to 
+facilitate high-frequency data ingestion and retrieval across disjointed 
+runtimes. It is built on the belief that for local inter-process communication 
+(IPC), the kernel’s networking stack is an expensive and unnecessary middleman.
 
-### Design Philosophy: The Natural Settling of Frugality is Speed!
+### Design Philosophy: Shedding Complexity == Speed!
+
+You wouldn't think it would need to be stated, but .. `<inhales sharply>` ...
 
 Modern software has become arrogant, assuming that CPU cycles and memory
 bandwidth are infinite. We invoke help from the kernel's socket layer to
@@ -57,10 +59,6 @@ the kernel. Splinter goes out of its way to not bother the kernel unless it
 must, and its logic shards inform the kernel of how the memory is intended for
 use at every step of the way.
 
-Here's [more about why Splinter and Linux are great friends](/splinter_and_linux/),
-which also touches on why Splinter gets along so well with even weaker CPUs and 
-memory models.
-
 ### Comparison: The Anti-Database Edge
 
 | Feature        | Splinter               | Traditional Vector DBs   |
@@ -84,7 +82,7 @@ enable them during the build:
 
  - NUMA (`libnuma-dev`) for NUMA affinity | `WITH_NUMA=1` during build
  - LUA (`lua5.4-dev`) for LUA integration | `WITH_LUA=1` during build
- - llama.cpp ([Github](#)) if you want to enable the nomic inference shard | `WITH_LLAMA=1` during  build
+ - llama.cpp ([Github](#)) if you want to enable the nomic inference shard | `WITH_LLAMA=1` during  build (COMING SOON)
  - Valgrind (`libvalgrind-dev`) for tighter Valgrind test integration | `WITH_VALGRIND=1` during build
 
 Splinter can be configured to just be KV (no space partitioned for embeddings) by
