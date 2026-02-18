@@ -1,0 +1,9 @@
+lang: en
+layout: layouts/base.vto
+metas:
+  site: Splinter Vector KV Substrate
+  twitter: ""
+  fediverse: ""
+  icon: /uploads/favicon.svg
+  lang: =lang
+  generator: true

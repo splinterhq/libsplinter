@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="{{ lang || metas.lang }}">
+  <head>
+    <meta charset="utf-8">
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=5.0"
+    >
+    <title>{{ title || metas.title }} - {{ metas.site }}</title>
+    <meta name="color-scheme" content="dark">
+    <link
+      rel="stylesheet"
+      media="(prefers-color-scheme:dark)"
+      href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/themes/dark.css"
+      onload="document.documentElement.classList.add('sl-theme-dark');"
+    />
+    <link rel="stylesheet" href="/style.css">
+    <link rel="canonical" href="{{ url |> url(true) }}">
+    <script
+      id="MathJax-script"
+      async
+      src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"
+    >
+    </script>
+  </head>
+  <body>
+    <main class="container">
+      <nav class="top-nav" id="nav">
+        <a href="/">HOME</a>
+        <a href="/core">CORE</a>
+        <a href="/shards">SHARDS</a>
+        <a href="/bindings">BINDINGS</a>
+        <a
+          href="https://bitbucket.org/tinkertim/libsplinter/src/main/"
+          target="_blank"
+        >CODE</a>
+      </nav>
+      <div style="clear: both"></div>
+      {{ content }}
+    </main>
+  </body>
+</html>

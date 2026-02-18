@@ -1,0 +1,208 @@
+/* VT-102 Terminal Override */
+
+body {
+  --terminal-gray: #cccccc;
+  --terminal-green: #33ff33;
+  --terminal-bg: #0a0a0a;
+  --terminal-amber: #ffbf00;
+  --terminal-red: #4b0a0a;
+
+  font-size: 1.1rem;
+  font-family: "Courier New", Courier, "Lucida Sans Typewriter", monospace;
+  margin: 0;
+  padding: 2em;
+  background-color: var(--terminal-bg);
+  color: var(--terminal-gray);
+  line-height: 1.2;
+
+  /* CRT "scan line" effect (kinda?) */
+  background:
+    linear-gradient(
+      rgba(18, 16, 16, 0) 50%,
+      rgba(0, 0, 0, 0.25) 50%
+    ),
+    var(--terminal-bg);
+  background-size: 100% 4px;
+
+  /* Slight glow to text */
+  text-shadow: 0 0 5px rgba(51, 255, 51, 0.8);
+}
+
+.container {
+  margin: 0 auto;
+  padding: 20px;
+  box-shadow: 0 0 15px rgba(51, 255, 51, 0.2);
+}
+
+hr {
+  display: block;
+  margin: 1em 0 1em;
+  color: var(--terminal-red);
+}
+
+h1 {
+  text-align: center;
+  font-size: x-large;
+  color: var(--terminal-bg);
+  background-color: var(--terminal-green); /* Inverted header style */
+  padding: 0.2em;
+  text-transform: uppercase;
+}
+
+/* Shoelace Component Overrides to match the theme */
+sl-card, sl-button, sl-input {
+  --sl-panel-background-color: var(--terminal-bg);
+  --sl-color-neutral-0: var(--terminal-bg);
+  --sl-color-neutral-1000: var(--terminal-green);
+  --sl-input-border-color: var(--terminal-green);
+  border-radius: 0; /* Terminals don't do rounded corners */
+}
+
+/* Style links as terminal underscores */
+a {
+  color: var(--terminal-green);
+  text-decoration: underline;
+}
+
+/* Updated Top Navigation: Right-aligned block */
+.top-nav {
+  display: flex;
+  justify-content: flex-end; /* Pushes links to the right */
+  gap: 1.5em; /* Spacing between menu items */
+  font-weight: bold;
+  margin: 0 0 2em 0;
+  border-bottom: 1px dashed var(--terminal-gray); /* Visual separator */
+  padding-bottom: 0.5em;
+}
+
+.top-nav a {
+  text-decoration: none;
+  padding: 0.2em 0.5em;
+  color: var(--terminal-green);
+}
+
+/* Simulate VT-102 block cursor on hover */
+.top-nav a:hover {
+  background-color: var(--terminal-green);
+  color: var(--terminal-bg);
+  text-shadow: none;
+}
+
+.top-nav span {
+  color: darkred;
+}
+
+/* ASCII-style Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 2em 0;
+}
+
+th {
+  background-color: var(--terminal-green);
+  color: var(--terminal-bg);
+  text-transform: uppercase;
+  padding: 0.5em;
+  text-align: left;
+  border: 1px solid var(--terminal-green);
+}
+
+td {
+  padding: 0.5em;
+  border: 1px solid var(--terminal-green);
+  vertical-align: top;
+}
+
+/* Scanline and Glow overrides for Shoelace components */
+
+sl-details::part(base) {
+  background-color: var(--terminal-bg);
+  border: 1px solid var(--terminal-green);
+  border-radius: 0;
+}
+
+sl-details::part(header) {
+  color: var(--terminal-green);
+  font-family: inherit;
+}
+
+sl-details::part(content) {
+  border-top: 1px solid var(--terminal-green);
+  color: var(--terminal-green);
+}
+
+/* VT-102 List Styles */
+
+ul, ol {
+  margin: 1em 0;
+  padding-left: 1.25 em;
+  color: var(--terminal-gray); /* Secondary text color */
+}
+
+li {
+  margin-bottom: 0.8em; /* Padding between items */
+  line-height: 1.4;
+}
+
+/* Custom indicator for unordered lists */
+ul {
+  list-style: square;
+}
+
+/* Ordered lists get a glowing index */
+ol {
+  list-style-type: decimal;
+  margin-left: 1.25em;
+}
+
+ol li::marker {
+  color: var(--terminal-green);
+  font-weight: bold;
+}
+
+code {
+  color: var(--terminal-amber);
+}
+
+mjx-container[jax="CHTML"][display="true"] {
+  text-align: left !important;
+  margin-left: 1.5em !important; /* Adjust this for left padding */
+}
+
+/* Responsive Adjustments */
+
+@media (max-width: 600px) {
+  body {
+    padding: 1em; /* Reduce padding for more screen real estate */
+    font-size: 1rem; /* Slightly smaller text for mobile */
+  }
+
+  .top-nav {
+    flex-direction: column; /* Stack the links vertically */
+    align-items: center; /* Center them for a 'menu' look */
+    justify-content: center;
+    gap: 0.8em; /* Tighter spacing for vertical stack */
+    text-align: center;
+  }
+
+  .top-nav a {
+    width: 100%; /* Make links easier to tap */
+    border: 1px solid transparent;
+  }
+
+  /* Optional: Add a border on hover for mobile to feel more 'button-like' */
+  .top-nav a:hover {
+    border-color: var(--terminal-green);
+  }
+
+  h1 {
+    font-size: 1.2rem; /* Ensure headers don't overflow */
+  }
+
+  table {
+    display: block;
+    overflow-x: auto; /* Allow horizontal scrolling for wide tables */
+    white-space: nowrap;
+  }
+}
