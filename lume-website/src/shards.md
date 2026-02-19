@@ -60,4 +60,24 @@ have entry points, shutdown points, metadata and checks.
 
 TODO: Show shard structure once done.
 
+## Why Shards Set Memory Expectations and Force Accounting
+
+Splinter's CLI provides some abstractions to coordinate necessary work where
+lots of dynamic allocation may be required for processing, or for advising the
+kernel when recently used memory is no longer needed. Splinter doesn't use
+`mlock()` anywhere in the code (it could be easily added, if the goal was to
+make splinter "appliances" where no system processes ran), but barring that
+specialized use Splinter just leaves it up to the kernel.
+
+Because of this, it's _extremely_ helpful to coordinate. We don't bother the
+kernel unless we need to, correctly, but "I'm not using this huge amount of RAM
+you reserved for me anymore" is polite in a process that never really calls
+"free()" as a matter of global routine.
+
+This is why shards have reconciliation macros (TODO, implement fully). As your
+code flows, you set assertions for how you believe memory will be used. When
+done, the accountant checks /proc/self to see if your prediction matched use,
+and advises the kernel further if not. We do this so it doesn't add an
+accounting burden to your logic.
+
 ---

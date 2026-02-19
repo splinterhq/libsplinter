@@ -3,6 +3,7 @@ import metas from "lume/plugins/metas.ts";
 import { Options as SitemapOptions, sitemap } from "lume/plugins/sitemap.ts";
 import { favicon, Options as FaviconOptions } from "lume/plugins/favicon.ts";
 import { merge } from "lume/core/utils/object.ts";
+import codeHighlight from "lume/plugins/code_highlight.ts";
 
 import "lume/types.ts";
 
@@ -27,6 +28,13 @@ export default function (userOptions?: Options) {
       .use(metas())
       .use(sitemap(options.sitemap))
       .use(favicon(options.favicon))
+      .use(codeHighlight({
+          theme: {
+          name: "a11y-dark", // The theme name to download
+          cssFile: "/style.css", // The destination filename
+          placeholder: "/* insert-theme-here */", // Optional placeholder to replace with the theme code
+        }
+      }))
       .add("uploads")
       .add("style.css");
   };

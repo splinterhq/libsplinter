@@ -60,7 +60,7 @@ Billion), the physics becomes undeniable:
 $$CPO_{AMD} = \frac{5,000,000,000 \text{ cycles/sec (est. clock)}}{500,000,000 \text{ ops/sec}} = \mathbf{10 \text{ cycles/op}}$$
 
 This represents a **2,300x improvement in efficiency** over the traditional i3
-baseline ($23,076 / 10$).
+baseline (23,076 / 10).
 
 ## **Summary for Researchers**
 
@@ -105,5 +105,3 @@ examined in high-resolution research.
 We expect this will be the experience of teams working with massive amounts of
 vectors, or timing Rank 2+ tensor measurements (as we do) and invite additional
 use as well as scrutiny and feedback.
-
----

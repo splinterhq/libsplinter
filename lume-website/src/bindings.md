@@ -11,5 +11,3 @@ best (both languages offer multiple routes).
 
 If you get Splinter working outside of Rust or TS, drop a line and let us know
 and share your setup if you can!
-
----

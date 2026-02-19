@@ -1,53 +1,74 @@
-# Splinter: A Vector Anti-Database & Shared-Memory Substrate
+# Splinter ⚡ A Vector Anti-Database & Shared-Memory Substrate
 
 Splinter is a minimalist, lock-free key-value manifold designed to facilitate
 high-frequency data ingestion and retrieval across disjointed runtimes. It is
 built on the belief that for local inter-process communication (IPC), the
 kernel’s networking stack is an expensive and unnecessary coupling.
 
-### Design Philosophy: Shedding Complexity == Speed!
+Splinter emerged out frustration resulting from attempting to stretch tools over
+gaps that they simply were never designed to cover. It wasn't a question of more
+tuning, it was a need to cut out the socket layer and kernel arbitration
+completely.
 
-You wouldn't think it would need to be stated, but .. `<inhales sharply>` ...
+It was either completely dismantle and re-imagine SQLite, or write something
+completely different. Given the sparse availability of options, different seemed
+most beneficial to both the current need as well as the current ecosystem.
 
-Modern software has become arrogant, assuming that CPU cycles and memory
-bandwidth are infinite. We invoke help from the kernel's socket layer to
-transfer a value that we already have in memory to somewhere else in memory as
-standard practice.
+## Design Philosophy: Low Complexity + Systemic Sympathy = Speed!
 
-And, now we're doing that with 768-dimensional vectors. Splinter is a gesture
-back in the direction of adulthood for systems development. Here's a list of the
-main things that set it apart (_**aka:
+Modern software has become complacent with IAAS marketing, assuming that CPU
+cycles and memory bandwidth are infinite. We invoke help from the kernel's
+socket layer to transfer a value that we already have in memory to another
+region in the same physical memory somewhere else in memory as standard
+practice.
+
+And, now we're doing that with 768-dimensional vectors 😱 Splinter is a gesture
+back in the direction of efficiency for systems development. Here's a list of
+the main things that set it apart (_**aka:
 [why Splinter is do damn fast](/splinter_performance)**_):
 
 - **Splinter Is a Passive Substrate**: Splinter is not a daemon. It is a
   memory-mapped region that acts as a mutual option for every process on the
   system.
+
 - **(DRYD) Zero-Copy Intent**: _(D)on't (R)epeat (Y)our (D)ata_ In Splinter,
   information is never "sent"; it is published. Readers access the raw memory
   directly, crossing only the minimal checkpoints needed for safe coordination,
   eliminating the energetic tax of serialization and context switching.
+
 - **Static Geometry**: By using a fixed-geometry arena, Splinter eliminates the
   "learned negligence" of dynamic heap fragmentation and background garbage
   collection.
+
 - **Lock-Free Practicality**: No time is wasted acquiring mutex locks; Splinter
   uses standard portable atomic sequence locks.
+
 - **In-Place Atomic Operations**: `INCR/DECR` as well as `AND`, `OR`, `XOR` and
   `NOT` happen in-place, atomically.
+
 - **NUMA Compatible**: Splinter can optionally utilize NUMA pinning on more
   modern hardware that, if combined with writers using the same affinity, could
   reach write speeds of near 500MM ops/sec.
+
 - **Persistent or RAM-only**: Splinter persists easily to/from disk using the
   included CLI or just regular Unix tools like `dd`.
+
 - **Lua Integration**: `splinter_cli` and `splinterctl` both feature easy lua
   scripting for data transformation.
+
 - **Doesn't Corrupt**: Doesn't require checking, operates cleanly.
+
 - **Unopinionated**: Implement LRU or TTL eviction how you like in a loadable
   shard, or no eviction at all. Splinter doesn't care.
+
 - **Scales Across RDMA**: Splinter uses UNIX permissions and scales "out" easily
   so that other systems on the same RDMA network can access it at near-local
   speeds too. The same seqlock protection covers it all.
 
-### The "Good Citizen" Protocol
+### The "Good Process" Approach:
+
+_(Even though technically only the CLI or client code is the process because
+Splinter itself is just a place, not a process)_
 
 Splinter assumes **informed intent**. It does not try to outsmart the kernel
 with `O_DIRECT` or complex paging logic. It provides the metadata (`ctime`,
@@ -65,7 +86,7 @@ Here's
 which also touches on why Splinter gets along so well with even weaker CPUs and
 memory models.
 
-### Comparison: The Anti-Database Edge
+### Comparison With Related Tools:
 
 | Feature        | Splinter                                                       | Traditional Vector DBs   |
 | -------------- | -------------------------------------------------------------- | ------------------------ |
@@ -81,7 +102,7 @@ consider using WSL with a slight penalty; MacOS would require some questionable
 shimming around the lack of `memfd` (You'd have to somehow force anonymous file
 descriptors to work), but it _should_ otherwise work perfectly.
 
-### Optional Linkage
+### Optional Linkage:
 
 These are _not_ required - but Splinter can use them if they're installed and
 you enable them during the build:
@@ -97,7 +118,7 @@ Splinter can be configured to just be KV (no space partitioned for embeddings)
 by passing `WITH_EMBEDDINGS=0` to the build command (for very lean
 configurations).
 
-### Exhaustive Feature Overview
+### Exhaustive Feature Overview:
 
 #### 1. Performance & Scale
 
@@ -169,13 +190,22 @@ easy semantic relation).
 The following cases stand out as those that the author himself uses Splinter for
 right now, or specifically wrote Splinter to handle with competence and ease:
 
-#### Sociophysics Research
+#### High-res Physics & Statistics Research
 
 Splinter allows up to 64 signal groups per bus along with ctags-style labeling
 and selection through built-in per-slot bloom filters. It also attaches a number
 of user- defined feature flags per slot for convenience, integrates easily with
 `btrfs` snapshot schemes and is built around the idea of capturing raw data
 exceptionally well while making backfill easy, even with temporal offset.
+
+Slot coupling allows for simple standard ordered sets, accessible by number
+(e.g. `foo_key.1`, `foo_key.2` for velocity and acceleration of `foo` (the
+primary key)).
+
+You also have the benefit of atomic operations on keys you identify as being
+expected to contain `BIGUINT` values, vector storage for every slot and well in
+excess of 500,000 operations per second with proper NUMA configuration on modern
+fast hardware. You can record most kinds of data at L3 speeds.
 
 #### LLM Orchestrated Memory
 
@@ -237,5 +267,3 @@ overhead instead `:)`.
 
 I'm Tim Post (former Stack Overflow Employee & Community Leader). You can reach
 me at `timthepost@protonmail.com` if you have questions.
-
----

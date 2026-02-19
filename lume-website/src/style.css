@@ -2,10 +2,10 @@
 
 body {
   --terminal-gray: #cccccc;
-  --terminal-green: #33ff33;
+  --terminal-green: #33ff3390;
   --terminal-bg: #0a0a0a;
   --terminal-amber: #ffbf00;
-  --terminal-red: #4b0a0a;
+  --terminal-red: #6d2323;
 
   font-size: 1.1rem;
   font-family: "Courier New", Courier, "Lucida Sans Typewriter", monospace;
@@ -22,10 +22,13 @@ body {
       rgba(0, 0, 0, 0.25) 50%
     ),
     var(--terminal-bg);
+  
   background-size: 100% 4px;
 
   /* Slight glow to text */
+  /*
   text-shadow: 0 0 5px rgba(51, 255, 51, 0.8);
+  */
 }
 
 .container {
@@ -206,3 +209,12 @@ mjx-container[jax="CHTML"][display="true"] {
     white-space: nowrap;
   }
 }
+
+footer {
+  color: var(--terminal-red);
+  margin: 1em 0 1em;
+  padding: 2px;
+  text-align: center;
+}
+
+/* insert-theme-here */
