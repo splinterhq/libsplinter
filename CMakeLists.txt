@@ -11,6 +11,7 @@ add_definitions(-DSPLINTER_VERSION="${SPLINTER_VERSION_STRING}")
 option(WITH_EMBEDDINGS "Enable Nomic/LLM embedding support" ON)
 option(WITH_NUMA       "Enable NUMA memory affinity support" OFF)
 option(WITH_LUA        "Enable Lua CLI integration" ON)
+option(WITH_LLAMA      "Enable llama.cpp inference sidecar" OFF)
 
 # --- Dependency Detection ---
 find_package(PkgConfig REQUIRED)
@@ -64,6 +65,40 @@ add_compile_options(-O3 -Wall -Wextra -D_GNU_SOURCE -fPIC)
 
 if(WITH_EMBEDDINGS)
     add_definitions(-DSPLINTER_EMBEDDINGS)
+endif()
+
+# --- llama.cpp Inference Sidecar ---
+if(WITH_LLAMA)
+    # The sidecar requires C++ support
+    enable_language(CXX)
+    set(CMAKE_CXX_STANDARD 14) # llama.cpp standard compatibility
+    set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+    # Detect llama.cpp library and headers
+    find_library(LLAMA_LIB 
+        NAMES llama 
+        HINTS /usr/local/lib /usr/lib /opt/llama.cpp/build
+    )
+    find_path(LLAMA_INCLUDE_DIR 
+        NAMES llama.h 
+        HINTS /usr/local/include /usr/include /opt/llama.cpp
+    )
+
+    if(LLAMA_LIB AND LLAMA_INCLUDE_DIR)
+        message(STATUS "Found llama.cpp: ${LLAMA_LIB}")
+        
+        # Build the sidecar executable
+        add_executable(splinference splinference.cpp)
+        
+        # Link against the Splinter shared library and llama.cpp
+        target_include_directories(splinference PRIVATE ${LLAMA_INCLUDE_DIR})
+        target_link_libraries(splinference PRIVATE splinter_shared ${LLAMA_LIB})
+        
+        # Add to installation targets
+        install(TARGETS splinference RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+    else()
+        message(FATAL_ERROR "llama.cpp not found. Disable WITH_LLAMA to skip.")
+    endif()
 endif()
 
 # --- Targets ---
