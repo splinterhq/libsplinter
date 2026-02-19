@@ -1093,7 +1093,7 @@ int splinter_client_set_tandem(const char *base_key, const void **vals,
 
     // Write subsequent orders using ".n" notation
     for (uint8_t i = 1; i < orders; i++) {
-        snprintf(tandem_name, sizeof(tandem_name), "%s.%u", base_key, i);
+        snprintf(tandem_name, sizeof(tandem_name), "%s%s%u", base_key, SPL_ORDER_ACCESSOR, i);
         if (splinter_set(tandem_name, vals[i], lens[i]) != 0) {
             return -1;
         }
@@ -1112,7 +1112,7 @@ void splinter_client_unset_tandem(const char *base_key, uint8_t orders) {
 
     // Unset the orders
     for (uint8_t i = 1; i < orders; i++) {
-        snprintf(tandem_name, sizeof(tandem_name), "%s.%u", base_key, i);
+        snprintf(tandem_name, sizeof(tandem_name), "%s%s%u", base_key, SPL_ORDER_ACCESSOR, i);
         splinter_unset(tandem_name);
     }
 }
@@ -1257,4 +1257,3 @@ uint64_t splinter_get_signal_count(uint8_t group_id) {
     // Explicitly load with acquire semantics to ensure we see the latest pulses
     return atomic_load_explicit(&H->signal_groups[group_id].counter, memory_order_acquire);
 }
-

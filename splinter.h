@@ -79,6 +79,13 @@ extern "C" {
 #define SPL_TIME_ATIME         1
 
 /**
+ * @brief The special character that accesses standard ordered sets in tandem keys.
+ * If you change it, change it to something that you're sure you won't see in your data.
+ * Emojis are fine.
+ */
+#define SPL_ORDER_ACCESSOR "."
+
+/**
  * @brief Individual signal lane, aligned to prevent false sharing.
  */
 struct splinter_signal_node {
