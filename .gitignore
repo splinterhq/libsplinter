@@ -13,3 +13,5 @@ bindings/rust/target
 *-tap-test
 mrsw_test_*
 build/*
+bind_watch
+bind_watch.c
