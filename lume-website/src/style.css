@@ -1,10 +1,11 @@
-/* VT-102 Terminal Override */
+/* An Amalgamation Of Terminals Override */
 
 body {
   --terminal-gray: #cccccc;
   --terminal-green: #33ff3390;
   --terminal-bg: #0a0a0a;
   --terminal-amber: #ffbf00;
+  --terminal-cyan: rgb(12, 193, 193);
   --terminal-red: #6d2323;
 
   font-size: 1.1rem;
@@ -50,6 +51,10 @@ h1 {
   background-color: var(--terminal-green); /* Inverted header style */
   padding: 0.2em;
   text-transform: uppercase;
+}
+
+h2, h3, h4, h5 {
+  color: var(--terminal-cyan);
 }
 
 /* Shoelace Component Overrides to match the theme */
