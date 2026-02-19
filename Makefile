@@ -23,6 +23,7 @@ tests: all
 
 clean:
 	@$(MAKE) -C build clean
+	@rm -f bind_watch bind_watch.c
 
 distclean:
 	@$(GIT) clean -fdx || false
