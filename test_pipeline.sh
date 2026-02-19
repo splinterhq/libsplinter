@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# generated script to coordinate the inference signal group test.
+
 # --- Configuration ---
 BUS_NAME="nomic_text"
 KEY_NAME="nomic_test_key"
