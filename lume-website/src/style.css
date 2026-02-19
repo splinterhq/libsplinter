@@ -72,15 +72,14 @@ a {
   text-decoration: underline;
 }
 
-/* Updated Top Navigation: Right-aligned block */
 .top-nav {
   display: flex;
-  justify-content: flex-end; /* Pushes links to the right */
-  gap: 1.5em; /* Spacing between menu items */
+  justify-content: flex-end;
+  gap: 1.5em; 
   font-weight: bold;
-  margin: 0 0 2em 0;
-  border-bottom: 1px dashed var(--terminal-gray); /* Visual separator */
-  padding-bottom: 0.5em;
+  margin: 0 0 .5em 0;
+  /* border-bottom: 1px dashed var(--terminal-gray); */
+  padding-bottom: 0.25em;
 }
 
 .top-nav a {
@@ -89,7 +88,6 @@ a {
   color: var(--terminal-green);
 }
 
-/* Simulate VT-102 block cursor on hover */
 .top-nav a:hover {
   background-color: var(--terminal-green);
   color: var(--terminal-bg);
@@ -100,7 +98,6 @@ a {
   color: darkred;
 }
 
-/* ASCII-style Tables */
 table {
   width: 100%;
   border-collapse: collapse;
@@ -140,25 +137,22 @@ sl-details::part(content) {
   color: var(--terminal-green);
 }
 
-/* VT-102 List Styles */
 
 ul, ol {
   margin: 1em 0;
   padding-left: 1.25 em;
-  color: var(--terminal-gray); /* Secondary text color */
+  color: var(--terminal-gray);
 }
 
 li {
-  margin-bottom: 0.8em; /* Padding between items */
+  margin-bottom: 0.8em;
   line-height: 1.4;
 }
 
-/* Custom indicator for unordered lists */
 ul {
   list-style: square;
 }
 
-/* Ordered lists get a glowing index */
 ol {
   list-style-type: decimal;
   margin-left: 1.25em;
@@ -175,42 +169,41 @@ code {
 
 mjx-container[jax="CHTML"][display="true"] {
   text-align: left !important;
-  margin-left: 1.5em !important; /* Adjust this for left padding */
+  margin-left: 1.5em !important;
 }
 
 /* Responsive Adjustments */
 
 @media (max-width: 600px) {
   body {
-    padding: 1em; /* Reduce padding for more screen real estate */
-    font-size: 1rem; /* Slightly smaller text for mobile */
+    padding: 1em;
+    font-size: 1rem; 
   }
 
   .top-nav {
-    flex-direction: column; /* Stack the links vertically */
-    align-items: center; /* Center them for a 'menu' look */
+    flex-direction: column; 
+    align-items: center;
     justify-content: center;
-    gap: 0.8em; /* Tighter spacing for vertical stack */
+    gap: 0.8em;
     text-align: center;
   }
 
   .top-nav a {
-    width: 100%; /* Make links easier to tap */
+    width: 100%;
     border: 1px solid transparent;
   }
 
-  /* Optional: Add a border on hover for mobile to feel more 'button-like' */
   .top-nav a:hover {
     border-color: var(--terminal-green);
   }
 
   h1 {
-    font-size: 1.2rem; /* Ensure headers don't overflow */
+    font-size: 1.2rem;
   }
 
   table {
     display: block;
-    overflow-x: auto; /* Allow horizontal scrolling for wide tables */
+    overflow-x: auto; 
     white-space: nowrap;
   }
 }
@@ -221,5 +214,7 @@ footer {
   padding: 2px;
   text-align: center;
 }
+
+/* The next comment line is for lume's code plugin */
 
 /* insert-theme-here */
