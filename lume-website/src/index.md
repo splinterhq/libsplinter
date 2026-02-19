@@ -19,8 +19,7 @@ most beneficial to both the current need as well as the current ecosystem.
 Modern software has become complacent with IAAS marketing, assuming that CPU
 cycles and memory bandwidth are infinite. We invoke help from the kernel's
 socket layer to transfer a value that we already have in memory to another
-region in the same physical memory somewhere else in memory as standard
-practice.
+region in the same physical memory as standard practice.
 
 And, now we're doing that with 768-dimensional vectors 😱 Splinter is a gesture
 back in the direction of efficiency for systems development. Here's a list of
