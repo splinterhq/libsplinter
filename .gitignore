@@ -7,6 +7,7 @@ splinter_stress
 splinterp_stress
 splinter_cli
 splinterp_cli
+splinference
 bindings/rust/Cargo.lock
 bindings/rust/src/bindings.rs
 bindings/rust/target
@@ -15,3 +16,4 @@ mrsw_test_*
 build/*
 bind_watch
 bind_watch.c
+3rdparty/Nomic/*.gguf
