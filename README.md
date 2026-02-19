@@ -14,6 +14,9 @@ It was either completely dismantle and re-imagine SQLite, or write something
 completely different. Given the sparse availability of options, different seemed
 most beneficial to both the current need as well as the current ecosystem.
 
+Splinter has a [work-in-progress website](https://splinter-website.netlify.app)
+with more information.
+
 ## Design Philosophy: Low Complexity + Systemic Sympathy = Speed!
 
 Modern software has become complacent with IAAS marketing, assuming that CPU
