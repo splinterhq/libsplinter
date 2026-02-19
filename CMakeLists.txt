@@ -87,15 +87,19 @@ if(WITH_LLAMA)
     if(LLAMA_LIB AND LLAMA_INCLUDE_DIR)
         message(STATUS "Found llama.cpp: ${LLAMA_LIB}")
         
-        # Build the sidecar executable
+        # Build the standard sidecar executable
         add_executable(splinference splinference.cpp)
-        
-        # Link against the Splinter shared library and llama.cpp
         target_include_directories(splinference PRIVATE ${LLAMA_INCLUDE_DIR})
         target_link_libraries(splinference PRIVATE splinter_shared ${LLAMA_LIB})
         
+        # Build the persistent sidecar executable
+        add_executable(splinferencep splinference.cpp)
+        target_compile_definitions(splinferencep PRIVATE SPLINTER_PERSISTENT)
+        target_include_directories(splinferencep PRIVATE ${LLAMA_INCLUDE_DIR})
+        target_link_libraries(splinferencep PRIVATE splinter_p_shared ${LLAMA_LIB})
+        
         # Add to installation targets
-        install(TARGETS splinference RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+        install(TARGETS splinference splinferencep RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
     else()
         message(FATAL_ERROR "llama.cpp not found. Disable WITH_LLAMA to skip.")
     endif()
