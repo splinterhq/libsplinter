@@ -91,4 +91,4 @@ the VMM do what it has been optimized to do for 30 years: move pages
 efficiently. It doesn't try to call the shots because it operates in a way where
 it doesn't _need_ to.
 
----
+Next, you might like to see [some math behind splinter's performance](/splinter_performance).

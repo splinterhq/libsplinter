@@ -123,3 +123,6 @@ examined in high-resolution research.
 We expect this will be the experience of teams working with massive amounts of
 vectors, or timing Rank 2+ tensor measurements (as we do) and invite additional
 use as well as scrutiny and feedback.
+
+If you're still here, you might be interested in reading about [why Splinter 
+and Linux get along so well](/splinter_and_linux).
