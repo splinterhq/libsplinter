@@ -13,10 +13,11 @@ see an object. How thick those screens are influences how light passes through
 them.
 
 FFIs that do very little "nanny" work when passing to and from "unsafe" pointers
-tend to excel with Splinter. Those that do more rigid checking as the data 
-passes through tend to be a bit slower.
+tend to excel with Splinter. They're screens, but they're close to transparent
+when it comes to thickness. Those that do more rigid checking as the data 
+passes through tend to be a bit slower/thicker in this analogy.
 
-And now, the supported languages:
+**Now, the supported languages:**
 
 ### TypeScript (Deno FFI / Bun FFI)
 
@@ -137,10 +138,10 @@ be appreciated.
 
 ### Python3x (Native Ctypes)
 
-Splinter abhors unnecessary data duplication. In fact it's a really good 
-GIL-bypass for vector data. Because Splinter uses mmap() to act as a passive substrate, 
-Python can use its built-in ctypes library to cast a Splinter slot directly 
-into a NumPy array or a native Python memory view:
+Splinter abhors unnecessary data duplication. It's actually a really good 
+GIL-bypass for vector data. Because Splinter uses `mmap()` to act as a passive substrate, 
+Python can use its built-in `ctypes` library to cast a Splinter slot directly 
+into a `NumPy` array or a native Python memory view:
 
 ```python
 import ctypes
