@@ -193,7 +193,7 @@ _should_ otherwise function perfectly.
 
 - NUMA (`libnuma-dev`) for NUMA affinity | `WITH_NUMA=1`
 - LUA (`lua5.4-dev`) for LUA integration | `WITH_LUA=1`
-- llama.cpp for the nomic inference shard | `WITH_LLAMA=1` _(COMING SOON)_
+- llama.cpp for the nomic inference shard | `WITH_LLAMA=1`
 - Valgrind (`libvalgrind-dev`) for tighter Valgrind test integration |
   `WITH_VALGRIND=1`
 

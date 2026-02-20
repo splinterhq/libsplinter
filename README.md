@@ -106,7 +106,7 @@ you enable them during the build:
 - NUMA (`libnuma-dev`) for NUMA affinity | `WITH_NUMA=1` during build
 - LUA (`lua5.4-dev`) for LUA integration | `WITH_LUA=1` during build
 - llama.cpp ([Github](https://github.com/ggml-org/llama.cpp)) if you want to
-  enable the nomic inference shard | `WITH_LLAMA=1` during build (COMING SOON)
+  enable the nomic inference shard | `WITH_LLAMA=1` during build
 - Valgrind (`libvalgrind-dev`) for tighter Valgrind test integration |
   `WITH_VALGRIND=1` during build
 
