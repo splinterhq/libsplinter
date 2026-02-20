@@ -151,12 +151,12 @@ void analyze_particle_state(const char *id) {
 }
 ```
 
-The speed isn't theoretical, though [here's the math](/splinter_performance) that 
-explains it. FFI isn't scary when you just use C, and loadable modules are the very
-next major feature on the way. Until then, the CLI is very hackable. 
+The speed isn't theoretical, though [here's the math](/splinter_performance)
+that explains it. FFI isn't scary when you just use C, and loadable modules are
+the very next major feature on the way. Until then, the CLI is very hackable.
 
-See also `splinference.cpp` as well as `splinter_stress.c` for examples of batching
-and a multi-threaded mosh pit that never corrupts.
+See also `splinference.cpp` as well as `splinter_stress.c` for examples of
+batching and a multi-threaded mosh pit that never corrupts.
 
 ### 3. The Monitor: NUMA-Local Watching
 
@@ -203,7 +203,7 @@ int main() {
 ## LLM Runtime Use
 
 When you run inference _on the bus_ things tend to speed up exponentially. This
-example takes a bus/key name and the location of a Nomic Text GGUF model. It 
+example takes a bus/key name and the location of a Nomic Text GGUF model. It
 loads the model and deposits the embeddings without actually moving any memory
 around in the same lane:
 
@@ -332,16 +332,17 @@ int main(int argc, char **argv) {
 ```
 
 This would be way more practical inside a daemon that listened to the bus for
-new updates on `VARTEXT`-named keys (you could set up a signal group). That 
-same code will work identically with on-disk stores if linked against the 
-persistent compilation. 
+new updates on `VARTEXT`-named keys (you could set up a signal group). That same
+code will work identically with on-disk stores if linked against the persistent
+compilation.
 
 ## Don't Forget FFI!
 
-All of the functions available in C are [also available via FFI in any language
-that allows dynamic loading](/bindings) into the runtime. You can use Splinter to store and
-lazy-load vectors if all you need is storage, or write your own cosine
-similarity or ANN search shards to access the embeddings through direct pointers
-instead of memory copying.
+All of the functions available in C are
+[also available via FFI in any language that allows dynamic loading](/bindings)
+into the runtime. You can use Splinter to store and lazy-load vectors if all you
+need is storage, or write your own cosine similarity or ANN search shards to
+access the embeddings through direct pointers instead of memory copying.
 
-There really are a lot of possibilities and you can use whatever language you want.
+There really are a lot of possibilities and you can use whatever language you
+want.

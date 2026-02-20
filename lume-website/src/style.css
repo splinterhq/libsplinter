@@ -7,6 +7,8 @@ body {
   --terminal-amber: #ffbf00;
   --terminal-cyan: rgb(12, 193, 193);
   --terminal-red: #6d2323;
+  --terminal-purple: rgba(255, 0, 255, 0.477);
+  --terminal-magenta: magenta;
 
   font-size: 1.1rem;
   font-family: "Courier New", Courier, "Lucida Sans Typewriter", monospace;
@@ -48,13 +50,17 @@ h1 {
   text-align: center;
   font-size: x-large;
   color: var(--terminal-bg);
-  background-color: var(--terminal-green); /* Inverted header style */
+  background-color: var(--terminal-purple); /* Inverted header style */
   padding: 0.2em;
   text-transform: uppercase;
 }
 
-h2, h3, h4, h5 {
+h2, h3 {
   color: var(--terminal-cyan);
+}
+
+h4, h5 {
+  color: var(--terminal-magenta);
 }
 
 /* Shoelace Component Overrides to match the theme */

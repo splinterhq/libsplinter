@@ -48,6 +48,16 @@ non-interactive mode. To see them, run `splinterctl --list`
 | lua    | Run a lua script                                        |
 | orders | Manage standard vector orders of a key                  |
 
+## Custom Loadable Modules
+
+[Shards](/shards) are planned to launch in the very near future. Some accounting
+and intent advertisement details are still being investigated, and then code
+should hit once we have a working system.
+
+They'll let you isolate logic into on-demand loadable components with sub-ms
+initialization; similar to Linux kernel modules (in fact, `insmod` and `rmmod`
+are the management tools in the working prototype).
+
 ## Command Line Use
 
 Take a look at the output of `splinterctl --help` to see the available options

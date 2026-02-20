@@ -1,31 +1,41 @@
 # Splinter Bindings For Other Languages
 
-Splinter is a very "`dlopen()`-friendly" library; it doesn't require complex 
-aggregation or construction, it doesn't implement callbacks and it doesn't
-rely on type-punning. Because of this, it tends to work without heroics on 
-modern runtimes that can read Linux DSOs.
+Splinter is a very "`dlopen()`-friendly" library; it doesn't require complex
+aggregation or construction, it doesn't implement callbacks and it doesn't rely
+on type-punning. Because of this, it tends to work without heroics on modern
+runtimes that can read Linux DSOs.
 
 ## A Note On "Far" Pointers
 
-Looking at a region of memory through FFI is like looking at something through
-one window screen for every layer that you have to see through in order to 
-see an object. How thick those screens are influences how light passes through
-them.
+Looking at a region of memory through FFI is one point where that old
+_information superhighway_ cliche actually bears meaning. When you can travel
+between borders freely, without a checkpoint, there's no barrier to speed.
 
-FFIs that do very little "nanny" work when passing to and from "unsafe" pointers
-tend to excel with Splinter. They're screens, but they're close to transparent
-when it comes to thickness. Those that do more rigid checking as the data 
-passes through tend to be a bit slower/thicker in this analogy.
+If you can drive very fast but have to slow down just a little for your license
+tag to be captured, or for a RFID fob to be read, then it's a slight choke
+point.
+
+If you have to completely stop, show your paperwork, declare everything in your
+possession and what you intend to do with it, and then get back on your way,
+it's a blocking clog.
+
+Foreign function interfaces each treat "unsafe" pointers in their own way. Those
+that essentially let data flow to -> from them freely do exceptionally well with
+splinter. Those that don't still achieve massive speedup, but anywhere the
+client has to wait for a list of things (keys, embeddings, modules) will be
+slower than "single-shot" I/O.
 
 **Now, the supported languages:**
 
 ### TypeScript (Deno FFI / Bun FFI)
 
-There's an included class in `bindings/ts/splinter.ts` that you can import and just
-start using (Bun or Deno, it uses a factory to provide the correct bindings).
+There's an included class in `bindings/ts/splinter.ts` that you can import and
+just start using (Bun or Deno, it uses a factory to provide the correct
+bindings).
 
-You will likely see better performance with Bun's FFI for things like listing keys
-and tandem reads (due to pointer diligence), otherwise they're pretty much equal.
+You will likely see better performance with Bun's FFI for things like listing
+keys and tandem reads (due to pointer diligence), otherwise they're pretty much
+equal.
 
 Here's an example:
 
@@ -46,20 +56,21 @@ console.log(`Value: ${val}`);
 const epoch = store.getEpoch("ts_key");
 console.log(`Current Epoch: ${epoch}`);
 
-// not absolutely necessary unless you want to 
+// not absolutely necessary unless you want to
 // open another store
 store.close();
 ```
 
-The class contains the basics to get you started. If you want more of the library
-exposed in the class, just upload the class itself, `splinter.c` and `splinter.h` 
-to any decent code LLM and tell it what additional methods you want to include. 
+The class contains the basics to get you started. If you want more of the
+library exposed in the class, just upload the class itself, `splinter.c` and
+`splinter.h` to any decent code LLM and tell it what additional methods you want
+to include.
 
-The bare minimum is just sort of how we do things in the main distribution. 
+The bare minimum is just sort of how we do things in the main distribution.
 
 ### Rust (Identical To C Build)
 
-Rust is (aside from C/C++) absolutely the easiest, most straight-forward and 
+Rust is (aside from C/C++) absolutely the easiest, most straight-forward and
 efficient way to use Splinter:
 
 ```rust
@@ -133,15 +144,15 @@ fn main() {
 ```
 
 Rust is not Splinter's primary dev's primary language, but something like that
-wrapped in a struct with `sync` and `send` could work? A better example would 
-be appreciated.
+wrapped in a struct with `sync` and `send` could work? A better example would be
+appreciated.
 
 ### Python3x (Native Ctypes)
 
-Splinter abhors unnecessary data duplication. It's actually a really good 
-GIL-bypass for vector data. Because Splinter uses `mmap()` to act as a passive substrate, 
-Python can use its built-in `ctypes` library to cast a Splinter slot directly 
-into a `NumPy` array or a native Python memory view:
+Splinter abhors unnecessary data duplication. It's actually a really good
+GIL-bypass for vector data. Because Splinter uses `mmap()` to act as a passive
+substrate, Python can use its built-in `ctypes` library to cast a Splinter slot
+directly into a `NumPy` array or a native Python memory view:
 
 ```python
 import ctypes
@@ -204,16 +215,19 @@ class SplinterBus:
 # print(f"Vector Head: {vec[0]}, {vec[1]}, {vec[2]}")
 ```
 
-In fact, slow Python scrapers can trickle data in while the very tiny `splinference` 
-Nomic Text inference engine (included) deposits vectors silently (no `memcpy()` 
-in the background either) as it chugs along.
+In fact, slow Python scrapers can trickle data in while the very tiny
+`splinference` Nomic Text inference engine (included) deposits vectors silently
+(no `memcpy()` in the background either) as it chugs along.
 
 Information Physics (from social data) is often done this way (GDELT, RSS, Etc)
 and Splinter was written specifically to handle that.
 
 ### Java (Panama)
 
-Because Splinter utilizes a static memory geometry mapped directly via the OS, you can pitch Splinter to Java engineers as an "Off-Heap Manifold." They can use Java's new MemorySegment and Arena classes to read and write directly to Splinter.
+Because Splinter utilizes a static memory geometry mapped directly via the OS,
+you can pitch Splinter to Java engineers as an "Off-Heap Manifold." They can use
+Java's new MemorySegment and Arena classes to read and write directly to
+Splinter.
 
 ```java
 import java.lang.foreign.*;
@@ -275,15 +289,16 @@ public class SplinterWire {
 }
 ```
 
-Because the data lives in Splinter's static slots and not the JVM heap, you can cache gigabytes 
-of Rank-2 tensors without ever triggering a single Garbage Collection pause.
+Because the data lives in Splinter's static slots and not the JVM heap, you can
+cache gigabytes of Rank-2 tensors without ever triggering a single Garbage
+Collection pause.
 
-Splinter also allows atomic INC, DEC, AND, and OR bitwise operations on BIGUINT flags directly 
-in shared memory, allowing thousands of Java threads to coordinate state without relying on 
-slow Java-level synchronized locks.
+Splinter also allows atomic INC, DEC, AND, and OR bitwise operations on BIGUINT
+flags directly in shared memory, allowing thousands of Java threads to
+coordinate state without relying on slow Java-level synchronized locks.
 
-And, you still have the per-slot feature flags. It's made for IPC without tick rate impacts, 
-and we count inference as IPC.
+And, you still have the per-slot feature flags. It's made for IPC without tick
+rate impacts, and we count inference as IPC.
 
 ### Lua
 
@@ -297,15 +312,14 @@ bus.set("test_integer", 1)
 bus.math("test_integer", "inc", 65535)
 ```
 
-See `splinter_cli_cmd_lua.c` for the actual coupling and
-breakout box to add more definitions and functionality. 
+See `splinter_cli_cmd_lua.c` for the actual coupling and breakout box to add
+more definitions and functionality.
 
-If someone wants to expose the whole store as a table in 
-Lua, I'd love a patch!
+If someone wants to expose the whole store as a table in Lua, I'd love a patch!
 
 ### Bash / Shell
 
 Just use `splinterctl` or `splinterpctl` respectively. There's also
-`splinter_cli` and `splinterp_cli` for interactive use. 
+`splinter_cli` and `splinterp_cli` for interactive use.
 
 See the [CLI](/cli) page for more information.
