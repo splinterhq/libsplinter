@@ -1,3 +1,21 @@
+---
+title: Splinter Bindings For Other Languages
+date: "2026-02-20"
+author: Tim Post
+draft: false
+metas:
+  lang: en
+  description: >-
+    Learn how to integrate Splinter with Python, Rust, Java, TypeScript, and Lua using Foreign Function Interfaces (FFI) for zero-copy shared memory access.
+  keywords:
+    - Foreign Function Interface
+    - Language Bindings
+    - Zero-Copy Access
+    - Python ctypes
+    - Java Panama FFM
+  robots: true
+  generator: true
+---
 # Splinter Bindings For Other Languages
 
 Splinter is a very "`dlopen()`-friendly" library; it doesn't require complex

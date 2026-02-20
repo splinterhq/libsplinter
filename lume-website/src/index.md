@@ -1,3 +1,21 @@
+---
+title: Splinter ⚡ A Vector Anti-Database & Shared-Memory Substrate
+date: "2026-02-20"
+author: Tim Post
+draft: false
+metas:
+  lang: en
+  description: >-
+    Splinter is a minimalist, lock-free key-value manifold designed for high-frequency data ingestion and retrieval across disjointed runtimes using IPC.
+  keywords:
+    - Vector Anti-Database
+    - Shared-Memory Substrate
+    - Lock-Free IPC
+    - LLM Semantic Memory
+    - Inter-Process Communication
+  robots: true
+  generator: true
+---
 # Splinter ⚡ A Vector Anti-Database & Shared-Memory Substrate
 
 Splinter is a minimalist, lock-free key-value manifold designed to facilitate
@@ -40,6 +58,8 @@ tenets that set it apart (_**aka:
   Splinter uses standard portable atomic sequence locks (`epoch`).
 - **Unopinionated & Agnostic:** Implement LRU or TTL eviction how you like in a
   loadable shard, or no eviction at all. Splinter doesn't care.
+
+Also: ugly websites convert well, but we digress.
 
 ### The "Good Process" Approach
 

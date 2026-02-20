@@ -1,3 +1,21 @@
+---
+title: Splinter's CLI and 'splinterctl' Utilities
+date: "2026-02-20"
+author: Tim Post
+draft: false
+metas:
+  lang: en
+  description: >-
+    Discover Splinter's extensible command-line interface and splinterctl utilities for managing shared-memory stores, running Lua scripts, and more.
+  keywords:
+    - splinterctl
+    - Command Line Interface
+    - Store Management
+    - Lua Scripting
+    - REPL
+  robots: true
+  generator: true
+---
 # Splinter's CLI and 'splinterctl' Utilities
 
 ## "CLI" Means `splinter_cli` and `splinterctl`.

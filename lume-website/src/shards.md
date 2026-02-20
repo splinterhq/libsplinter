@@ -1,3 +1,21 @@
+---
+title: What Are Splinter Logic Shards?
+date: "2026-02-20"
+author: Tim Post
+draft: false
+metas:
+  lang: en
+  description: >-
+    Learn about Splinter Logic Shards, loadable modules that allow dynamic extension of the CLI architecture for custom data processing and transformation.
+  keywords:
+    - Logic Shards
+    - Loadable Modules
+    - Dynamic Extension
+    - C Plugins
+    - Data Transformation
+  robots: true
+  generator: true
+---
 # What Are Splinter Logic Shards?
 
 Splinter's CLI is easily extended, but, you might want to link against

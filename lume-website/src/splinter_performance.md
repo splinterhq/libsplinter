@@ -1,3 +1,21 @@
+---
+title: Some Math Behind Splinter's Claims
+date: "2026-02-20"
+author: Tim Post
+draft: false
+metas:
+  lang: en
+  description: >-
+    A physics-based breakdown of Splinter's performance, analyzing Cycles Per Operation to demonstrate its massive efficiency gains over traditional DBs.
+  keywords:
+    - Cycles Per Operation
+    - IPC Performance
+    - Lock-Free Benchmarks
+    - Socket Tax
+    - Hardware Optimization
+  robots: true
+  generator: true
+---
 # Some Math Behind Splinter's Claims
 
 We must guard our time. This is especially true for researchers, where system

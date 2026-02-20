@@ -1,3 +1,21 @@
+---
+title: Splinter's Core, Benchmarks & Code Walkthrough
+date: "2026-02-20"
+author: Tim Post
+draft: false
+metas:
+  lang: en
+  description: >-
+    Explore the core architecture, C code examples, and performance benchmarks of Splinter, including its application as an LLM semantic hippocampus.
+  keywords:
+    - Splinter Core
+    - C Programming
+    - Memory Benchmarks
+    - Lock-Free Architecture
+    - Retrieval-Augmented Generation
+  robots: true
+  generator: true
+---
 # Splinter's Core, Benchmarks & Code Walkthrough
 
 ## "Core" Means `splinter.c` and `splinter.h` only.
@@ -33,21 +51,22 @@ that) if you do anything to the slot structures.
 
 ## Benchmarks
 
-All tests were conducted on a Tiger Lake (i3-1115G4) with 6GB total usable RAM.
+All tests were conducted on a Tiger Lake (i3-1115G4) with 6GB total usable RAM
+while performing other experiments (worst case workday):
 
-| Test | Memory Model | Hygiene Model | Duration (ms) | Writer Backoff (us) | Threads | Operations/Sec | EAGAIN % | Corruptions |
-| ---- | ------------ | ------------- | ------------- | ------------------- | ------- | -------------- | -------- | ----------- |
-| MRSW | in-memory    | none          | 60000         | 0                   | 64      | 3.2mm          | 21.15    | 0           |
-| MRSW | im-memory    | hybrid        | 60000         | 0                   | 64      | 3.2mm          | 21.52    | 0           |
-| MRSW | in-memory    | none          | 60000         | 0                   | 32      | 3.2mm          | 21.15    | 0           |
-| MRSW | im-memory    | hybrid        | 60000         | 0                   | 32      | 3.2mm          | 21.52    | 0           |
-| MRSW | file-backed  | none          | 30000         | 150                 | 16      | 2.7mm          | 18.3     | 0           |
-| MRSW | file-backed  | hybrid        | 30000         | 150                 | 16      | 2.7mm          | 18.3     | 0           |
+| Test | Memory Model | Hygiene | Duration (ms) | W/Backoff (us) | Threads | Ops/Sec   | EAGAIN% | NumKeys | Corrupt |
+| ---- | ------------ | ------- | ------------- | -------------- | ------- | --------- | ------- | ------- | ------- |
+| MRSW | in-memory    | none    | 60000         | 0              | 63 + 1  | 3,259,500 | 23.72   | 20K     | 0       |
+| MRSW | im-memory    | hybrid  | 60000         | 0              | 63 + 1  | 3,620,886 | 30.50   | 20K     | 0       |
+| MRSW | in-memory    | none    | 60000         | 0              | 31 + 1  | 3,245,405 | 20.76   | 20K     | 0       |
+| MRSW | im-memory    | hybrid  | 60000         | 0              | 31 + 1  | 3,273,807 | 20.60   | 20K     | 0       |
+| MRSW | in-memory    | none    | 30000         | 0              | 15 + 1  | 4,094,896 | 31.94   | 10K     | 0       |
+| MRSW | file-backed  | none    | 30000         | 0              | 15 + 1  | 4,768,989 | 29.63   | 10K     | 0       |
+| MRSW | file-backed  | none    | 30000         | 150            | 15 + 1  | 2,992,652 | 13.94   | 10K     | 0       |
+| MRSW | file-backed  | hybrid  | 30000         | 150            | 15 + 1  | 3,189,306 | 25.91   | 10K     | 0       |
 
-<sub><em>`*` We expect fewer `EAGAIN` results with a 150us backoff because the
-work just aligns with the seqlock (and lane) better, albeit with less velocity
-than in-memory. See the `splinter_stress` tool that ships with Splinter for
-more!</em></sub>
+Keys were limited in file tests due to space and wear constraints, but an
+in-memory reference is provided.
 
 ## A Note On Keyspaces
 
@@ -72,15 +91,7 @@ won't appear in your normal data, like 💩; the separator is stored as
 A little levity can make drab analysis marathons more tolerable. Send in the
 poop, the clowns, the beds, or whatever it takes in the name of discovery.
 
-## Core API examples:
-
-The best ways to see the public API being exercised is to look at
-`splinter_test.c` as well as the source code to the individual CLI commands.
-Splinter's CLi is designed to be a production-grade tool, no bones about it, but
-it's also a useful resource to see how the code is intended for use.
-
-Here are some examples so you can see if Splinter is something that would
-interest you.
+## Some C Examples of Splinter During an "Average Work Day":
 
 ### 1. The Ingestor: Telemetry & Atomic Global State
 
@@ -200,149 +211,59 @@ int main() {
 }
 ```
 
-## LLM Runtime Use
+## LLM Runtime / RAG / Training Uses
 
-When you run inference _on the bus_ things tend to speed up exponentially. This
-example takes a bus/key name and the location of a Nomic Text GGUF model. It
-loads the model and deposits the embeddings without actually moving any memory
-around in the same lane:
+Large Language Models are brilliant, but they suffer from severe amnesia. The
+current industry solution to this is to bolt on a traditional Vector Database,
+which forces the LLM to pause its thinking, serialize a JSON request, send it
+over a network socket, and wait for a database to reply.
 
-```c++
-#include <atomic>
-// Bridge the C/C++ atomic divide before including the C header
-using atomic_uint_least64_t = std::atomic_uint_least64_t;
-using atomic_uint_least32_t = std::atomic_uint_least32_t;
-using atomic_uint_least8_t  = std::atomic_uint_least8_t;
+Splinter allows you to build a **Semantic Hippocampus**: a shared memory space
+where the LLM’s short-term context and long-term memories live in the exact same
+physical RAM, accessible instantly without a single `memcpy()`.
 
-#include "splinter.h"
-#include "llama.h"
+To understand how to use it, you don't need a PhD in linear algebra. You just
+need to know your toolkit:
 
-#include <iostream>
-#include <vector>
-#include <string>
-#include <unistd.h>
+- **Cosine Similarity is your Steam Shovel:** It grabs massive, general scoops
+  of memory that are semantically pointing in the same direction.
+- **Euclidean Distance is your Sifter:** It shakes out the exact literal matches
+  from that massive bucket of context.
+- **Feature Flags are your Post-It Notes:** You can slap a 64-bit integer onto
+  any memory slot to instantly track metadata (e.g.,
+  `flag_user_frustrated = 1`).
+- **Bloom Filters are your C-Style Tags:** They allow you to instantly filter
+  the entire memory bus for specific concepts without scanning every individual
+  slot.
 
-int main(int argc, char **argv) {
-    if (argc < 4) {
-        std::cerr << "Usage: " << argv[0] << " <bus_name> <key_name> <path_to_nomic_gguf>\n";
-        return 1;
-    }
+So, what can you actually _build_ with those tools?
 
-    const char* bus_name = argv[1];
-    const char* target_key = argv[2];
-    const char* model_path = argv[3];
+### 1. The Hallucination Governor (Preventing Narrative Lysis)
 
-    // there's also splinter_create_or_open() as well as open_or_create()
-    if (splinter_open(bus_name) != 0) {
-        std::cerr << "Failed to connect to Splinter bus: " << bus_name << "\n";
-        return 1;
-    }
+Because Splinter operates at L3 cache speeds, it can sit _inside_ the LLM's
+auto-regressive generation loop. Using your Steam Shovel and Sifter, you can
+constantly measure the "Tension" of the text the LLM is generating. If the LLM
+starts speaking highly confidently about a subject where it has zero factual
+grounding in its memory slots, a Splinter watcher detects that "Vacuum State."
+It can physically halt the LLM mid-sentence before a hallucination escapes into
+the user's terminal.
 
-    // the rest of this pretty much just copies llama-server's embedding route
-    llama_backend_init();
-    
-    llama_model_params model_params = llama_model_default_params();
-    llama_model *model = llama_model_load_from_file(model_path, model_params);
-    if (!model) {
-        std::cerr << "Failed to load model from " << model_path << "\n";
-        return 1;
-    }
+Logging uncertainty at inference and emitting special `<UNC_explanation>` tokens
+lets you watch for these events _very_ specifically. Custom information physics
+engines can provide even greater accuracy, such as those that Splinter is being
+used to research.
 
-    llama_context_params ctx_params = llama_context_default_params();
-    ctx_params.embeddings = true; 
-    llama_context *ctx = llama_init_from_model(model, ctx_params);
+### 2. True Zero-Latency RAG (Retrieval-Augmented Generation)
 
-    // here we have to do "chi sao" (double sticky hands) to observe movement
-    // around the raw pointer
+In traditional RAG, embedding vectors are serialized and dragged across the
+kernel boundary. With Splinter, the inference engine (like `llama.cpp`) simply
+casts a raw C-pointer to the L3 cache. When a user asks a 70B parameter model a
+question, the context injection happens instantly. You are feeding the AI its
+own memories at the speed of the hardware bus.
 
-    size_t val_len = 0;
-    uint64_t start_epoch = 0;
-    
-    const void *raw_ptr = splinter_get_raw_ptr(target_key, &val_len, &start_epoch);
-    if (!raw_ptr || val_len == 0) {
-        std::cerr << "Key not found or empty: " << target_key << "\n";
-        return 1;
-    }
+### 3. User-space Conversational Memory
 
-    if (start_epoch & 1) {
-        std::cerr << "Writer currently active on key. Try again.\n";
-        return 1;
-    }
+Splinter gives you a cheap semantic key->value store for personalizations
+that would work blazingly fast persistently, too. If ctags style bloom isn't
+enough, a 1024x1024 store just for their needs works perfectly. 
 
-    // GOOD! Tokenize from what's in memory (don't copy it!)
-    std::vector<llama_token> tokens(val_len + 8); 
-    
-    // get vocab from the model
-    const llama_vocab *vocab = llama_model_get_vocab(model);
-    
-    int n_tokens = llama_tokenize(
-        vocab, 
-        static_cast<const char*>(raw_ptr), 
-        val_len, 
-        tokens.data(), 
-        tokens.size(), 
-        true,  
-        false  
-    );
-
-    if (n_tokens < 0) {
-        tokens.resize(-n_tokens);
-        n_tokens = llama_tokenize(vocab, static_cast<const char*>(raw_ptr), val_len, tokens.data(), tokens.size(), true, false);
-    }
-
-    // here is the 'double' part of the dance. Make sure the epoch hasn't changed while we peeked.
-    uint64_t end_epoch = splinter_get_epoch(target_key);
-    if (start_epoch != end_epoch) {
-        std::cerr << "Torn read detected! The value mutated during tokenization.\n";
-        return 1;
-    }
-
-    // now we can actually run inference
-    llama_batch batch = llama_batch_get_one(tokens.data(), n_tokens);
-    if (llama_decode(ctx, batch) != 0) {
-        std::cerr << "Failed to decode/run inference.\n";
-        return 1;
-    }
-
-    // this isn't a "copy" since the model generates it; here we're as close as we can 
-    // get to the model just generating right into the target address space as possible.
-    float *embedding = llama_get_embeddings_seq(ctx, 0);
-    if (!embedding) {
-        std::cerr << "Failed to extract embeddings. Ensure model is an embedding model.\n";
-        return 1;
-    }
-
-    // now the vectors can be published
-    if (splinter_set_embedding(target_key, embedding) != 0) {
-        std::cerr << "Failed to write embedding back to Splinter bus.\n";
-        return 1;
-    }
-
-    std::cout << "Successfully generated and published embedding for '" << target_key << "'.\n";
-
-    llama_free(ctx);
-    llama_model_free(model);
-    llama_backend_free();
-    
-    // this is non-destructive (check /dev/shm)
-    splinter_close();
-
-    return 0;
-}
-```
-
-This would be way more practical inside a daemon that listened to the bus for
-new updates on `VARTEXT`-named keys (you could set up a signal group). That same
-code will work identically with on-disk stores if linked against the persistent
-compilation.
-
-## Don't Forget FFI!
-
-All of the functions available in C are
-[also available via FFI in any language that allows dynamic loading](/bindings)
-into the runtime. You can use Splinter to store and lazy-load vectors if all you
-need is storage, or write your own cosine similarity or ANN search shards to
-access the embeddings through direct pointers instead of memory copying.
-
-There really are a lot of possibilities and you can use whatever language you
-want.

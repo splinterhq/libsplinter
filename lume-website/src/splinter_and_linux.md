@@ -1,3 +1,21 @@
+---
+title: Why Linux, 64 Bit Architecture and Splinter Form a Symphony
+date: "2026-02-20"
+author: Tim Post
+draft: false
+metas:
+  lang: en
+  description: >-
+    Explore the mechanical sympathy between Splinter and the Linux kernel, leveraging mmap, transparent huge pages, and 64-byte cache line alignment.
+  keywords:
+    - Linux Kernel
+    - Memory Mapped Files
+    - Transparent Huge Pages
+    - Cache Line Alignment
+    - Zero-Copy Efficiency
+  robots: true
+  generator: true
+---
 # Why Linux, 64 Bit Architecture and Splinter Form a Symphony
 
 Splinter is designed with **Mechanical Sympathy** for the Linux kernel. By
