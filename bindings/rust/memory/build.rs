@@ -2,8 +2,8 @@ use std::fs;
 use std::path::Path;
 
 fn main() {
-    let header_path = "../../splinter.h";
-    let lib_path = "../../";
+    let header_path = "../../../splinter.h";
+    let lib_path = "../../../";
 
     println!("cargo:rustc-link-search=native={}", lib_path);
     println!("cargo:rustc-link-lib=dylib=splinter");

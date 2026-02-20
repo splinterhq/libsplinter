@@ -12,6 +12,7 @@ option(WITH_EMBEDDINGS "Enable Nomic/LLM embedding support" ON)
 option(WITH_NUMA       "Enable NUMA memory affinity support" OFF)
 option(WITH_LUA        "Enable Lua CLI integration" ON)
 option(WITH_LLAMA      "Enable llama.cpp inference sidecar" OFF)
+option(WITH_RUST       "Enable Rust bindings via Cargo" OFF)
 
 # --- Dependency Detection ---
 find_package(PkgConfig REQUIRED)
@@ -120,6 +121,28 @@ file(GLOB CLI_SOURCES "splinter_cli_*.c")
 add_executable(splinter_cli ${CLI_SOURCES} 3rdparty/linenoise.c 3rdparty/libgrawk.c)
 target_link_libraries(splinter_cli PRIVATE splinter_shared ${LUA_LDFLAGS})
 target_include_directories(splinter_cli PRIVATE ${LUA_INCLUDE_DIRS})
+
+if(WITH_RUST)
+    find_program(CARGO_EXEC NAMES cargo)
+    
+    if(CARGO_EXEC)
+        message(STATUS "Found Cargo: ${CARGO_EXEC}")
+        
+        # We pass the CMake build directory to Cargo so build.rs can find the .so files
+        set(RUST_ENV "CARGO_TARGET_DIR=${CMAKE_CURRENT_BINARY_DIR}/rust_target")
+        set(RUST_LINK_SEARCH "SPLINTER_LIB_DIR=${CMAKE_CURRENT_BINARY_DIR}")
+        
+        add_custom_target(rust_bindings ALL
+            COMMAND ${CMAKE_COMMAND} -E env ${RUST_ENV} ${RUST_LINK_SEARCH} 
+                    ${CARGO_EXEC} build --release
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bindings/rust
+            DEPENDS splinter_shared splinter_p_shared
+            COMMENT "Building Rust workspace (memory & persistent bindings)"
+        )
+    else()
+        message(FATAL_ERROR "Cargo not found. Disable WITH_RUST to skip.")
+    endif()
+endif()
 
 # --- Installation Logic ---
 include(GNUInstallDirs)

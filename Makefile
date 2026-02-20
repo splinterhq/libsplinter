@@ -10,7 +10,7 @@ all: build/Makefile
 
 build/Makefile:
 	@mkdir -p build
-	@cd build && cmake -DWITH_NUMA=ON -DWITH_LUA=ON -DWITH_EMBEDDINGS=ON -DWITH_LLAMA=ON ..
+	@cd build && cmake -DWITH_NUMA=ON -DWITH_LUA=ON -DWITH_EMBEDDINGS=ON -DWITH_LLAMA=ON -DWITH_RUST=ON ..
 
 install: all
 	@$(MAKE) -C build install
