@@ -69,7 +69,8 @@ change the order access operator if needed. You can change it to something that
 won't appear in your normal data, like 💩; the separator is stored as
 `SPL_ORDER_SEPARATOR` in `splinter.h`.
 
-A little levity can make drab analysis marathons more tolerable.
+A little levity can make drab analysis marathons more tolerable. Send in the
+poop, the clowns, the beds, or whatever it takes in the name of discovery.
 
 ## Core API examples:
 
@@ -92,24 +93,24 @@ processes can monitor without needing a centralized lock:
 #include <stdio.h>
 
 int main() {
-    // Open the pre-existing research bus
+    // open pre-existing project bus
     if (splinter_open("/dev/shm/physics_bus") != 0) return 1;
 
-    // We use a BIGUINT to track global events across 100+ processes
-    // This allows L3-speed atomic increments
+    // use a BIGUINT to track global events across 100+ processes
+    // this allows L3-speed atomic increments
     uint64_t inc = 1;
     double sensor_val = 0.0;
     char key[SPLINTER_KEY_MAX];
 
     for (int i = 0; i < 1000000; i++) {
-        sensor_val = read_spectrometer(); // Hypothetical hardware call
+        sensor_val = read_spectrometer(); // hypothetical hardware call
         snprintf(key, sizeof(key), "sensor.alpha.%d", i % 100);
 
-        // 1. Write the telemetry point
+        // write the telemetry point
         splinter_set(key, &sensor_val, sizeof(sensor_val));
 
-        // 2. Atomic increment of the shared global counter
-        // No mutex required; Splinter handles the atomic transition.
+        // atomic increment of the shared global counter
+        // no mutex required; Splinter handles the atomic transition.
         splinter_integer_op("global_event_count", SPL_OP_INC, &inc);
     }
 
@@ -135,19 +136,27 @@ void analyze_particle_state(const char *id) {
     float state_vector[SPL_EMBED_DIM];
     compute_particle_physics(id, state_vector); // Hypothetical math
 
-    // 1. Update the high-dimensional vector in shared memory
-    // Uses Seqlocks to ensure readers don't get 'torn' vectors.
+    // update the high-dimensional vector in shared memory
+    // uses sequence locks to ensure readers don't get 'torn' vectors.
     splinter_set_embedding(id, state_vector);
 
-    // 2. Perform anomaly detection
+    // some kind of anomaly detection (simulated)
     if (state_vector[0] > 0.95f) { 
-        // 3. Atomically apply a Bloom label
-        // This triggers a 'pulse' to the signal arena for anyone watching bit 7.
+        // atomically-apply a Bloom label
+        // this also triggers a pulse to the signal arena for anyone watching bit 7
         splinter_set_label(id, LABEL_UNSTABLE);
-        printf("Particle %s is drifting! Label applied.\n", id);
+        // elusive splinter particle "sparticle" :P
+        printf("Sparticle %s is drifting! Label applied.\n", id);
     }
 }
 ```
+
+The speed isn't theoretical, though [here's the math](/splinter_performance) that 
+explains it. FFI isn't scary when you just use C, and loadable modules are the very
+next major feature on the way. Until then, the CLI is very hackable. 
+
+See also `splinference.cpp` as well as `splinter_stress.c` for examples of batching
+and a multi-threaded mosh pit that never corrupts.
 
 ### 3. The Monitor: NUMA-Local Watching
 
@@ -160,10 +169,10 @@ indicate that an "Unstable" label was applied anywhere on the bus.
 #include <unistd.h>
 
 int main() {
-    // Bind the bus to NUMA node 1 for local memory controller performance
+    // bind the bus to NUMA node 1 for local memory controller performance
     splinter_open_numa("/dev/shm/physics_bus", 1);
 
-    // Map Bloom bit 7 (Unstable) to Signal Group 0 (Safety)
+    // map Bloom bit 7 (Unstable) to Signal Group 0 (Safety)
     splinter_watch_label_register(LABEL_UNSTABLE, GROUP_SAFETY);
 
     uint64_t last_count = splinter_get_signal_count(GROUP_SAFETY);
@@ -172,18 +181,18 @@ int main() {
         uint64_t current = splinter_get_signal_count(GROUP_SAFETY);
         
         if (current > last_count) {
-            // A writer somewhere just set the UNSTABLE bit on a key
+            // a writer somewhere just set the UNSTABLE bit on a key
             printf("SAFETY ALERT: %lu new unstable detections!\n", current - last_count);
             
-            // Snapshot the header to check parse_failures or global epoch
+            // snapshot the header to check parse_failures or global epoch
             splinter_header_snapshot_t snap;
             splinter_get_header_snapshot(&snap);
             
             last_count = current;
         }
         
-        // High-frequency "Nap" - in production, you'd use epoll on an eventfd 
-        // linked to the signal group counter.
+        // in the real world we would use epoll() on an eventfd
+        // linked to the signal group. 
         usleep(500); 
     }
 
@@ -329,8 +338,8 @@ persistent compilation.
 
 ## Don't Forget FFI!
 
-All of the functions available in C are also available via FFI in any language
-that allows dynamic loading into the runtime. You can use Splinter to store and
+All of the functions available in C are [also available via FFI in any language
+that allows dynamic loading](/bindings) into the runtime. You can use Splinter to store and
 lazy-load vectors if all you need is storage, or write your own cosine
 similarity or ANN search shards to access the embeddings through direct pointers
 instead of memory copying.
