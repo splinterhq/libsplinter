@@ -1,83 +1,53 @@
-# Splinter Logic Shards
+# What Are Splinter Logic Shards?
 
-By design, Splinter does no calculation or transformation of any kind during
-atomic I/O. Once acquiring a sequence lock, Splinter's mission becomes to write
-as quickly as possible so it doesn't stand on the sequence lock. It wants to
-minimize the chance of another operation being told to try again.
+Splinter's CLI is easily extended, but, you might want to link against 
+_considerably more_ than Splinter's build system allows for, and it's 
+usually just for one or several very specific tasks. 
 
-Any data transformation or extrapolation is expected to run only _after_ the
-primary irreplaceable data has been published in the store, normally triggered
-_by_ the data being published in the store.
+In short, you need to be able to load modules into the CLI architecture
+that can handle your custom processing, transformation, observation, 
+***whatever*** without having to wrangle linkage and that didn't
+need to be located in-tree to be compiled. 
 
-Shards are a way to "shard" logic into separate loosely-coupled routines.
+If you want to develop a `foo` command, you should be able to just do
+so and point `splinterctl` or `splinter_cli_` at the `.so` file and,
+provided it conforms to a symbol map, loads it.
 
-## A Practical Shard Example: Simple "Sidecar" Vectors
+This gives you access to Splinter with all the CLI structure and whatever
+else you want to bring in, without having to modify Splinter or the tools.
 
-In a Splinter workflow, we don't compute _and_ write synchronously, ever. If
-your workflow is "grab this text, run embeddings, save text + embeddings" then
-it actually becomes three atomic operations for Splinter:
+## The Solution: Loadable Shards
 
-1. Receive the text; pulse virtual watch file descriptor to awaken any watchers.
+Design constraints prevent making the CLI's module list dynamic entirely;
+some platforms disallow heap allocation entirely so Splinter tries 
+hard to not require it for anything essential, even in tooling.
 
-2. Your shard sees text has just been published to a slot type-named `VARTEXT`,
-   grabs a guided pointer to the value and embedding regions, runs a slim
-   Llama/Nomic inference loop, writes values directly to the addresses where
-   they will remain unless deleted. No `memcpy()` or duplication of data. No
-   sockets.
+We need to instead have an optional dynamic module structure that can 
+advertise and enter these 'shards' for the user. As long as they contain
+the correct entry points and metadata, they can be compiled anywhere
+`splinter.h` can be found. This `splinter_shard_t` will be the only 
+coupling of tooling to the core store (found in the core header, not
+CLI). 
 
-If you use tandem slots (let's say you're tracking the velocity, acceleration
-and jerk of the same base key), then those vectors get quietly deposited next,
-or even simultaneously if you run threaded inference.
+## Progress: Coming Soon!
 
-There will be an example shard that does this loading Nomic Text V2 from a
-`.gguf` file in the next release.
+Implementation requires a little juggling of what the CLI currently 
+understands a use session to look like as far as different users 
+loading different shards that have the same topological access to
+the same store.
 
-## How Lua Helps
+There's some memory expectation setting and accounting to tackle
+as shards load and prepare workloads that might compete with each
+other, as well as some other debt refactoring in the CLI that's 
+already planned to consider (which is mostly done).
 
-If you manage your splinter key space so that `___` means a hidden, reserved
-thing (similar to underscore precedence in software), you can name keys like:
+Shards are expected Late February / Early March 2026.
 
-- `___on_read`: Lua code stored in the value region of this key should be
-  executed every time a key in this store is read.
+Practical examples would be sidecar analysis, backfill, a shard could even 
+expose the store as a RESTful interface (`Deno -> FFI -> Oak` or even 
+`Bun -> FFI -> Express`). There's lots of possibilities, think "micro 
+services" that run as shared objects.
 
-- `___on_write`: Lua code stored in the value region of this key should be
-  executed every time a key in this store is written.
+They have access to Lua, too `:)`
 
-- `___on_write/REGEX/`: Lua code stored in the value region of this key should
-  be executed every time a write operation happens in this store where the key
-  matches `/REGEX/`.
-
-This is of course on the honor system and up for the shard to adhere to (the
-store itself is passive and incapable of enforcement), but it's one way you can
-achieve the same effect as Lua meta tables themselves. This is also a great
-trigger system. See the `splinter_cli_cmd_lua.c` for what's exposed / how and
-some idea of how to use it.
-
-## How Shards Are Structured
-
-Shards are just like any other dynamically-loadable module you'd see in C. They
-have entry points, shutdown points, metadata and checks.
-
-TODO: Show shard structure once done.
-
-## Why Shards Set Memory Expectations and Force Accounting
-
-Splinter's CLI provides some abstractions to coordinate necessary work where
-lots of dynamic allocation may be required for processing, or for advising the
-kernel when recently used memory is no longer needed. Splinter doesn't use
-`mlock()` anywhere in the code (it could be easily added, if the goal was to
-make splinter "appliances" where no system processes ran), but barring that
-specialized use Splinter just leaves it up to the kernel.
-
-Because of this, it's _extremely_ helpful to coordinate. We don't bother the
-kernel unless we need to, correctly, but "I'm not using this huge amount of RAM
-you reserved for me anymore" is polite in a process that never really calls
-"free()" as a matter of global routine.
-
-This is why shards have reconciliation macros (TODO, implement fully). As your
-code flows, you set assertions for how you believe memory will be used. When
-done, the accountant checks /proc/self to see if your prediction matched use,
-and advises the kernel further if not. We do this so it doesn't add an
-accounting burden to your logic.
-
----
+Stay tuned!
