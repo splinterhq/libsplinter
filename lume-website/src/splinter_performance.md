@@ -83,11 +83,11 @@ baseline (23,076 / 10).
 ## **Summary for Researchers**
 
 While traditional architectures are restricted by a **Series of Jerks**—our term
-for the erratic overhead of interrupts and context switching—Splinter functions
+for the erratic overhead of interrupts and context switching, Splinter functions
 as a **Laminar Flow Substrate**. On commodity hardware, Splinter already
 outperforms Redis by **16x** and SQLite3 by **33x**, despite memory throttling.
 
-Moving to an AMD rig with NUMA-pinning allows us to achieve a projected **10
+Moving to an AMD rig with NUMA-pinning will allow us to achieve a projected **10
 cycles per operation**. At this scale, Splinter isn't just "faster"—it is
 operating at the physical limit of the silicon, achieving **~2,300 times the
 efficiency** of standard middleware by removing the "Socket Tax" entirely.
