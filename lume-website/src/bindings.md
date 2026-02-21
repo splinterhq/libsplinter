@@ -243,9 +243,8 @@ and Splinter was written specifically to handle that.
 ### Java (Panama)
 
 Because Splinter utilizes a static memory geometry mapped directly via the OS,
-you can pitch Splinter to Java engineers as an "Off-Heap Manifold." They can use
-Java's new MemorySegment and Arena classes to read and write directly to
-Splinter.
+you can use Java's new MemorySegment and Arena classes to read and write directly to
+Splinter:
 
 ```java
 import java.lang.foreign.*;
