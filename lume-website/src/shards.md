@@ -36,7 +36,7 @@ you want to bring in, without having to modify Splinter or the tools.
 
 ## The Solution: Loadable Shards (a type-punned derivative of a "splinter" 🤓)
 
-Design constraints prevent making the CLI's module list dynamic entirely; some
+Design constraints prevent making the CLI's module list dynamic; some
 platforms disallow heap allocation entirely so Splinter tries hard to not
 require it for anything essential, even in tooling.
 
