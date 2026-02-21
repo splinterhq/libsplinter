@@ -106,6 +106,10 @@ Key Name                          | Epoch      | Val Len    | Named Type
 foo_key                           | 2          | 31         | SPL_SLOT_TYPE_VOID
 ```
 
+You can also prefix keys with  namespace automatically. Passing `--prefix foo::bar::`
+to `splinterctl set zoo monkey` would translate to `set foo::bar::zoo monkey`, likewise
+for unset.
+
 If you want to persist the in-memory created store, you can simply run:
 
 ```bash
