@@ -267,3 +267,14 @@ Splinter gives you a cheap semantic key->value store for personalizations
 that would work blazingly fast persistently, too. If ctags style bloom isn't
 enough, a 1024x1024 store just for their needs works perfectly. 
 
+## Testing Splinter
+
+You can run Splinter's tests using `make tests`. If you have enabled Valgrind
+integration, splinter's unit and integration tests will also be scrutinized
+for leaks and access errors. For less than 1k lines of total core code,
+Splinter is extremely well-tested. Splinter uses CMake's test runner with 
+a few scripts at the end.
+
+Performance benchmarks can be obtained with `splinter_stress` and 
+`splinterp_stress` for in-memory and file-backed respectively, as shown above.
+

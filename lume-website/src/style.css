@@ -5,10 +5,12 @@ body {
   --terminal-green: #33ff3390;
   --terminal-bg: #0a0a0a;
   --terminal-amber: #ffbf00;
+  --terminal-yellow: #ffbf00b0;
   --terminal-cyan: rgb(12, 193, 193);
   --terminal-red: #6d2323;
   --terminal-purple: rgba(255, 0, 255, 0.477);
   --terminal-magenta: magenta;
+  --terminal-blue: navy;
 
   font-size: 1.1rem;
   font-family: "Courier New", Courier, "Lucida Sans Typewriter", monospace;
@@ -49,8 +51,8 @@ hr {
 h1 {
   text-align: center;
   font-size: x-large;
-  color: var(--terminal-bg);
-  background-color: var(--terminal-purple);
+  color: var(--terminal-yellow);
+  background-color: var(--terminal-blue);
   padding: 0.2em;
   text-transform: uppercase;
 }
@@ -111,17 +113,17 @@ table {
 }
 
 th {
-  background-color: var(--terminal-purple);
-  color: var(--terminal-bg);
+  background-color: var(--terminal-blue);
+  color: var(--terminal-gray);
   text-transform: uppercase;
   padding: 0.5em;
   text-align: left;
-  border: 1px solid var(--terminal-purple);
+  border: 1px solid var(--terminal-blue);
 }
 
 td {
   padding: 0.5em;
-  border: 1px solid var(--terminal-purple);
+  border: 1px solid var(--terminal-blue);
   vertical-align: top;
 }
 
