@@ -50,7 +50,7 @@ h1 {
   text-align: center;
   font-size: x-large;
   color: var(--terminal-bg);
-  background-color: var(--terminal-purple); /* Inverted header style */
+  background-color: var(--terminal-purple);
   padding: 0.2em;
   text-transform: uppercase;
 }
@@ -91,11 +91,11 @@ a {
 .top-nav a {
   text-decoration: none;
   padding: 0.2em 0.5em;
-  color: var(--terminal-green);
+  color: var(--terminal-amber);
 }
 
 .top-nav a:hover {
-  background-color: var(--terminal-green);
+  background-color: var(--terminal-amber);
   color: var(--terminal-bg);
   text-shadow: none;
 }
@@ -111,17 +111,17 @@ table {
 }
 
 th {
-  background-color: var(--terminal-green);
+  background-color: var(--terminal-purple);
   color: var(--terminal-bg);
   text-transform: uppercase;
   padding: 0.5em;
   text-align: left;
-  border: 1px solid var(--terminal-green);
+  border: 1px solid var(--terminal-purple);
 }
 
 td {
   padding: 0.5em;
-  border: 1px solid var(--terminal-green);
+  border: 1px solid var(--terminal-purple);
   vertical-align: top;
 }
 
@@ -200,7 +200,7 @@ mjx-container[jax="CHTML"][display="true"] {
   }
 
   .top-nav a:hover {
-    border-color: var(--terminal-green);
+    border-color: var(--terminal-amber);
   }
 
   h1 {
