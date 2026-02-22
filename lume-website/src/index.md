@@ -59,9 +59,7 @@ tenets that set it apart (_**aka:
 - **Unopinionated & Agnostic:** Implement LRU or TTL eviction how you like in a
   loadable shard, or no eviction at all. Splinter doesn't care.
 
-Also: ugly websites convert well, but we digress.
-
-### The "Good Process" Approach
+### The "Good Process Neighbor" Approach
 
 _(Even though technically only the CLI or client code is the process because
 Splinter itself is just a place, not a process)_
@@ -77,6 +75,50 @@ _be_ the kernel. Splinter goes out of its way to not bother the kernel unless it
 must, and its logic shards inform the kernel of how the memory is intended for
 use at every step of the way. Here's
 [more about why Splinter and Linux are great friends](/splinter_and_linux/).
+
+## Supported Platforms & Linkage
+
+Splinter is designed to work on any modern GNU/Linux flavor. Windows users can
+use WSL with a slight penalty. MacOS requires some questionable shimming around
+the lack of `memfd` (forcing anonymous file descriptors to work), but it
+_should_ otherwise function perfectly.
+
+**Optional Linkage (Enable during build):**
+
+- NUMA (`libnuma-dev`) for NUMA affinity | `WITH_NUMA=1`
+- LUA (`lua5.4-dev`) for LUA integration | `WITH_LUA=1`
+- llama.cpp for the nomic inference shard | `WITH_LLAMA=1`
+- Valgrind (`libvalgrind-dev`) for tighter Valgrind test integration |
+  `WITH_VALGRIND=1`
+
+## Quick Start / Building & Installing
+
+If you want to build Splinter with "everything", just clone the repo, enter `libsplinter/`
+and just type **`make`**. This will configure a build with `-DWITH_NUMA=ON`, `-DWITH_LUA=ON`, 
+`-DWITH_EMBEDDINGS=ON`, `-DWITH_LLAMA=ON` (for inference) and `-DWITH_RUST=ON` for bindings.
+
+This also means you need to have all of those prerequisites installed and want to build with
+them. If you want to pick and choose yourself, or enable nothing at all, then do this:
+
+```bash
+git clone git@bitbucket.org:tinkertim/libsplinter.git
+
+cd libsplinter
+mkdir build
+cd build
+
+cmake -D{your flags} ..
+ctest --output-on-failure
+sudo -E make install
+```
+
+The `-E` option tells Sudo to preserve your environment, which is required
+if you're running install targets with Rust enabled. Once you have installed,
+you can verify with `splinterctl --version`. 
+
+From there, check out [the CLI](/cli) and then [the C API](/core) and 
+[bindings](/bindings). You can find examples of most functions in 
+`splinter_test.c` if the doxygen-style comments aren't enough.
 
 ## Comparison With Related Tools
 
@@ -95,6 +137,44 @@ bitwise math; Splinter _**tries**_ to stay boring.
 Think about what you can do once TypeScript, Rust, Python and Go can all share
 the same address space and embeddings **safely**, without socket or even
 `memcpy()` overhead instead `:)`.
+
+## The Main Splinter Use Cases (What's it Good For?)
+
+Splinter can be anything from a simple configuration store to a Rank-2 tensor
+model scaffold. It's designed for **vector-heavy workflows** like Artificial
+Intelligence (AI) inference or high-resolution physics and linguistic research.
+
+#### 1. High-Res Physics & Information Rheology
+
+Splinter was built around the idea of capturing raw data exceptionally well
+while making backfill easy. It allows up to 64 signal groups per bus,
+ctags-style labeling, and built-in per-slot Bloom filters. Slot coupling allows
+for simple standard ordered sets (e.g. `foo_key.1`, `foo_key.2` for velocity and
+acceleration). You can record high-frequency data—like calculating the fluid
+dynamics of global sentiment—at L3 speeds without hardware aliasing.
+
+#### 2. The Semantic Hippocampus (LLM Orchestrated Memory)
+
+Splinter functions remarkably well as semantic short-to-long-term memory for
+Large Language Models. LRU-based movement helps "forget" ephemera quickly while
+making sure stuff that actually matters (as viewed by access time and epoch)
+settles into long-term memory. You can run inference directly on the bus,
+accessing embeddings using Splinter's supervised raw pointers so operations
+require zero `memcpy()`.
+
+#### 3. Configurations, Registries & Edge Caching
+
+Splinter's epochs and feature flags lend very well to application configuration
+on Linux systems. You can also compile Splinter to simply ignore embeddings
+(`WITH_EMBEDDINGS=0`) and use it as a local, socket-less cache server. (The
+author uses Splinter to trickle into Redis based on key activity).
+
+#### 4. Embedded IoT Use
+
+Splinter is great for environmental loggers or system ring buffers because its
+static geometry is vastly superior for flash-based storage than relational
+databases. At just 875 lines of code, it stays in the "hot path" for most modern
+edge processors.
 
 ## Exhaustive Feature Overview
 
@@ -143,59 +223,6 @@ computational thermodynamics:
   you on a defined signal group—with zero socket overhead.
 - **Modular Logic:** Side-load specialized C logic (DSP, ANN search, Inference)
   via `insmod`.
-
-## The Main Splinter Use Cases (What's it Good For?)
-
-Splinter can be anything from a simple configuration store to a Rank-2 tensor
-model scaffold. It's designed for **vector-heavy workflows** like Artificial
-Intelligence (AI) inference or high-resolution physics and linguistic research.
-
-#### 1. High-Res Physics & Information Rheology
-
-Splinter was built around the idea of capturing raw data exceptionally well
-while making backfill easy. It allows up to 64 signal groups per bus,
-ctags-style labeling, and built-in per-slot Bloom filters. Slot coupling allows
-for simple standard ordered sets (e.g. `foo_key.1`, `foo_key.2` for velocity and
-acceleration). You can record high-frequency data—like calculating the fluid
-dynamics of global sentiment—at L3 speeds without hardware aliasing.
-
-#### 2. The Semantic Hippocampus (LLM Orchestrated Memory)
-
-Splinter functions remarkably well as semantic short-to-long-term memory for
-Large Language Models. LRU-based movement helps "forget" ephemera quickly while
-making sure stuff that actually matters (as viewed by access time and epoch)
-settles into long-term memory. You can run inference directly on the bus,
-accessing embeddings using Splinter's supervised raw pointers so operations
-require zero `memcpy()`.
-
-#### 3. Configurations, Registries & Edge Caching
-
-Splinter's epochs and feature flags lend very well to application configuration
-on Linux systems. You can also compile Splinter to simply ignore embeddings
-(`WITH_EMBEDDINGS=0`) and use it as a local, socket-less cache server. (The
-author uses Splinter to trickle into Redis based on key activity).
-
-#### 4. Embedded IoT Use
-
-Splinter is great for environmental loggers or system ring buffers because its
-static geometry is vastly superior for flash-based storage than relational
-databases. At just 875 lines of code, it stays in the "hot path" for most modern
-edge processors.
-
-## Supported Platforms & Linkage
-
-Splinter is designed to work on any modern GNU/Linux flavor. Windows users can
-use WSL with a slight penalty. MacOS requires some questionable shimming around
-the lack of `memfd` (forcing anonymous file descriptors to work), but it
-_should_ otherwise function perfectly.
-
-**Optional Linkage (Enable during build):**
-
-- NUMA (`libnuma-dev`) for NUMA affinity | `WITH_NUMA=1`
-- LUA (`lua5.4-dev`) for LUA integration | `WITH_LUA=1`
-- llama.cpp for the nomic inference shard | `WITH_LLAMA=1`
-- Valgrind (`libvalgrind-dev`) for tighter Valgrind test integration |
-  `WITH_VALGRIND=1`
 
 ### Contact The Author
 
