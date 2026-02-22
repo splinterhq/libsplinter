@@ -10,8 +10,8 @@ gaps that they simply were never designed to cover. It wasn't a question of more
 tuning, it was a need to cut out the socket layer and kernel arbitration
 completely.
 
-It was either completely dismantle and re-imagine SQLite, or write something
-completely different. Given the sparse availability of options, different seemed
+The choice was completely dismantle and re-imagine SQLite, or write something
+very different. Given the sparse availability of options, different seemed
 most beneficial to both the current need as well as the current ecosystem.
 
 Splinter has a [work-in-progress website](https://splinter-website.netlify.app)
@@ -53,6 +53,10 @@ the main things that set it apart:
 
 - **Persistent or RAM-only**: Splinter persists easily to/from disk using the
   included CLI or just regular Unix tools like `dd`.
+
+- **Inference Included**: Splinter includes a "sidecar" embedding engine that 
+  works asynchronously in the store on a signal group, utilizing a quantized
+  version of Nomic Text (`.gguf`) with a tiny llama.cpp wrapper.
 
 - **Lua Integration**: `splinter_cli` and `splinterctl` both feature easy lua
   scripting for data transformation.
