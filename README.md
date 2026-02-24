@@ -15,7 +15,7 @@ very different. Given the sparse availability of options, different seemed
 most beneficial to both the current need as well as the current ecosystem.
 
 Splinter has a [work-in-progress website](https://splinter-website.netlify.app)
-with more information.
+with more information. Netlify suspends it for exceeding usage limits often, so just view it locally (included in the repo).
 
 ## Design Philosophy: Low Complexity + Systemic Sympathy = Speed!
 
