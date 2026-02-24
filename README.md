@@ -192,20 +192,19 @@ right now, or specifically wrote Splinter to handle with competence and ease:
 
 #### High-res Physics & Statistics Research
 
-Splinter allows up to 64 signal groups per bus along with ctags-style labeling
-and selection through built-in per-slot bloom filters. It also attaches a number
-of user- defined feature flags per slot for convenience, integrates easily with
-`btrfs` snapshot schemes and is built around the idea of capturing raw data
-exceptionally well while making backfill easy, even with temporal offset.
+Do you like vectors? Of course you do.
 
-Slot coupling allows for simple standard ordered sets, accessible by number
-(e.g. `foo_key.1`, `foo_key.2` for velocity and acceleration of `foo` (the
-primary key)).
+Splinter was built around the idea of capturing raw data exceptionally well
+while making backfill easy. It allows up to 64 signal groups per bus,
+ctags-style labeling, and built-in per-slot Bloom filters. Slot coupling allows
+for simple standard ordered sets (e.g. `foo_key.1`, `foo_key.2` for velocity and
+acceleration). You can record high-frequency data at L3 speeds without hardware 
+aliasing, and have many keys in tandem with vectors all representing
+a single fraction of a second, if you have the room. 
 
-You also have the benefit of atomic operations on keys you identify as being
-expected to contain `BIGUINT` values, vector storage for every slot and well in
-excess of 500,000 operations per second with proper NUMA configuration on modern
-fast hardware. You can record most kinds of data at L3 speeds.
+Splinter was built primarily around [GDELT](https://www.gdeltproject.org/) 
+consumption, to set expectations. High-rank tensors? No problem, that's routine
+in the author's use and splinter makes sharing them fast and safe.
 
 #### LLM Orchestrated Memory
 
@@ -267,3 +266,5 @@ overhead instead `:)`.
 
 I'm Tim Post (former Stack Overflow Employee & Community Leader). You can reach
 me at `timthepost@protonmail.com` if you have questions.
+
+[![Buy Tim A Coffee](https://cdn.buymeacoffee.com/buttons/v2/default-blue.png)](https://www.buymeacoffee.com/timthepost)
