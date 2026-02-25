@@ -1,25 +1,12 @@
 # Security Policy
 
-Splinter is currently in a very _alpha quality_ state, and while actively
-maintained, isn't yet ready for production use.
+Any version of Splinter from `1.0.0` onward is supported. Due to the 
+nature of Splinter there will likely be very few issues that require
+responsible disclosure, but please reach out to me at:
 
-The _current_ version of the library as defined in `config.h` is always
-supported, as well as the development branch `splinter-devel`.
+`timthepost@protonmail.com`
 
-## Supported Versions
-
-The following versions are supported:
-
-| Version | Supported          |
-| ------- | ------------------ |
-| 0.5.4   | :white_check_mark: |
-| next    | :white_check_mark: |
-| < 0.5.3 | :x:                |
-
-## Reporting a Vulnerability
-
-If you need to report a vulnerability, it's best to file an issue at Github.
-
-If you need to report it privately, contact me at `timthepost@protonmail.com`.
-
-I usually get back to people within 24 - 36 hours.
+If you find something that you think could make someone using Splinter
+in production vulnerable to mishap or bad actors. I usually respond as
+soon as I can to urgent things like that, but please give me a day or
+two as I am disabled.
