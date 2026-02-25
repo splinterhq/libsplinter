@@ -264,6 +264,19 @@ about what you can do once TypeScript, Rust, Python and Go can all share the
 same address space and embeddings **safely**, without socket or even `memcpy()`
 overhead instead `:)`.
 
+### RDMA Scaling
+
+Splinter works (in theory) perfectly well over RDMA. The value arena is easily
+exported via `ibv_*`, but the author lacks the hardware to bake the actual
+implementation in (even simulations exceed what I have access to currently).
+
+It *should not* be hard to map the arena, plus slot metadata, and most globals
+that make sense to be shared. There's some timing and accounting to do 
+(maybe 200 LOC? That sounds actually about right). We just want to avoid excess
+traffic and "shivering" on the bus. But it's a half-day project, most likely.
+
+If you have hardware to spare, please reach out!
+
 ### Contact The Author
 
 I'm Tim Post (former Stack Overflow Employee & Community Leader). You can reach
