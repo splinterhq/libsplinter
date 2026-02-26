@@ -211,6 +211,8 @@ It was dropped because it was too much of a pain to deal with concurrency,
 persistence, or cross‑language use. Splinter nails all of that plus the convenience
 of bloom tagging, isolated vectors for each strata, etc - all safely shared at lane
 speeds. You can read more about [Splinter's bindings](https://splinterhq.github.io/bindings/)
+on the documentation site; Java users can escape GC cycles thrashing memory caches, 
+and lots of other perks in other interpreters.
 
 #### LLM Orchestrated Memory
 
