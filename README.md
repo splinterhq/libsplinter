@@ -287,5 +287,3 @@ If you have hardware to spare, please reach out!
 
 I'm Tim Post (former Stack Overflow Employee & Community Leader). You can reach
 me at `timthepost@protonmail.com` if you have questions.
-
-[![Buy Tim A Coffee](https://cdn.buymeacoffee.com/buttons/v2/default-blue.png)](https://www.buymeacoffee.com/timthepost)

@@ -32,10 +32,16 @@ This is stated simply to set some expectations:
    you might find ways to improve it and share them with me.
 
  - Most of the maintainer's time is taken up actively doing research 
-   even retired early due to disabilities because there's literally shit
-   else to do in the current world but observe it. Splinter evolves 
-   with the actual work that goes into falsifying theories, it doesn't 
-   stagnate in "theoretical work"; there's a key difference between the
-   two. PRs should be grounded in something you're _doing_, or at least
-   _trying to do_. This helps optimize for _my time_, which is precious
-   to me.
+   even into early disability retirement. Splinter evolves with the actual
+   work that goes into falsifying theories, it doesn't stagnate forever in
+   "theoretical work"; there's a key difference between the two. PRs should
+   be grounded in something you're _doing_, or at least _trying to do_. This
+   helps ground the weight of the immediate need (and gain from trying to
+   implement it).
+
+I'm very chill and laid back, easy to work with, provided that you understand
+my brain is sometimes like Swiss cheese, and I rarely engage socially with 
+people I didn't know pre-diagnosis.
+
+Github is a very social, engagement-engineered place, so I want to be up-front
+about what to expect in collaboration. Thanks for reading!
