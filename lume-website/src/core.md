@@ -105,7 +105,7 @@ processes can monitor without needing a centralized lock:
 
 int main() {
     // open pre-existing project bus
-    if (splinter_open("/dev/shm/physics_bus") != 0) return 1;
+    if (splinter_open("physics_bus") != 0) return 1;
 
     // use a BIGUINT to track global events across 100+ processes
     // this allows L3-speed atomic increments
@@ -181,7 +181,7 @@ indicate that an "Unstable" label was applied anywhere on the bus.
 
 int main() {
     // bind the bus to NUMA node 1 for local memory controller performance
-    splinter_open_numa("/dev/shm/physics_bus", 1);
+    splinter_open_numa("experiment_bus", 1);
 
     // map Bloom bit 7 (Unstable) to Signal Group 0 (Safety)
     splinter_watch_label_register(LABEL_UNSTABLE, GROUP_SAFETY);
