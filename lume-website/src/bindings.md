@@ -63,7 +63,8 @@ splinter. Those that don't still achieve massive speedup, but anywhere the
 client has to wait for a list of things (keys, embeddings, modules) will be
 slower than "single-shot" I/O.
 
-**Now, the supported languages:**
+**Now, the supported languages:** ***Please note that while every effort is
+made to provide working code, some adaptation is an exercise for the user.***
 
 ### TypeScript (Deno FFI / Bun FFI)
 

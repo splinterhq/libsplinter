@@ -93,6 +93,9 @@ poop, the clowns, the beds, or whatever it takes in the name of discovery.
 
 ## Some C Examples of Splinter During an "Average Work Day":
 
+**Note - code is provided "as-is" for illustrative use; it may require polishing and
+further implementation to compile.**
+
 ### 1. The Ingestor: Telemetry & Atomic Global State
 
 This program simulates a high-frequency data loop. It records raw sensor values
