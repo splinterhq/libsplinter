@@ -53,30 +53,27 @@ a use session to look like as far as different users loading different shards
 that have the same topological access to the same store.
 
 There's some memory expectation setting and accounting to tackle as shards load
-and prepare workloads that might compete with each other, as well as some other
-debt refactoring in the CLI that's already planned to consider (which is mostly
-done).
+and prepare workloads that might compete with each other, or send the kernel 
+conflicting signals when it comes to the same region of memory.
 
-I may add store-level accounting bits so that individual shards each calling 
-`posix_madvise()` regarding what they intend to do with the store doesn't 
-result in the kernel being sent a stream of erratic mixed signals. The kernel
-can't be put in a state where it has to constantly re-evaluate its page cache
-strategy for the same region just because a cron job was ill-conceived.
+I'm going to add store level accounting bits so that shards cooperatively schedule
+themselves based on how they need to use memory for how long and at what scheduling
+priority. This election determines what shards run when, and what is ultimately 
+communicated to the kernel via `posix_madvise()`.
 
-We don't care what individual shards advise regarding their own heap, but a
-centralized advisory governor might be needed. Shards 'register' their intended 
-access patterns rather than calling the kernel directly. This ensures that a backfill 
-task and a real-time monitor don't send conflicting signals to the page cache, 
-maintaining the L3 pipeline's integrity even under (perhaps unintentionally) heavy
-workloads.
+Shards will use a `splinter_madvise()` that votes in the election, and can optionally
+block instead of voluntarily yielding, depending on what kind of API is being 
+called.
 
-Some macros to help make sure memory advisement is coordinated and (upon finishing) 
-examined for expectation meeting reality should make this pretty much invisible to 
-clients, if it turns out anything is needed at all. At the cost of maybe 16 or 32 
-extra bits in the store global header along with the structure. The rest really 
-is just the simple `dlopen()` loader and unloader code.
+**Put plainly:** The kernel can't be put in a state where it has to constantly 
+re-evaluate its page cache strategy for the same region just because a cron job was 
+ill-conceived, but we need "quick and sometimes dirty load-ables" for experiments
+or production inference loads. Shards are a great compromise answer.
 
-Shards are expected Late February / Early March 2026.
+The shape of the helpers / macros is still wildly kinetic, but functionality and 
+design have been mostly finalized.
+
+Shards are expected to 'land' Late February / Early March 2026.
 
 ## What Can We \*DO\* With Them, Though?!
 
