@@ -88,6 +88,11 @@ unless someone wants to write a gRPC version.
 There's lots of possibilities, think "micro services" that run as shared 
 objects plugged into an L3 data pipeline.
 
-They have access to Lua, too `:)`
+Think what you could do with something like [Sonic](https://github.com/bytedance/sonic)
+in a sidecar serializing your data asynchronously without socket, mutex
+or even `memcpy()` penalty. You can write shards in Go, Rust, or any 
+language that compiles down to standard shared objects.
+
+Shards have access to Lua, too `:)`
 
 Stay tuned!
