@@ -86,6 +86,13 @@ the kernel. Splinter goes out of its way to not bother the kernel unless it
 must, and its logic shards inform the kernel of how the memory is intended for
 use at every step of the way.
 
+You can read more on 
+[why Splinter and Linux get along](https://splinterhq.github.io/splinter_and_linux/) 
+so well on Splinter's doc site, as well as 
+[an overview](https://splinterhq.github.io/splinter_performance/) on why
+the gains are so appreciable (tl;dr: it's practical computational physics, not just 
+code efficiency). 
+
 ### Comparison With Related Tools:
 
 | Feature        | Splinter                                                       | Traditional Vector DBs   |
