@@ -71,9 +71,9 @@ ill-conceived, but we need "quick and sometimes dirty load-ables" for experiment
 or production inference loads. Shards are a great compromise answer.
 
 The shape of the helpers / macros is still wildly kinetic, but functionality and 
-design have been mostly finalized.
+design have been mostly finalized. CPU use intent is also being factored in.
 
-Shards are expected to 'land' Late February / Early March 2026.
+Shards are expected to 'land' sometime in March 2026.
 
 ## What Can We \*DO\* With Them, Though?!
 
