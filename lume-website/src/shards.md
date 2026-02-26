@@ -77,16 +77,12 @@ Shards are expected to 'land' sometime in March 2026.
 
 ## What Can We \*DO\* With Them, Though?!
 
-Practical examples would be sidecar analysis, backfill, a shard could even
-expose the store as a RESTful interface (similar to how it's currently done 
-with `Deno -> FFI -> Oak` or even `Bun -> FFI -> Express`, except we remove
-runtimes and TypeScript from the service loop by doing it with C and a micro
-http server that supports chunking, with something like GhostTunnel if SSL
-or mTLS is needed). This will likely be the "best bet" for k8s deployments,
-unless someone wants to write a gRPC version. 
-
-There's lots of possibilities, think "micro services" that run as shared 
-objects plugged into an L3 data pipeline.
+Practical examples would be sidecar analysis, sidecar inference, backfill, a shard 
+could even expose the store as a RESTful interface. `splinference.cpp` is an example
+of running a llama.cpp style inference loop without sockets or moving memory around;
+it would be even more valuable as a loadable object that could be run on-demand in 
+the CLI. Shards can service signal groups with whatever you need them to do right after
+your data lands.
 
 Think what you could do with something like [Sonic](https://github.com/bytedance/sonic)
 in a sidecar serializing your data asynchronously without socket, mutex
