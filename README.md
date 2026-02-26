@@ -206,6 +206,12 @@ Splinter was built primarily around [GDELT](https://www.gdeltproject.org/)
 consumption, to set expectations. High-rank tensors? No problem, that's routine
 in the author's use and splinter makes sharing them fast and safe.
 
+Remember the "`torchshare`" tool that let you put a PyTorch tensor in shared memory? 
+It was dropped because it was too much of a pain to deal with concurrency, 
+persistence, or cross‑language use. Splinter nails all of that plus the convenience
+of bloom tagging, isolated vectors for each strata, etc - all safely shared at lane
+speeds. You can read more about [Splinter's bindings](https://splinterhq.github.io/bindings/)
+
 #### LLM Orchestrated Memory
 
 Splinter functions remarkably well as semantic short -> long-term memory for
