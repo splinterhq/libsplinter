@@ -1,7 +1,5 @@
 # Splinter ⚡ A Vector Anti-Database & Shared-Memory Substrate
 
-Prefer a `tl;dr` version? View [Splinter's summary on PitchHut](https://www.pitchhut.com/project/splinter-vector-store).
-
 Splinter is a minimalist, lock-free key-value manifold designed to facilitate
 high-frequency data ingestion and retrieval across disjointed runtimes. It is
 built on the belief that for local inter-process communication (IPC), the
