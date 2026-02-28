@@ -52,7 +52,7 @@ tenets that set it apart (_**aka:
   directly, crossing only the minimal checkpoints needed for safe coordination,
   eliminating the energetic tax of serialization and context switching.
 - **Static Geometry:** By using a fixed-geometry arena, Splinter eliminates the
-  "learned negligence" of dynamic heap fragmentation and background garbage
+  complications that stem from dynamic heap fragmentation and background garbage
   collection.
 - **Lock-Free Practicality:** No time is wasted acquiring blocking mutex locks;
   Splinter uses standard portable atomic sequence locks (`epoch`).
