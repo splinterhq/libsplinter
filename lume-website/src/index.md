@@ -232,7 +232,7 @@ computational thermodynamics:
   (`splinference.cpp`) that loads Nomic Text locally and butlers embeddings for
   you on a defined signal group—with zero socket overhead.
 - **Modular Logic:** Side-load specialized C logic (DSP, ANN search, Inference)
-  via `insmod`.
+  via `insmod`-like tooling (Coming soon!).
 
 ### Contact The Author
 
