@@ -10,7 +10,7 @@ help:
 	@echo "----------------------------------"
 	@echo "dev       | \"nerd\" + Valgrind"
 	@echo "nerd      | \"prod\" + Llama + Rust"
-	@echo "prod      | Numa + Embeddings"
+	@echo "prod      | Numa + Lua + Embeddings"
 	@echo "mini      | Embeddings only"
 	@echo "tiny      | No Embeddings (KV Only)"
 	@echo "clean     | Clean build artifacts"
