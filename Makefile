@@ -3,22 +3,46 @@
 # We use git to clean 
 GIT := /bin/git
 
-.PHONY: all clean distclean install uninstall tests help
+.PHONY: all prod nerd dev clean distclean install uninstall setup_build tests help
 
-all: build/Makefile
+help:
+	@echo "Build targets:"
+	@echo "----------------------------------"
+	@echo "dev       | \"nerd\" + Valgrind"
+	@echo "nerd      | \"prod\" + Llama + Rust"
+	@echo "prod      | Numa + Embeddings"
+	@echo "clean     | Clean build artifacts"
+	@echo "distclean | Purge repo"
+	@echo "install   | Install Splinter"
+	@echo "uninstall | Uninstall Splinter"
+	@echo ""
+	@echo "You can also run CMake manually (edit this Makefile to see how)"
+	@echo ""
+
+setup_build:
+	@mkdir -p build
+
+dev: setup_build
+	cd build && cmake -DWITH_EMBEDDINGS=ON -DWITH_LLAMA=ON -DWITH_LUA=ON -DWITH_NUMA=ON -DWITH_RUST=ON -DWITH_VALGRIND=ON ..
 	@$(MAKE) -C build
 
-build/Makefile:
-	@mkdir -p build
-	@cd build && cmake -DWITH_NUMA=ON -DWITH_LUA=ON -DWITH_EMBEDDINGS=ON -DWITH_LLAMA=ON -DWITH_RUST=ON ..
+nerd: setup_build
+	cd build && cmake -DWITH_EMBEDDINGS=ON -DWITH_LLAMA=ON -DWITH_LUA=ON -DWITH_NUMA=ON -DWITH_RUST=ON ..
+	@$(MAKE) -C build
 
-install: all
+prod: setup_build
+	cd build && cmake -DWITH_EMBEDDINGS=ON -DWITH_LUA=ON -DWITH_NUMA=ON ..
+	@$(MAKE) -C build
+
+all: help
+
+install:
 	@$(MAKE) -C build install
 
 uninstall:
 	@$(MAKE) -C build uninstall
 
-tests: all
+tests:
 	@cd build && ctest --output-on-failure
 
 clean:
