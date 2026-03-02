@@ -3,7 +3,7 @@
 # We use git to clean 
 GIT := /bin/git
 
-.PHONY: all prod nerd dev clean distclean install uninstall setup_build tests help
+.PHONY: all prod nerd dev mini tiny clean distclean install uninstall setup_build tests help
 
 help:
 	@echo "Build targets:"
@@ -11,6 +11,8 @@ help:
 	@echo "dev       | \"nerd\" + Valgrind"
 	@echo "nerd      | \"prod\" + Llama + Rust"
 	@echo "prod      | Numa + Embeddings"
+	@echo "mini      | Embeddings only"
+	@echo "tiny      | No Embeddings (KV Only)"
 	@echo "clean     | Clean build artifacts"
 	@echo "distclean | Purge repo"
 	@echo "install   | Install Splinter"
@@ -33,6 +35,14 @@ nerd: setup_build
 prod: setup_build
 	cd build && cmake -DWITH_EMBEDDINGS=ON -DWITH_LUA=ON -DWITH_NUMA=ON ..
 	@$(MAKE) -C build
+
+mini: setup_build
+	cd build && cmake -DWITH_EMBEDDINGS=ON ..
+	@$(MAKE) -C build
+
+tiny: setup_build
+	cd build && cmake .. 
+	@$(MAKE) -C build 
 
 all: help
 
