@@ -15,7 +15,9 @@ very different. Given the sparse availability of options, different seemed
 most beneficial to both the current need as well as the current ecosystem.
 
 Splinter has a [work-in-progress website](https://splinterhq.github.io/) with
-a lot more information and benchmarks.
+a lot more information and benchmarks. Please consider giving splinter a star 
+if you find it share-worthy; this helps more people who have problems Splinter
+can solve find it just-in-time.
 
 ## Design Philosophy: Low Complexity + Systemic Sympathy = Speed!
 
