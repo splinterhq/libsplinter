@@ -3,13 +3,13 @@
 # We use git to clean 
 GIT := /bin/git
 
-.PHONY: all prod nerd dev mini tiny clean distclean install uninstall setup_build tests help
+.PHONY: all prod sense dev mini tiny clean distclean install uninstall setup_build tests help
 
 help:
 	@echo "Build targets:"
 	@echo "----------------------------------"
-	@echo "dev       | \"nerd\" + Valgrind"
-	@echo "nerd      | \"prod\" + Llama + Rust"
+	@echo "sense     | \"dev\" + Valgrind"
+	@echo "dev       | \"prod\" + Llama + Rust"
 	@echo "prod      | Numa + Lua + Embeddings"
 	@echo "mini      | Embeddings only"
 	@echo "tiny      | No Embeddings (KV Only)"
@@ -28,7 +28,7 @@ dev: setup_build
 	cd build && cmake -DWITH_EMBEDDINGS=ON -DWITH_LLAMA=ON -DWITH_LUA=ON -DWITH_NUMA=ON -DWITH_RUST=ON -DWITH_VALGRIND=ON ..
 	@$(MAKE) -C build
 
-nerd: setup_build
+sense: setup_build
 	cd build && cmake -DWITH_EMBEDDINGS=ON -DWITH_LLAMA=ON -DWITH_LUA=ON -DWITH_NUMA=ON -DWITH_RUST=ON ..
 	@$(MAKE) -C build
 
