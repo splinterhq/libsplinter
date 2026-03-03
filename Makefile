@@ -6,8 +6,14 @@ GIT := /bin/git
 .PHONY: all prod sense dev mini tiny clean distclean install uninstall setup_build tests help
 
 help:
-	@echo "Build targets:"
-	@echo "----------------------------------"
+	@echo "Splinter's build is managed by CMake. This Makefile is a shim"
+	@echo "to help people get started quickly. Any build configuration is"
+	@echo "possible; here are targets that produce the most common"
+	@echo "configurations:"
+	@echo ""
+	@echo "------------------------------------"	
+	@echo "| Type 'make' + target_name to use |"
+	@echo "------------------------------------"
 	@echo "sense     | \"dev\" + Valgrind"
 	@echo "dev       | \"prod\" + Llama + Rust"
 	@echo "prod      | Numa + Lua + Embeddings"
@@ -18,7 +24,11 @@ help:
 	@echo "install   | Install Splinter"
 	@echo "uninstall | Uninstall Splinter"
 	@echo ""
-	@echo "You can also run CMake manually (edit this Makefile to see how)"
+	@echo "You can also run CMake manually, for example, if you wanted a "
+	@echo "stripped-down build + Rust bindings for it. Edit this Makefile to see how."
+	@echo ""
+	@echo "If unsure where to start, try 'make mini' - it requires no dependencies and"
+	@echo "enables many features."
 	@echo ""
 
 setup_build:
