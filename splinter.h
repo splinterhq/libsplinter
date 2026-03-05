@@ -608,6 +608,14 @@ void splinter_pulse_watchers(struct splinter_slot *slot);
  */
 uint64_t splinter_get_signal_count(uint8_t group_id);
 
+/**
+ * @brief Iterates through all slots matching a bloom mask.
+ * @param mask The bloom mask to match against.
+ * @param callback Function to call for each match.
+ * @param user_data Opaque pointer for the callback.
+ */
+void splinter_enumerate_matches(uint64_t mask, 
+    void (*callback)(const char *key, uint64_t version, void *data), void *user_data);
 #ifdef __cplusplus
 }
 #endif

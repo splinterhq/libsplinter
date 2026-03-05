@@ -1257,3 +1257,24 @@ uint64_t splinter_get_signal_count(uint8_t group_id) {
     // Explicitly load with acquire semantics to ensure we see the latest pulses
     return atomic_load_explicit(&H->signal_groups[group_id].counter, memory_order_acquire);
 }
+
+/**
+ * @brief Iterates through all slots matching a bloom mask.
+ */
+void splinter_enumerate_matches(uint64_t mask, 
+    void (*callback)(const char *key, uint64_t epoch, void *data), void *user_data) 
+{
+    if (!H || !S) return;
+    for (size_t i = 0; i < H->slots; i++) {
+        struct splinter_slot *slot = &S[i];
+        
+        // Load the hash to check if the slot is active
+        uint64_t h = atomic_load_explicit(&slot->hash, memory_order_acquire);
+        
+        // Match against the bloom member
+        if (h != 0 && (atomic_load_explicit(&slot->bloom, memory_order_acquire) & mask) == mask) {
+            uint64_t ep = atomic_load_explicit(&slot->epoch, memory_order_relaxed);
+            callback(slot->key, ep, user_data);
+        }
+    }
+}

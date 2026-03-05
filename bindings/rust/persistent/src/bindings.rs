@@ -763,3 +763,17 @@ unsafe extern "C" {
     #[doc = " @brief Safely retrieve the current pulse count for a signal group. Good for debugging.\n @param group_id The signal group (0-63).\n @return The 64-bit pulse count, or 0 if invalid."]
     pub fn splinter_get_signal_count(group_id: u8) -> u64;
 }
+unsafe extern "C" {
+    #[doc = " @brief Iterates through all slots matching a bloom mask.\n @param mask The bloom mask to match against.\n @param callback Function to call for each match.\n @param user_data Opaque pointer for the callback."]
+    pub fn splinter_enumerate_matches(
+        mask: u64,
+        callback: ::std::option::Option<
+            unsafe extern "C" fn(
+                key: *const ::std::os::raw::c_char,
+                version: u64,
+                data: *mut ::std::os::raw::c_void,
+            ),
+        >,
+        user_data: *mut ::std::os::raw::c_void,
+    );
+}

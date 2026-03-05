@@ -31,6 +31,19 @@
 #define TIME_T_MAX 0x00
 #endif
 
+/* Tracker for enumeration tests */
+struct enum_tracker {
+    int count;
+    char last_key[SPLINTER_KEY_MAX];
+};
+
+static void test_enum_callback(const char *key, uint64_t epoch, void *data) {
+    struct enum_tracker *t = (struct enum_tracker *)data;
+    t->count++;
+    strncpy(t->last_key, key, SPLINTER_KEY_MAX - 1);
+    (void)epoch; // unused in this specific check
+}
+
 /* 
  * Returns true on success, false if the value cannot be represented. 
  * Older data loggers can wake up pre-1970 on battery changes, so we
@@ -303,6 +316,24 @@ splinter_get_header_snapshot(&b_after);
 
 TEST("label watch triggered pulse (global epoch check)", b_after.epoch > b_before.epoch);
 
+/* --- Enumerator Tests --- */
+struct enum_tracker tracker = { 0, "" };
+const uint64_t ENUM_LABEL = (1ULL << 5);
+
+// Setup: two keys with the same label, one without
+splinter_set("enum_01", "val", 3);
+splinter_set_label("enum_01", ENUM_LABEL);
+splinter_set("enum_02", "val", 3);
+splinter_set_label("enum_02", ENUM_LABEL);
+splinter_set("enum_skip", "val", 3); // No label
+
+// Execute enumeration
+splinter_enumerate_matches(ENUM_LABEL, test_enum_callback, &tracker);
+
+TEST("enumerate matches found correct number of keys (2)", tracker.count == 2);
+TEST("enumerate matches found expected key names", 
+     strcmp(tracker.last_key, "enum_02") == 0 || strcmp(tracker.last_key, "enum_01") == 0);
+
 /* --- Hybrid Auto-Scrub & Hygiene Tests --- */
 
 // Test the "One Fell Swoop" transition
@@ -316,7 +347,7 @@ TEST("header snapshot confirms both bits (AUTO | HYBRID) are set",
       (hybrid_snap.core_flags & SPL_SYS_AUTO_SCRUB) &&
       (hybrid_snap.core_flags & SPL_SYS_HYBRID_SCRUB));
 
-// Verify the "Wing Chun" reset: one motion to clear the path
+// Verify the reset: one motion to clear the path
 TEST("set_av(0) clears both bits in one motion", splinter_set_av(0) == 0);
 TEST("get hybrid av returns 0 after full reset", splinter_get_hybrid_av() == 0);
 TEST("get regular av returns 0 after full reset", splinter_get_av() == 0);
