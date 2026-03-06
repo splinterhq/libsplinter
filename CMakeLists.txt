@@ -298,3 +298,24 @@ endif()
 install(TARGETS splinter_test splinter_stress splinterp_test splinterp_stress 
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
+# --- Documentation and Example Configuration ---
+
+# 1. Install the example to the system's shared data directory
+# This typically resolves to /usr/local/share/splinter/splinterrc.example
+install(FILES splinterrc_example
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/splinter
+        RENAME splinterrc.example)
+
+# 2. Display a post-install message to the user
+install(CODE "
+    message(STATUS \"\")
+    message(STATUS \"------------------------------------------------------------------\")
+    message(STATUS \"  CONFIGURATION NOTE:\")
+    message(STATUS \"  A sample bloom configuration file for Splinter has been installed to:\")
+    message(STATUS \"  ${CMAKE_INSTALL_FULL_DATADIR}/splinter/splinterrc.example\")
+    message(STATUS \"\")
+    message(STATUS \"  To customize Splinter's bloom label functionality, copy this to:\")
+    message(STATUS \"  ~/.splinterrc\")
+    message(STATUS \"------------------------------------------------------------------\")
+    message(STATUS \"\")
+")
