@@ -102,7 +102,7 @@ code efficiency).
 | **Transport**  | `memfd()` that degrades gracefully to `mmap()` (L3 Speed)      | TCP/gRPC (Network Stack) |
 | **Daemon**     | None (Passive)                                                 | Active Service (Heavy)   |
 | **Footprint**  | Static & Deterministic                                         | Dynamic & Volatile       |
-| **Complexity** | ~ 875 Lines of obsessively-optimized C (Will never exceed 999) | 100k+ Lines of Code      |
+| **Complexity** | 890 Lines of obsessively-optimized C (Will never exceed 999) | 100k+ Lines of Code      |
 
 ### Supported Platforms:
 

@@ -27,8 +27,8 @@ Philosophically, Splinter is built under the following constraints:
 2. The main hot path of the code should strive to fit in a modern processor's
    instruction cache.
 
-This set of constraints has kept the core library very lean, currently at around
-845 lines of actual code, less if you remove support for embeddings, even less
+This set of constraints has kept the core library very lean, currently at 
+890 lines of actual code, less if you remove support for embeddings, even less
 if you take out the bitwise operators if you don't need them, etc. It's designed
 to be embedded and customized. Splinter provides a stable, high-speed substrate
 in less code than most line editors occupy.
