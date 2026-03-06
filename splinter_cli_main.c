@@ -643,6 +643,8 @@ int main (int argc, char *argv[]) {
         }
     }
 
+    cli_load_config();
+    
     if (m == MODE_REPL) {
         if (cli_set_signal_handlers() < 0) {
             fprintf(stderr, 
