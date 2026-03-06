@@ -3,7 +3,7 @@
 #ifndef BUILD_H
 #define BUILD_H
 
-#define SPLINTER_BUILD "9bf3a8f"
+#define SPLINTER_BUILD "857b1f1"
 
 #endif /* BUILD_H */
 
