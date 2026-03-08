@@ -1,6 +1,7 @@
 /**
  * @file splinter_cli_cmd_label.c
  * @brief Implements the CLI 'label' command to tag keys via Bloom filter.
+ * License: Apache 2
  */
 
 #include <stdio.h>
@@ -17,12 +18,6 @@ void help_cmd_label(unsigned int level) {
     printf("Labels are defined in ~/.splinterrc and apply to the 64-bit Bloom filter.\n");
     puts("");
 }
-
-// need getopt_long here
-// --clear option (unsets the label instead of setting it)
-// --reload (reload .splinterrc) (maybe do that in 'config' instead?)
-// --show mode to print the labels attached to a key (maybe in 'head' instead?)
-// see notes about detecting a pattern and doing batches
 
 int cmd_label(int argc, char *argv[]) {
     if (argc < 3) {
@@ -54,8 +49,6 @@ int cmd_label(int argc, char *argv[]) {
         }
     }
 
-    // we should look to see if key is a regex, and if so, iterate over matches setting the label?
-    // (maybe with dry-run)
     if (splinter_set_label(key, mask) == 0) {
         printf("Label '%s' (0x%lx) applied to '%s'.\n", label_name, (unsigned long)mask, key);
         return 0;
