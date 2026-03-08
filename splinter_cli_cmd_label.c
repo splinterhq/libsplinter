@@ -18,6 +18,12 @@ void help_cmd_label(unsigned int level) {
     puts("");
 }
 
+// need getopt_long here
+// --clear option (unsets the label instead of setting it)
+// --reload (reload .splinterrc) (maybe do that in 'config' instead?)
+// --show mode to print the labels attached to a key (maybe in 'head' instead?)
+// see notes about detecting a pattern and doing batches
+
 int cmd_label(int argc, char *argv[]) {
     if (argc < 3) {
         help_cmd_label(1);
@@ -29,7 +35,7 @@ int cmd_label(int argc, char *argv[]) {
     uint64_t mask = 0;
     bool found = false;
 
-    // 1. Resolve Label from .splinterrc
+    // resolve Label from .splinterrc
     for (int i = 0; i < thisuser.label_count; i++) {
         if (!strcasecmp(label_name, thisuser.labels[i].name)) {
             mask = thisuser.labels[i].mask;
@@ -39,7 +45,7 @@ int cmd_label(int argc, char *argv[]) {
     }
 
     if (!found) {
-        // Fallback to hex parsing if not a named label
+        // fallback to hex parsing if not a named label
         char *endptr;
         mask = strtoull(label_name, &endptr, 0);
         if (*endptr != '\0' || mask == 0) {
@@ -48,7 +54,8 @@ int cmd_label(int argc, char *argv[]) {
         }
     }
 
-    // 2. Execute the atomic label update
+    // we should look to see if key is a regex, and if so, iterate over matches setting the label?
+    // (maybe with dry-run)
     if (splinter_set_label(key, mask) == 0) {
         printf("Label '%s' (0x%lx) applied to '%s'.\n", label_name, (unsigned long)mask, key);
         return 0;
