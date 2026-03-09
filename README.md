@@ -40,7 +40,7 @@ the main things that set it apart:
   eliminating the energetic tax of serialization and context switching.
 
 - **Static Geometry**: By using a fixed-geometry arena, Splinter eliminates the
-  "learned negligence" of dynamic heap fragmentation and background garbage
+  problems created by dynamic heap fragmentation and background garbage
   collection.
 
 - **Lock-Free Practicality**: No time is wasted acquiring mutex locks; Splinter
