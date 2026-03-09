@@ -1,4 +1,4 @@
-# Splinter ⚡ A Vector Anti-Database & Shared-Memory Substrate
+# Splinter ⚡ A L3-Speed Vector Store & Shared-Memory KV Substrate
 
 Splinter is a minimalist, lock-free key-value manifold designed to facilitate
 high-frequency data ingestion and retrieval across disjointed runtimes. It is
