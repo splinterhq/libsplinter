@@ -19,7 +19,7 @@ a lot more information and benchmarks. Please consider giving splinter a star
 if you find it share-worthy; this helps more people who have problems Splinter
 can solve find it just-in-time.
 
-## Design Philosophy: Low Complexity + Systemic Sympathy = Speed!
+## Design Philosophy: Low Complexity + Mechanical Sympathy = Speed!
 
 Modern software has become complacent with IAAS marketing, assuming that CPU
 cycles and memory bandwidth are infinite. We invoke help from the kernel's
