@@ -1,5 +1,5 @@
 ---
-title: splinter_get_signal_count()
+title: splinter_get_signal_count
 parent: "Function Reference"
 nav_order: 28
 metas:

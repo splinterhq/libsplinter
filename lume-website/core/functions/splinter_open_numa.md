@@ -1,5 +1,5 @@
 ---
-title: splinter_open_numa()
+title: splinter_open_numa
 parent: "Function Reference"
 nav_order: 5
 metas:

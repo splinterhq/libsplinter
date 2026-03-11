@@ -1,5 +1,5 @@
 ---
-title: splinter_get_slot_snapshot()
+title: splinter_get_slot_snapshot
 parent: "Function Reference"
 nav_order: 8
 metas:

@@ -1,5 +1,5 @@
 ---
-title: splinter_get_epoch()
+title: splinter_get_epoch
 parent: "Function Reference"
 nav_order: 24
 metas:

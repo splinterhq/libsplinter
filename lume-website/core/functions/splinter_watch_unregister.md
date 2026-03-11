@@ -1,5 +1,5 @@
 ---
-title: splinter_watch_unregister()
+title: splinter_watch_unregister
 parent: "Function Reference"
 nav_order: 19
 ---

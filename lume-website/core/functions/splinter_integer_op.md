@@ -1,5 +1,5 @@
 ---
-title: splinter_integer_op()
+title: splinter_integer_op
 parent: "Function Reference"
 nav_order: 29
 metas:

@@ -1,5 +1,5 @@
 ---
-title: splinter_poll()
+title: splinter_poll
 parent: "Function Reference"
 nav_order: 13
 metas:

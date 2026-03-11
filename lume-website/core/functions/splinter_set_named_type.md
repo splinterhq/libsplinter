@@ -1,5 +1,5 @@
 ---
-title: splinter_set_named_type()
+title: splinter_set_named_type
 parent: "Function Reference"
 nav_order: 17
 metas:

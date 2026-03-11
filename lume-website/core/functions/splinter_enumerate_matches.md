@@ -1,5 +1,5 @@
 ---
-title: splinter_enumerate_matches()
+title: splinter_enumerate_matches
 parent: "Function Reference"
 nav_order: 25
 metas:

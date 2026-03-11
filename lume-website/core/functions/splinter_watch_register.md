@@ -1,5 +1,5 @@
 ---
-title: splinter_watch_register()
+title: splinter_watch_register
 parent: "Function Reference"
 nav_order: 18
 metas:

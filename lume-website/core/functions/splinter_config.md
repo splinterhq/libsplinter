@@ -1,5 +1,5 @@
 ---
-title: splinter_config(*)
+title: splinter_config*
 parent: "Function Reference"
 nav_order: 14
 metas:

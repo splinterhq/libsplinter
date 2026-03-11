@@ -1,5 +1,5 @@
 ---
-title: splinter_close()
+title: splinter_close
 parent: "Function Reference"
 nav_order: 6
 ---

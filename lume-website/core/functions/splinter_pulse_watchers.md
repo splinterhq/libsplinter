@@ -1,5 +1,5 @@
 ---
-title: splinter_pulse_watchers()
+title: splinter_pulse_watchers
 parent: "Function Reference"
 nav_order: 29
 metas:

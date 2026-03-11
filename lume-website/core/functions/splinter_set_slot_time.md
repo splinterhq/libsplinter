@@ -1,5 +1,5 @@
 ---
-title: splinter_set_slot_time()
+title: splinter_set_slot_time
 parent: "Function Reference"
 nav_order: 16
 metas:

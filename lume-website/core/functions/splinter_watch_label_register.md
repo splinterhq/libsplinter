@@ -1,5 +1,5 @@
 ---
-title: splinter_label_register()
+title: splinter_label_register
 parent: "Function Reference"
 nav_order: 20
 metas:

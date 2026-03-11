@@ -1,5 +1,5 @@
 ---
-title: splinter_get_embedding()
+title: splinter_get_embedding
 parent: "Function Reference"
 nav_order: 22
 metas:

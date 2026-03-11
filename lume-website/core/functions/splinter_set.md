@@ -1,5 +1,5 @@
 ---
-title: splinter_set()
+title: splinter_set
 parent: "Function Reference"
 nav_order: 10
 metas:

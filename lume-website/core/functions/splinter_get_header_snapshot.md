@@ -1,5 +1,5 @@
 ---
-title: splinter_get_header_snapshot()
+title: splinter_get_header_snapshot
 parent: "Function Reference"
 nav_order: 7
 metas:

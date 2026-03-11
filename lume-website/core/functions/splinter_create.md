@@ -1,5 +1,5 @@
 ---
-title: splinter_create()
+title: splinter_create
 parent: "Function Reference"
 nav_order: 1
 metas:

@@ -1,5 +1,5 @@
 ---
-title: splinter_slot_usr(*)
+title: splinter_slot_usr*
 parent: "Function Reference"
 nav_order: 15
 metas:
