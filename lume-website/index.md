@@ -92,34 +92,8 @@ _should_ otherwise function perfectly.
 
 ## Quick Start / Building & Installing
 
-If you want to build Splinter with "everything", just clone the repo, enter
-`libsplinter/` and just type **`make`**. This will configure a build with
-`-DWITH_NUMA=ON`, `-DWITH_LUA=ON`, `-DWITH_EMBEDDINGS=ON`, `-DWITH_LLAMA=ON`
-(for inference) and `-DWITH_RUST=ON` for bindings.
-
-This also means you need to have all of those prerequisites installed and want
-to build with them. If you want to pick and choose yourself, or enable nothing
-at all, then do this:
-
-```bash
-git clone git@bitbucket.org:tinkertim/libsplinter.git
-
-cd libsplinter
-mkdir build
-cd build
-
-cmake -D{your flags} ..
-ctest --output-on-failure
-sudo -E make install
-```
-
-The `-E` option tells Sudo to preserve your environment, which is required if
-you're running install targets with Rust enabled. Once you have installed, you
-can verify with `splinterctl --version`.
-
-From there, check out [the CLI](/cli) and then [the C API](/core) and
-[bindings](/bindings). You can find examples of most functions in
-`splinter_test.c` if the doxygen-style comments aren't enough.
+**See [Building & Intstalling Splinter](/installing/)**. Provided you have a working
+compiler (like GCC), Splinter has very few (and all optional) dependencies.
 
 ## Comparison With Related Tools
 
