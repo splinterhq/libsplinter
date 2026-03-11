@@ -20,16 +20,17 @@ a lot more information and benchmarks. Please consider giving splinter a star
 if you find it share-worthy; this helps more people who have problems Splinter
 can solve find it just-in-time.
 
-## Design Philosophy: Low Complexity + Mechanical Sympathy = Speed!
+## Low Complexity + Mechanical Sympathy = Speed!
 
 Modern software has become complacent with IAAS marketing, assuming that CPU
 cycles and memory bandwidth are infinite. We invoke help from the kernel's
 socket layer to transfer a value that we already have in memory to another
 region in the same physical memory as standard practice.
 
-And, now we're doing that with 768-dimensional vectors 😱 Splinter is a gesture
-back in the direction of efficiency for systems development. Here's a list of
-the main things that set it apart:
+And lately, we're repeating this practice by adding vector embeddings - let's think
+more about what we actually need in this process. Splinter is a gesture back in the direction of efficiency for systems development. 
+
+Here's a list of the main things that set it apart:
 
 - **Splinter Is a Passive Substrate**: Splinter is not a daemon. It is a
   memory-mapped region that acts as a mutual option for every process on the
