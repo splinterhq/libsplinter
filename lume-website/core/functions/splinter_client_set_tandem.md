@@ -1,5 +1,5 @@
 ---
-title: splinter_client_set_tandem()
+title: splinter_client_set_tandem
 parent: "Function Reference"
 nav_order: 26
 metas:
