@@ -146,7 +146,7 @@ configurations).
 - **In-Place Atomic Ops**: Keys tagged as `BIGUINT` support atomic `INC`, `DEC`,
   `OR`, `XOR`, `AND`, and `NOT` operations directly in shared memory.
 - **Tandem Keys**: Multi-order support allows for atomic updates to related
-  signals (e.g., `sensor.1`, `sensor.2`).
+  signals (e.g., `sensor.1` for velocity of `sensor`, `sensor.2` for acceleration).
 
 #### 3. Mechanical Hygiene (Auto-Scrubbing)
 
