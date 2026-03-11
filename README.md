@@ -1,4 +1,4 @@
-# Splinter ⚡ An L3-Speed Shared Memory Vector & KV Store
+# Splinter ⚡ L3-Speed, Persistable, Shared Memory Vector & KV Store
 
 Splinter is a minimalist, lock-free key-value manifold designed to facilitate
 high-frequency data ingestion and retrieval across disjointed runtimes. It is
@@ -19,7 +19,7 @@ a lot more information and benchmarks. Please consider giving splinter a star
 if you find it share-worthy; this helps more people who have problems Splinter
 can solve find it just-in-time.
 
-## Design Philosophy: Low Complexity + Systemic Sympathy = Speed!
+## Design Philosophy: Low Complexity + Mechanical Sympathy = Speed!
 
 Modern software has become complacent with IAAS marketing, assuming that CPU
 cycles and memory bandwidth are infinite. We invoke help from the kernel's
@@ -40,7 +40,7 @@ the main things that set it apart:
   eliminating the energetic tax of serialization and context switching.
 
 - **Static Geometry**: By using a fixed-geometry arena, Splinter eliminates the
-  "learned negligence" of dynamic heap fragmentation and background garbage
+  problems created by dynamic heap fragmentation and background garbage
   collection.
 
 - **Lock-Free Practicality**: No time is wasted acquiring mutex locks; Splinter
@@ -146,7 +146,7 @@ configurations).
 - **In-Place Atomic Ops**: Keys tagged as `BIGUINT` support atomic `INC`, `DEC`,
   `OR`, `XOR`, `AND`, and `NOT` operations directly in shared memory.
 - **Tandem Keys**: Multi-order support allows for atomic updates to related
-  signals (e.g., `sensor.1`, `sensor.2`).
+  signals (e.g., `sensor.1` for velocity of `sensor`, `sensor.2` for acceleration).
 
 #### 3. Mechanical Hygiene (Auto-Scrubbing)
 
