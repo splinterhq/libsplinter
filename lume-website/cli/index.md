@@ -31,6 +31,8 @@ just as a way to implement functionality, but also to illustrate how
 the library can be used to build "just enough" storage for any project
 that uses KV and vectors over the same physical network.
 
+<!-- TOC -->
+
 ## Command Help Vs Tool Help
 
 There are commands `splinter_cli` understands how to run, which are:
