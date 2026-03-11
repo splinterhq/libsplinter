@@ -1,17 +1,18 @@
-# Splinter ⚡ L3-Speed, Persistable, Shared Memory Vector & KV Store
+# Splinter ⚡ L3-Speed Shared Memory Vector & KV Store
 
 Splinter is a minimalist, lock-free key-value manifold designed to facilitate
 high-frequency data ingestion and retrieval across disjointed runtimes. It is
 built on the belief that for local inter-process communication (IPC), the
-kernel’s networking stack is an expensive and unnecessary coupling.
+kernel’s networking stack and arbitration services are expensive and unnecessary 
+couplings.
 
-Splinter emerged out frustration resulting from attempting to stretch tools over
-gaps that they simply were never designed to cover. It wasn't a question of more
-tuning, it was a need to cut out the socket layer and kernel arbitration
+Splinter emerged out of frustration resulting from attempting to stretch tools
+over gaps that they simply were never designed to cover. It wasn't a question of
+more tuning; it was a need to cut out the socket layer and kernel arbitration
 completely.
 
-The choice was completely dismantle and re-imagine SQLite, or write something
-very different. Given the sparse availability of options, different seemed
+It was a choice between dismantling and re-imagining SQLite, or creating something
+completely different. Given the sparse availability of options, different seemed
 most beneficial to both the current need as well as the current ecosystem.
 
 Splinter has a [work-in-progress website](https://splinterhq.github.io/) with
