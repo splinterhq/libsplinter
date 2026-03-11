@@ -32,7 +32,7 @@ It was a choice between dismantling and re-imagining SQLite, or creating somethi
 completely different. Given the sparse availability of options, different seemed
 most beneficial to both the current need as well as the current ecosystem.
 
-## Design Philosophy: Low Complexity + Mechanical Sympathy = Speed!
+## Low Complexity + Mechanical Sympathy = Speed!
 
 Modern software has become complacent with IAAS marketing, assuming that CPU
 cycles and memory bandwidth are infinite. We invoke help from the kernel's
