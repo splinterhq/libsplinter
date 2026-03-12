@@ -52,7 +52,7 @@ See the `Makefile` for how CMake options work.
 You can also run CMake manually:
 
 ```bash
-git clone git@bitbucket.org:tinkertim/libsplinter.git
+git clone git@github.com:splinterhq/libsplinter.git
 
 cd libsplinter
 mkdir build
