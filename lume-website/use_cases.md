@@ -35,9 +35,9 @@ filtering help store understandings of relationships between different data.
 ### Exploiting the "Signal Arena" for Graph Traversal
 
 The most powerful aspect of Splinter for this use case is the
-`splinter_pulse_watchers()` and `signal_groups` logic. In a traditional graph, 
-finding related nodes requires "traversing" edges. In Splinter, you can implement
-Reactive Graph Traversal:
+`splinter_pulse_watchers()` and `signal_groups` logic. In a traditional graph,
+finding related nodes requires "traversing" edges. In Splinter, you can
+implement Reactive Graph Traversal:
 
 - The Scenario: Agent A (a Sales Bot) detects a "Pricing Dispute" in a chat log.
 
@@ -52,6 +52,27 @@ based on the graph's state.
 
 It's limited also because there's no real way to write information at the edges,
 but it's also less than 1k lines of code.
+
+### "Agentic Labeling" and Semantic Overlap
+
+Suppose you let agents modify the bloom, but not the key or value region
+(reasonable).
+
+That opens up a kind of fuzzy matching; If multiple agents use the same hashing
+strategy for their labels, Splinter’s Bloom filter naturally handles Semantic
+Overlap:
+
+- If Agent A labels a node with 0x01 (Finance) and Agent B labels it with 0x02
+  (Legal), the slot's mask becomes 0x03.
+
+- An LLM agent looking for "Financial-Legal" overlaps can query the mask 0x03.
+
+- Because Bloom filters can have false positives (but never false negatives),
+  the agent might get a few "extra" hits, but it will never miss a valid
+  connection.
+
+For a Knowledge Graph, this acts as a "Fuzzy Discovery" mechanism. It's not
+perfect but `<gestures at code size again>` you get a lot for a little.
 
 ## LLM Runtime / RAG / LLM Training Uses
 
