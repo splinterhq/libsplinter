@@ -68,4 +68,4 @@ sudo -E make install
 If building the Rust bindings, make sure you preserve the user environment
 (`-E`) when using `sudo` for `make install`.
 
-Otherwise, Rust might not be able to resolve locations and the build will fail.
+Otherwise, Rust's tools might not be able to resolve locations and the build will fail.

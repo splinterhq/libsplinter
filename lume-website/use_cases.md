@@ -164,11 +164,14 @@ customer feature flags, etc.
 
 ## Serverless Semantic KV
 
-Splinter's persistent stores work wonderfully well on DenoKV; use persistent
+Splinter's persistent stores work wonderfully well on Deno Deploy; use persistent
 mode and bloom with pre-filled embeddings to help serve "psychic" ads at the
 edge, or whatever you need to serve.
 
 If it allows access to `mmap()`, Splinter will work on it.
+
+Splinter isn't a replacement for DenoKV; it's a separate local cache that doesn't
+have the replicated backing, so keep it ephemeral.
 
 ## Just A Great Cache Implementation
 
