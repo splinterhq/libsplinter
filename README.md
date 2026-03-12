@@ -192,71 +192,8 @@ These can be extended (or replaced entirely) at the user's discretion.
 
 ### The Main Splinter Use Cases (What's it Good For?)
 
-Splinter can be anything from a simple configuration or KV store to a Rank - 2
-tensor model scaffold. It's designed for **vector-heavy workflows** like those
-typically found in Artificial Intelligence (AI) inference and training or
-high-resolution physics and linguistic research (anything that benefits from
-easy semantic relation).
-
-The following cases stand out as those that the author himself uses Splinter for
-right now, or specifically wrote Splinter to handle with competence and ease:
-
-#### High-res Physics & Statistics Research
-
-Do you like vectors? Of course you do.
-
-Splinter was built around the idea of capturing raw data exceptionally well
-while making backfill easy. It allows up to 64 signal groups per bus,
-ctags-style labeling, and built-in per-slot Bloom filters. Slot coupling allows
-for simple standard ordered sets (e.g. `foo_key.1`, `foo_key.2` for velocity and
-acceleration). You can record high-frequency data at L3 speeds without hardware 
-aliasing, and have many keys in tandem with vectors all representing
-a single fraction of a second, if you have the room. 
-
-Splinter was built primarily around [GDELT](https://www.gdeltproject.org/) 
-consumption, to set expectations. High-rank tensors? No problem, that's routine
-in the author's use and splinter makes sharing them fast and safe.
-
-Remember the "`torchshare`" tool that let you put a PyTorch tensor in shared memory? 
-It was dropped because it was too much of a pain to deal with concurrency, 
-persistence, or cross‑language use. Splinter nails all of that plus the convenience
-of bloom tagging, isolated vectors for each strata, etc - all safely shared at lane
-speeds. You can read more about [Splinter's bindings](https://splinterhq.github.io/bindings/)
-on the documentation site; Java users can escape GC cycles thrashing memory caches, 
-and lots of other perks in other interpreters.
-
-#### LLM Orchestrated Memory
-
-Splinter functions remarkably well as semantic short -> long-term memory for
-large language models. LRU-based movement helps "forget" ephemera quickly while
-making sure stuff that actually matters (as viewed by access time and epoch)
-stays in short term memory a little longer and eventually settles into
-long-term.
-
-You can also run inference directly on the bus, accessing the embeddings using
-Splinter's supervised raw pointers and epoch counter, so embedding operations do
-not require `memcpy()` operations. Splinter can significantly reduce inference
-loads.
-
-#### Configurations And Registries
-
-Splinter's epochs and feature flags lend very well to application configuration
-on Linux systems, and you can wrap REST endpoints around them to expose it to
-management tools like Configu or others.
-
-#### Just a KV Store
-
-You can compile splinter to not even reserve space for embeddings to just use it
-as a local socket-less cache server. The author uses splinter to trickle into
-Redis based on key activity.
-
-#### Embedded Use
-
-Great for environmental loggers or system ring buffers because it's much better
-for flash-based storage than relational databases, thanks to static geometry.
-
-Splinter is small enough at 875 lines of code that it stays in the "hot path"
-for most modern processors.
+Have a look at [use cases on Splinter's documentation site](https://splinterhq.github.io/use-cases/)
+for the most up-to-date information (Splinter is under active development).
 
 ### Comparison With Other Stores
 
