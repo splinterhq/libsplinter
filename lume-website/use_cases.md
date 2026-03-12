@@ -35,7 +35,7 @@ filtering help store understandings of relationships between different data.
 ### Exploiting the "Signal Arena" for Graph Traversal
 
 The most powerful aspect of Splinter for this use case is the
-`splinter_pulse_watchers()` and `signal_groups` logic. In a traditional graph,
+`splinter_pulse_watchers()` and signal groups logic. In a traditional graph,
 finding related nodes requires "traversing" edges. In Splinter, you can
 implement Reactive Graph Traversal:
 
