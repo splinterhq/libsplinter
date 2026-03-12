@@ -17,4 +17,3 @@ metas:
 ---
 
 # `splinter_watch_label_register()`: Register a bloom label to be watched
-

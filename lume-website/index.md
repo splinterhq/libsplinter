@@ -20,7 +20,7 @@ metas:
 Splinter is a minimalist, lock-free key-value manifold designed to facilitate
 high-frequency data ingestion and retrieval across disjointed runtimes. It is
 built on the belief that for local inter-process communication (IPC), the
-kernel’s networking stack and arbitration services are expensive and unnecessary 
+kernel’s networking stack and arbitration services are expensive and unnecessary
 couplings.
 
 Splinter emerged out of frustration resulting from attempting to stretch tools
@@ -28,9 +28,10 @@ over gaps that they simply were never designed to cover. It wasn't a question of
 more tuning; it was a need to cut out the socket layer and kernel arbitration
 completely.
 
-It was a choice between dismantling and re-imagining SQLite, or creating something
-completely different. Given the sparse availability of options, different seemed
-most beneficial to both the current need as well as the current ecosystem.
+It was a choice between dismantling and re-imagining SQLite, or creating
+something completely different. Given the sparse availability of options,
+different seemed most beneficial to both the current need as well as the current
+ecosystem.
 
 ## Low Complexity + Mechanical Sympathy = Speed!
 
@@ -93,8 +94,9 @@ _should_ otherwise function perfectly.
 
 ## Quick Start / Building & Installing
 
-**See [Building & Intstalling Splinter](/installing/)**. Provided you have a working
-compiler (like GCC), Splinter has very few (and all optional) dependencies.
+**See [Building & Intstalling Splinter](/installing/)**. Provided you have a
+working compiler (like GCC), Splinter has very few (and all optional)
+dependencies.
 
 ## Comparison With Related Tools
 

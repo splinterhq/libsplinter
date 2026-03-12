@@ -17,4 +17,3 @@ metas:
 ---
 
 # `splinter_get_raw_ptr()`; Avoid `memcpy()` entirely by accessing by pointer!
-

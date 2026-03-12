@@ -17,19 +17,19 @@ metas:
 
 # Splinter's `splinter_cli` and `splinterctl` Programs
 
-> A persistent version of these programs exists as "splinterp_cli" 
-and "splinterpctl", respectively. { .note }
+> A persistent version of these programs exists as "splinterp_cli" and
+> "splinterpctl", respectively. { .note }
 
-The `splinter_cli` program is a REPL-like environment in which you
-can explore and control Splinter stores. You can do things like list,
-set and update keys, run Lua scripts, manage bloom labels, couple tandem
-keys, and other common tasks.
+The `splinter_cli` program is a REPL-like environment in which you can explore
+and control Splinter stores. You can do things like list, set and update keys,
+run Lua scripts, manage bloom labels, couple tandem keys, and other common
+tasks.
 
-It features built-in tab completion and hinting, online help for all
-commands and consistency in behavior wherever possible. It serves not
-just as a way to implement functionality, but also to illustrate how 
-the library can be used to build "just enough" storage for any project
-that uses KV and vectors over the same physical network.
+It features built-in tab completion and hinting, online help for all commands
+and consistency in behavior wherever possible. It serves not just as a way to
+implement functionality, but also to illustrate how the library can be used to
+build "just enough" storage for any project that uses KV and vectors over the
+same physical network.
 
 <!-- TOC -->
 
@@ -61,8 +61,8 @@ There are commands `splinter_cli` understands how to run, which are:
  orders     | Manage standard vector orders of a key
 ```
 
-There's also a way in which `splinterctl` / `splinter_cli` should _be_
-run, which you can get by passing `--help` to either:
+There's also a way in which `splinterctl` / `splinter_cli` should _be_ run,
+which you can get by passing `--help` to either:
 
 ```sh
 Usage:  splinterctl [options] [arguments] *or*
@@ -92,35 +92,35 @@ the SPLINTER_NS_PREFIX environmental variable.
 
 Both tools look for the following environmental variables:
 
- - `SPLINTER_NS_PREFIX` - prepended to every I/O operation (allows auto namespacing)
- - `SPLINTER_HISTORY_FILE` - Default is `~/.splinter_history`
- - `SPLINTER_DEFAULT_STORE` - CLI will load this store if set and valid
- - `HOME` - Home directory (system setting)
- - `TERM` - Terminal Slug (e.g. `xterm-256color` - system setting)
+- `SPLINTER_NS_PREFIX` - prepended to every I/O operation (allows auto
+  namespacing)
+- `SPLINTER_HISTORY_FILE` - Default is `~/.splinter_history`
+- `SPLINTER_DEFAULT_STORE` - CLI will load this store if set and valid
+- `HOME` - Home directory (system setting)
+- `TERM` - Terminal Slug (e.g. `xterm-256color` - system setting)
 
 ## Files
 
-`${HOME}/.splinterrc` is an (optional) list of ctags-style labels before
-hex or binary codes that they represent. For instance:
+`${HOME}/.splinterrc` is an (optional) list of ctags-style labels before hex or
+binary codes that they represent. For instance:
 
 ```sh
 urgent-label 0x1
 debug-label 0x4
 ```
 
-63 labels can be used (64 are possible, but the 64th is reserved
-for proximity)
+63 labels can be used (64 are possible, but the 64th is reserved for proximity)
 
 ## `splinterctl` Special Invocation
 
-`splinterctl` is a symbolic link to `splinter_cli` that causes the CLI
-to skip REPL setup and some other terminal handling so that you can 
-specify commands right on the command line.
+`splinterctl` is a symbolic link to `splinter_cli` that causes the CLI to skip
+REPL setup and some other terminal handling so that you can specify commands
+right on the command line.
 
 ### Example - `splinter_cli` vs `splinterctl`:
 
-This is an example of doing the same thing in the interactive REPL-like
-console (`splinter_cli`) vs just using `splinterctl` for one-off commands.
+This is an example of doing the same thing in the interactive REPL-like console
+(`splinter_cli`) vs just using `splinterctl` for one-off commands.
 
 ```sh
 splinter_cli
@@ -140,12 +140,12 @@ testing_store # set test_key "This is a test value."
 testing_store # get test_key
 21:This is a test value.
 
-testing_store # 
+testing_store #
 ```
 
-And using `splinterctl` with just `zsh`. Note, here we make use of
-the shell's `alias` functionality so that we don't have to keep
-adding `--use testing_store` each time:
+And using `splinterctl` with just `zsh`. Note, here we make use of the shell's
+`alias` functionality so that we don't have to keep adding `--use testing_store`
+each time:
 
 ```sh
 ╭─tinkertim at localhost in ~/code 26-03-11 - 12:41:52
@@ -171,5 +171,4 @@ Key Name                          | Epoch      | Val Len    | Named Type
 Key Name                          | Epoch      | Val Len    | Named Type     
 -------------------------------------------------------------------------------------
 test_key                          | 2          | 30         | SPL_SLOT_TYPE_VOID
-
 ```

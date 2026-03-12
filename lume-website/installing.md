@@ -41,9 +41,9 @@ If unsure where to start, try 'make mini' - it requires no dependencies and
 enables many features.
 ```
 
-**Most users will just want to type `make prod`**, if you have the Lua and Numa 
-development packages installed on your system. Otherwise, try `make mini` to build
-with just the self-contained features like embeddings / cli / etc.
+**Most users will just want to type `make prod`**, if you have the Lua and Numa
+development packages installed on your system. Otherwise, try `make mini` to
+build with just the self-contained features like embeddings / cli / etc.
 
 See the `Makefile` for how CMake options work.
 
@@ -65,8 +65,7 @@ sudo -E make install
 
 ## Note on `sudo -E` With Rust During `make install`:
 
-If building the Rust bindings, make sure you preserve the 
-user environment (`-E`) when using `sudo` for `make install`.
+If building the Rust bindings, make sure you preserve the user environment
+(`-E`) when using `sudo` for `make install`.
 
-Otherwise, Rust might not be able to resolve locations and
-the build will fail.
+Otherwise, Rust might not be able to resolve locations and the build will fail.

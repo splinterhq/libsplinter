@@ -16,4 +16,4 @@ metas:
   generator: true
 ---
 
-# `splinter_unset()`: Remove a key from the store 
+# `splinter_unset()`: Remove a key from the store

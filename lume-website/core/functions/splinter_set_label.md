@@ -17,4 +17,3 @@ metas:
 ---
 
 # `splinter_set_label()`: Attach a bloom label to a key
-
