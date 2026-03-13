@@ -80,56 +80,18 @@ Cycle).
 ### The Math of the Claim
 
 If we conservatively estimate the AMD rig hits **500,000,000 ops/sec** (0.5
-Billion), the physics becomes undeniable:
+Billion), it becomes hard to argue with the physics:
 
 $$CPO_{AMD} = \frac{5,000,000,000 \text{ cycles/sec (est. clock)}}{500,000,000 \text{ ops/sec}} = \mathbf{10 \text{ cycles/op}}$$
 
 This represents a **2,300x improvement in efficiency** over the traditional i3
 baseline (23,076 / 10).
 
-## A Summary For Those Spending Research Budgets:
+## TL;DR: Splinter Can Save You Significant Research $$$
 
-While traditional architectures are restricted by a **Series of Jerks**—our term
-for the erratic overhead of interrupts and context switching, Splinter functions
-as a **Laminar Flow Substrate**. On commodity hardware, Splinter already
-outperforms Redis by **16x** and SQLite3 by **33x**, despite memory throttling.
+With a little work, you get the kind of high-speed ingestion on commodity 
+hardware enterprise is currently getting on big-iron.
 
-Moving to an AMD rig with NUMA-pinning will allow us to achieve a projected **10
-cycles per operation**. At this scale, Splinter isn't just "faster"—it is
-operating at the physical limit of the silicon, achieving **~2,300 times the
-efficiency** of standard middleware by removing the "Socket Tax" entirely.
+If you manage to get big-iron, speed is no longer a concern for you.
 
-**Baseline: i3-1115G4 @ 3.0GHz**
-
-Traditional Middleware (130k ops/sec):
-$$\frac{3 \times 10^9}{130,000} \approx 23,076 \text{ cycles/op}$$
-
-Splinter Standard (3.2M ops/sec):
-$$\frac{3 \times 10^9}{3,200,000} \approx 937 \text{ cycles/op}$$
-
-**Projected: AMD Rig (NUMA-Pinned @ 5.0GHz Clock):**
-
-We're in the process of seeking/acquiring additional funding for development and
-plan to transition to "big iron" now that we're certain we can support weaker
-memory models sufficiently.
-
-To help substantiate the need to grow the computational lab, we had to consider
-what we could do (GDELT is massive) with higher-resolution samplings. We knew it
-was high but the math was a little startling:
-
-**Splinter Conservative Estimate (500M ops/sec):**
-
-$$\frac{5 \times 10^9}{500,000,000} = 10 \text{ cycles/op}$$
-
-**The Efficiency Delta:**
-
-The jump from **23,076** cycles to **10** cycles per operation represents a
-**2,300x** reduction in the computational energy required to audit the manifolds
-examined in high-resolution research.
-
-We expect this will be the experience of teams working with massive amounts of
-vectors, or timing Rank 2+ tensor measurements (as we do) and invite additional
-use as well as scrutiny and feedback.
-
-If you're still here, you might be interested in reading about
-[why Splinter and Linux get along so well](/splinter-and-linux/).
+It just needs space to persist when not in RAM.
