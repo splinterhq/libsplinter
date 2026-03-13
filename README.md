@@ -13,14 +13,53 @@ Splinter emerged out of frustration resulting from attempting to stretch tools
 over gaps as they broke. It wasn't a question of more tuning; it was a need to 
 cut out the socket layer and kernel arbitration completely.
 
-It was a choice between dismantling and re-imagining SQLite, or creating something
-completely different. Given the sparse availability of options, different seemed
-most beneficial to both the current need as well as the current ecosystem.
+It was a choice between dismantling and re-imagining SQLite, or creating
+something completely different. Given the sparse availability of options,
+different seemed most beneficial to both the current need as well as the current
+ecosystem.
 
-Splinter has a [work-in-progress website](https://splinterhq.github.io/) with
-a lot more information and benchmarks. Please consider giving splinter a star 
-if you find it share-worthy; this helps more people who have problems Splinter
-can solve find it just-in-time.
+## The Swimming Pool Analogy: Understanding Splinter "Visually"
+
+There is nothing quite like Splinter, so it helps to be able to visualize the
+architecture so you see how the features work together.
+
+Imagine you aren't just storing data; you are designing a high-performance 
+Olympic-sized swimming pool. In fact imagine `splinter_create()` returned 
+a multi-lane pool that rivals any YMCA.
+
+But ... with some twists.
+
+### Pre-Allocated Lanes (Zero Overhead)
+
+Instead of building a new pool every time you have a guest (dynamic allocation), 
+we build one massive pool at the start. We divide it into perfectly equal lanes. 
+If you need a key, you don't "request" it from a lifeguard (the OS/Kernel); 
+you simply look at Lane 4. You have a direct line of sight to the water 
+because the memory is already mapped to your process.
+
+### The Diving Boards (Lock-Free Access)
+
+Each lane has a diving board. Because of Splinter's atomic sequence epochs, 
+32 divers  can jump into their own lanes at the exact same time. They never collide. 
+If two divers try to hit the same lane simultaneously, the second one doesn't 
+crash; they simply "bounce" back to the board (`EAGAIN`) and try again a 
+nanosecond later. No one ever stops the flow of the meet to wait for a key.
+
+### The Signal Pulse (The "Aha!" Moment)
+
+Now, imagine the water is connected. When a diver hits the water in Lane 1, 
+a ripple (signal) travels instantly across the surface. A coach 
+(inference) sitting at the far end doesn't have to keep staring at the lane; 
+they just wait to feel the ripple. The moment they feel it, they know exactly 
+which lane to look at. 
+
+### No Jumping Out (Zero Copy)
+
+In a traditional system (like Redis or SQLite), if you want to inspect a 
+diver, you have to pull them out of the water, dry them off, and carry 
+them to a different building (Serialization/Network/Memcpy). In Splinter, 
+the inspectors are already in the water with the divers. You just use 
+a pointer. No carrying, no constant re-serializing, no delays.
 
 ## Low Complexity + Mechanical Sympathy = Speed!
 
@@ -232,6 +271,10 @@ that make sense to be shared. There's some timing and accounting to do
 traffic and "shivering" on the bus. But it's a half-day project, most likely.
 
 If you have hardware to spare, please reach out!
+
+## Documentation
+
+Splinter has a [work-in-progress documentation site](https://splinterhq.github.io).
 
 ### Contact The Author
 
