@@ -10,9 +10,8 @@ couplings. Splinter provides "just enough" safety for processes to swim in the
 same address space without conflict, and most importantly, without latency.
 
 Splinter emerged out of frustration resulting from attempting to stretch tools
-over gaps that they simply were never designed to cover. It wasn't a question of
-more tuning; it was a need to cut out the socket layer and kernel arbitration
-completely.
+over gaps as they broke. It wasn't a question of more tuning; it was a need to 
+cut out the socket layer and kernel arbitration completely.
 
 It was a choice between dismantling and re-imagining SQLite, or creating something
 completely different. Given the sparse availability of options, different seemed

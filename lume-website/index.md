@@ -17,16 +17,18 @@ metas:
 
 # Splinter ⚡ L3-Speed Shared Memory Vector & KV Store
 
-Splinter is a minimalist, lock-free key-value manifold designed to facilitate
-high-frequency data ingestion and retrieval across disjointed runtimes. It is
-built on the belief that for local inter-process communication (IPC), the
-kernel’s networking stack and arbitration services are expensive and unnecessary
-couplings.
+Splinter is a minimalist, lock-free key-value and persist-able manifold designed 
+to facilitate high-frequency data and vector ingestion and retrieval across 
+disjointed runtimes. 
+
+It is built on the belief that for local inter-process communication (IPC), the
+kernel’s networking stack and arbitration services are expensive and unnecessary 
+couplings. Splinter provides "just enough" safety for processes to swim in the 
+same address space without conflict, and most importantly, without latency.
 
 Splinter emerged out of frustration resulting from attempting to stretch tools
-over gaps that they simply were never designed to cover. It wasn't a question of
-more tuning; it was a need to cut out the socket layer and kernel arbitration
-completely.
+over gaps as they broke. It wasn't a question of more tuning; it was a need to 
+cut out the socket layer and kernel arbitration completely.
 
 It was a choice between dismantling and re-imagining SQLite, or creating
 something completely different. Given the sparse availability of options,
