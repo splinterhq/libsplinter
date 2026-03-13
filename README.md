@@ -1,10 +1,12 @@
 # Splinter ⚡ L3-Speed Shared Memory Vector & KV Store
 
-Splinter is a minimalist, lock-free key-value manifold designed to facilitate
-high-frequency data ingestion and retrieval across disjointed runtimes. It is
-built on the belief that for local inter-process communication (IPC), the
+Splinter is a minimalist, lock-free key-value and persist-able manifold designed 
+to facilitate high-frequency data ingestion and retrieval across disjointed runtimes. 
+
+It isbuilt on the belief that for local inter-process communication (IPC), the
 kernel’s networking stack and arbitration services are expensive and unnecessary 
-couplings.
+couplings. Splinter provides "just enough" safety for processes to swim in the 
+same address space without conflict, and most importantly, without latency.
 
 Splinter emerged out of frustration resulting from attempting to stretch tools
 over gaps that they simply were never designed to cover. It wasn't a question of
