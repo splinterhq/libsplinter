@@ -1,7 +1,7 @@
 # Splinter ⚡ L3-Speed Shared Memory Vector & KV Store
 
-Splinter is a minimalist, lock-free key-value and persist-able manifold designed 
-to facilitate high-frequency data and vector ingestion and retrieval across 
+Splinter is a minimalist, persistable lock-free key-value store designed 
+to handle high-frequency data and vector ingestion/retrieval across 
 disjointed runtimes. 
 
 It is built on the belief that for local inter-process communication (IPC), the
