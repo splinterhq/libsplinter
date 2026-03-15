@@ -17,9 +17,7 @@ metas:
 
 # Splinter ⚡ L3-Speed Shared Memory Vector & KV Store
 
-Splinter is a minimalist, lock-free key-value and persist-able manifold designed 
-to facilitate high-frequency data and vector ingestion and retrieval across 
-disjointed runtimes. 
+Splinter is a minimalist, persistable lock-free and bloomable key-value store designed to handle high-frequency data and vector ingestion/retrieval across disjointed runtimes.
 
 It is built on the belief that for local inter-process communication (IPC), the
 kernel’s networking stack and arbitration services are expensive and unnecessary 
@@ -104,6 +102,27 @@ tenets that set it apart (_**aka:
   Splinter uses standard portable atomic sequence locks (`epoch`).
 - **Unopinionated & Agnostic:** Implement LRU or TTL eviction how you like in a
   loadable shard, or no eviction at all. Splinter doesn't care.
+
+### A Vector / K/V "Anti-Database" Design
+
+Most database designs combine storage and computation in one server layer, and
+then provide a client that can interact with it and abstract transactions.
+
+Splinter takes another approach - in order to minimize disruption needed to 
+complete a transaction, the _client_ is required to do whatever computational 
+heap allocation is necessary while the storage layer remains gapped and only 
+performs only bitwise operations on keys in-place (twiddling existing bits).
+
+Splinter does not provide automatic ANN clustering; it leaves that as an
+exercise for the client, if the client needs it. See [Splinter Shards](/shards/)
+for more about how this works. Splinter will include a set of default shards
+to handle basic clustering and eviction strategies as examples of how the library
+is intended to work.
+
+While "clients" usually reside on the same machine, they have their own _heap_
+in addition to the shared pool, and that's what Splinter utilizes for computation.
+We never "slosh" in still water, and design to prevent thundering hurds through
+cooperative logic scheduling. 
 
 ### The "Good Process Neighbor" Approach
 
