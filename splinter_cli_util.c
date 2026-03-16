@@ -176,7 +176,7 @@ void cli_show_key_config(const char *key, const char *caller) {
 
     printf("hash:     %lu\n", snap.hash);
     printf("epoch:    %lu\n", snap.epoch);
-    printf("bloom:    %lu\n", snap.bloom);
+    printf("bloom:    %#lx\n", snap.bloom);
     printf("val_off:  %u\n", snap.val_off);
     printf("val_len:  %u\n", snap.val_len);
     printf("ctime:    %lu\n", snap.ctime);
