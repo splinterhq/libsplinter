@@ -74,7 +74,7 @@ int cli_find_module(const char *name);
 int cli_find_alias(int idx);
 int cli_run_module(int idx, int argc, char *argv[]);
 void cli_show_module_help(int idx, unsigned int level);
-char **cli_slice_args(char *const src[], size_t n);
+char **cli_slice_args(char *const src[], int start_index, int count);
 char *cli_rejoin_args(char *const src[]);
 void cli_show_modules(void);
 void cli_show_key_config(const char *key, const char *caller);

@@ -718,10 +718,11 @@ int main (int argc, char *argv[]) {
             // End of REPL loop
         } while (1);
     } else {
-        if (argc > 1) { 
+        if (argc > optind) { 
             _argc = argc - optind;
-            mod_args = cli_slice_args(argv, _argc);
-            if (mod_args[0]) {
+            mod_args = cli_slice_args(argv, optind, _argc);
+
+            if (mod_args && mod_args[0]) {
                 idx = cli_find_module(mod_args[0]);
                 if (idx >= 0) {
                     buff = cli_rejoin_args(mod_args);

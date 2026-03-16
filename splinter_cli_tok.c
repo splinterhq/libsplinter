@@ -104,24 +104,16 @@ fail:
  * Slice the last n elements of an array (usually args) into
  * a new array beginning at the given offset as [0].
  */
-char **cli_slice_args(char *const src[], size_t n) {
-    size_t i = 0, start = 0, len = 0;
-
+char **cli_slice_args(char *const src[], int start_index, int count) {
     if (!src) return NULL;
 
-    while (src[len] != NULL) ++len;
-
-    /* clamp to available elements */
-    if (n > len) n = len;
-
-    char **dst = malloc((n + 1) * sizeof(char *));
+    char **dst = malloc((count + 1) * sizeof(char *));
     if (!dst) return NULL;
 
-    start = len - n;
-    for (i = 0; i < n; ++i) {
-        dst[i] = src[start + i];
+    for (int i = 0; i < count; ++i) {
+        dst[i] = src[start_index + i];
     }
-    dst[n] = NULL;
+    dst[count] = NULL;
 
     return dst;
 }
