@@ -11,6 +11,7 @@
 #include <errno.h>
 #include <string.h>
 #include <limits.h>
+#include <math.h>
 #include <linux/limits.h>
 #include "splinter_cli.h"
 
@@ -140,8 +141,29 @@ uint16_t cli_type_to_bitmask(const char *type) {
     return 0; // not found
 }
 
+#ifdef SPLINTER_EMBEDDINGS
+// Helper to check if the vector is actually populated
+static double calculate_magnitude(const float *vec, size_t len) {
+    double sum = 0.0;
+    for (size_t i = 0; i < len; i++) {
+        sum += vec[i] * vec[i];
+    }
+    return sqrt(sum);
+}
+
+// Simple XOR-sum to see if values shifted without printing all 768
+static uint32_t calculate_vec_checksum(const float *vec, size_t len) {
+    uint32_t check = 0;
+    for (size_t i = 0; i < len; i++) {
+        union { float f; uint32_t u; } cast = { .f = vec[i] };
+        check ^= cast.u;
+    }
+    return check;
+}
+#endif
+
 /**
- * Dump a key's configuration.
+ * Dump a key's config
  */
 void cli_show_key_config(const char *key, const char *caller) {
     splinter_slot_snapshot_t snap = { 0 };
@@ -160,8 +182,21 @@ void cli_show_key_config(const char *key, const char *caller) {
     printf("atime:    %lu\n", snap.atime);
     printf("type:     %s\n", cli_show_key_type(snap.type_flag));
     printf("key:      %s\n", snap.key);
-    puts("");
 
+#ifdef SPLINTER_EMBEDDINGS
+    double mag = calculate_magnitude(snap.embedding, SPLINTER_EMBED_DIM);
+    uint32_t vcheck = calculate_vec_checksum(snap.embedding, SPLINTER_EMBED_DIM);
+    
+    printf("embed:    DIM=%d, Mag=%.4f, Checksum=0x%08x\n", 
+           SPLINTER_EMBED_DIM, mag, vcheck);
+    
+    // Show the first few elements for easy visual update comparison
+    // (not always guaranteed to be helpful but it is what it is)
+    printf("vec[0..2]: [%.3f, %.3f, %.3f...]\n", 
+           snap.embedding[0], snap.embedding[1], snap.embedding[2]);
+#endif
+
+    puts("");
     return;
 }
 
