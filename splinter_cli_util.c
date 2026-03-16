@@ -15,6 +15,18 @@
 #include <linux/limits.h>
 #include "splinter_cli.h"
 
+// for printf / bloom rendering to the CLI
+#define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
+#define BYTE_TO_BINARY(byte)  \
+  ((byte) & 0x80 ? '1' : '0'), \
+  ((byte) & 0x40 ? '1' : '0'), \
+  ((byte) & 0x20 ? '1' : '0'), \
+  ((byte) & 0x10 ? '1' : '0'), \
+  ((byte) & 0x08 ? '1' : '0'), \
+  ((byte) & 0x04 ? '1' : '0'), \
+  ((byte) & 0x02 ? '1' : '0'), \
+  ((byte) & 0x01 ? '1' : '0')
+
 /**
  * Returns the index of the module in the modules array given its 
  * name, or -1 if not found.
@@ -176,7 +188,7 @@ void cli_show_key_config(const char *key, const char *caller) {
 
     printf("hash:       %lu\n", snap.hash);
     printf("epoch:      %lu\n", snap.epoch);
-    printf("bloom:      %#lx\n", snap.bloom);
+    printf("bloom:      "BYTE_TO_BINARY_PATTERN"\n", BYTE_TO_BINARY(snap.bloom));
     printf("val_off:    %u\n", snap.val_off);
     printf("val_len:    %u\n", snap.val_len);
     printf("ctime:      %lu\n", snap.ctime);
