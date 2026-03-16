@@ -529,7 +529,7 @@ static const struct option long_options[] = {
     {NULL, 0, NULL, 0}
 };
 
-static const char *optstring = "h::H:l:Lnv";
+static const char *optstring = "+h::H:l:Lnv";
 
 static void cli_at_exit(void) {
     if (thisuser.store_conn)
@@ -718,7 +718,7 @@ int main (int argc, char *argv[]) {
             // End of REPL loop
         } while (1);
     } else {
-        if (argc > optind) { 
+        if (argc >= optind) { 
             _argc = argc - optind;
             mod_args = cli_slice_args(argv, optind, _argc);
 

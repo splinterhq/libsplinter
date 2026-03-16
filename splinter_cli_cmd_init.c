@@ -41,7 +41,7 @@ static const struct option long_options[] = {
     { NULL, 0, NULL, 0 }
 };
 
-static const char *optstring = "hs:l:";
+static const char *optstring = "+hs:l:";
 
 int cmd_init(int argc, char *argv[]) {
     char *buff = NULL, save[64] = { 0 }, store[64] = { 0 };
