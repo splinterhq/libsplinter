@@ -218,3 +218,51 @@ export class Splinter {
         throw new Error("Runtime not supported");
     }
 }
+
+/**
+ * SplinterWatcher
+ * An event-driven bridge for Deno isolates to react to Splinter Signal Groups.
+ */
+export class SplinterWatcher {
+    private store: SplinterStore;
+    private lastCounts: Map<number, bigint> = new Map();
+
+    constructor(store: SplinterStore) {
+        this.store = store;
+    }
+
+    /**
+     * Blocks (async) until a signal group count increments.
+     * Use this in a Deno.cron or a long-running while loop.
+     */
+    async nextSignal(groupId: number, pollMs = 50): Promise<bigint> {
+        let current = this.store.getSignalCount(groupId);
+        
+        // Initialize if first time seeing this group
+        if (!this.lastCounts.has(groupId)) {
+            this.lastCounts.set(groupId, current);
+        }
+
+        const previous = this.lastCounts.get(groupId)!;
+
+        while (current <= previous) {
+            await new Promise(resolve => setTimeout(resolve, pollMs));
+            current = this.store.getSignalCount(groupId);
+        }
+
+        this.lastCounts.set(groupId, current);
+        return current;
+    }
+
+    /**
+     * Starts a background loop that fires a callback on signal.
+     */
+    subscribe(groupId: number, callback: (count: bigint) => void, pollMs = 100) {
+        (async () => {
+            while (true) {
+                const newCount = await this.nextSignal(groupId, pollMs);
+                callback(newCount);
+            }
+        })();
+    }
+}
