@@ -219,10 +219,6 @@ export class Splinter {
     }
 }
 
-/**
- * SplinterWatcher
- * An event-driven bridge for Deno isolates to react to Splinter Signal Groups.
- */
 export class SplinterWatcher {
     private store: SplinterStore;
     private lastCounts: Map<number, bigint> = new Map();
@@ -232,13 +228,20 @@ export class SplinterWatcher {
     }
 
     /**
-     * Blocks (async) until a signal group count increments.
-     * Use this in a Deno.cron or a long-running while loop.
+     * Maps a Bloom label (bitmask) to a signal group.
+     * Tells the C-engine: "Pulse Group X when a slot with Mask Y changes."
+     */
+    registerLabelInterest(mask: bigint, groupId: number): boolean {
+        // Calling the FFI splinter_watch_label_register
+        return this.store.watchLabelRegister(mask, groupId) === 0;
+    }
+
+    /**
+     * Async wait for the next signal pulse on a specific group.
      */
     async nextSignal(groupId: number, pollMs = 50): Promise<bigint> {
         let current = this.store.getSignalCount(groupId);
         
-        // Initialize if first time seeing this group
         if (!this.lastCounts.has(groupId)) {
             this.lastCounts.set(groupId, current);
         }
@@ -253,16 +256,5 @@ export class SplinterWatcher {
         this.lastCounts.set(groupId, current);
         return current;
     }
-
-    /**
-     * Starts a background loop that fires a callback on signal.
-     */
-    subscribe(groupId: number, callback: (count: bigint) => void, pollMs = 100) {
-        (async () => {
-            while (true) {
-                const newCount = await this.nextSignal(groupId, pollMs);
-                callback(newCount);
-            }
-        })();
-    }
 }
+
