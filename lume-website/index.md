@@ -186,47 +186,7 @@ Splinter can be anything from a simple configuration store to a Rank-2 tensor
 model scaffold. It's designed for **vector-heavy workflows** like Artificial
 Intelligence (AI) inference or high-resolution physics and linguistic research.
 
-#### 1. High-Res Physics Of All Kinds
-
-Do you like vectors? Of course you do.
-
-Splinter was built around the idea of capturing raw data exceptionally well
-while making backfill easy. It allows up to 64 signal groups per bus,
-ctags-style labeling, and built-in per-slot Bloom filters. Slot coupling allows
-for simple standard ordered sets (e.g. `foo_key.1`, `foo_key.2` for velocity and
-acceleration). You can record high-frequency data at L3 speeds without hardware
-aliasing, and have many keys in tandem with vectors all representing a single
-fraction of a second, if you have the room.
-
-Splinter was built primarily around [GDELT](https://www.gdeltproject.org/)
-consumption, to set expectations. High-rank tensors? No problem, that's routine
-in the author's use and splinter makes sharing them fast and safe.
-
-#### 2. The Semantic Hippocampus (LLM Orchestrated Memory)
-
-Splinter functions remarkably well as semantic short-to-long-term memory for
-Large Language Models. LRU-based movement helps "forget" ephemera quickly while
-making sure stuff that actually matters (as viewed by access time and epoch)
-settles into long-term memory. You can run inference directly on the bus,
-accessing embeddings using Splinter's supervised raw pointers so operations
-require zero `memcpy()`.
-
-Plus, well, "psychic search" being fundamental to design is quite attractive for
-such a feature. Inference (on the bus) via `.gguf` is included.
-
-#### 3. Configurations, Registries & Edge Caching
-
-Splinter's epochs and feature flags lend very well to application configuration
-on Linux systems. You can also compile Splinter to simply ignore embeddings
-(`WITH_EMBEDDINGS=0`) and use it as a local, socket-less cache server. (The
-author uses Splinter to trickle into Redis based on key activity).
-
-#### 4. Embedded IoT Use
-
-Splinter is great for environmental loggers or system ring buffers because its
-static geometry is vastly superior for flash-based storage than relational
-databases. At just 875 lines of code, it stays in the "hot path" for most modern
-edge processors.
+See [use cases](/use-cases/) for an exhaustive list!
 
 ## Exhaustive Feature Overview
 
