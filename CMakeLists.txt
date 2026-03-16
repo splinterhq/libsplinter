@@ -167,20 +167,113 @@ if(WITH_RUST)
     endif()
 endif()
 
-# --- Testing and Documentation (Remain as defined in original) ---
+# --- Local Symlinks for Development/Testing ---
+
+# Symlink for splinter_cli -> splinterctl
+add_custom_command(
+    TARGET splinter_cli POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E create_symlink 
+            $<TARGET_FILE_NAME:splinter_cli> 
+            ${CMAKE_CURRENT_BINARY_DIR}/splinterctl
+    COMMENT "Creating local symlink: splinterctl"
+)
+
+# Symlink for splinterp_cli -> splinterpctl
+add_custom_command(
+    TARGET splinterp_cli POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E create_symlink 
+            $<TARGET_FILE_NAME:splinterp_cli> 
+            ${CMAKE_CURRENT_BINARY_DIR}/splinterpctl
+    COMMENT "Creating local symlink: splinterpctl"
+)
+
+# The lua test suite
+set(LUA_TEST_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/test.lua")
+set(LUA_TEST_BINARY "${CMAKE_CURRENT_BINARY_DIR}/test.lua")
+add_custom_command(
+    OUTPUT "${LUA_TEST_BINARY}"
+    COMMAND ${CMAKE_COMMAND} -E create_symlink "${LUA_TEST_SOURCE}" "${LUA_TEST_BINARY}"
+    DEPENDS "${LUA_TEST_SOURCE}"
+    COMMENT "Symlinking test.lua to build directory"
+)
+add_custom_target(copy_test_lua ALL DEPENDS "${LUA_TEST_BINARY}")
+
+set(SPLINTERCTL_TEST_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/splinterctl_tests.sh")
+set(SPLINTERCTL_TEST_BINARY "${CMAKE_CURRENT_BINARY_DIR}/splinterctl_tests.sh")
+add_custom_command(
+    OUTPUT "${SPLINTERCTL_TEST_BINARY}"
+    COMMAND ${CMAKE_COMMAND} -E create_symlink "${SPLINTERCTL_TEST_SOURCE}" "${SPLINTERCTL_TEST_BINARY}"
+    DEPENDS "${SPLINTERCTL_TEST_SOURCE}"
+    COMMENT "Symlinking splinterctl_tests.sh to build directory"
+)
+add_custom_target(copy_test_splinterctl ALL DEPENDS "${SPLINTERCTL_TEST_BINARY}")
+
+# --- Testing and Documentation ---
 enable_testing()
+
+# 1. Define Executables
 add_executable(splinter_test splinter_test.c)
 target_link_libraries(splinter_test PRIVATE splinter_shared)
+
 add_executable(splinter_stress splinter_stress.c)
 target_link_libraries(splinter_stress PRIVATE splinter_shared)
+
 add_executable(splinterp_test splinter_test.c)
 target_compile_definitions(splinterp_test PRIVATE SPLINTER_PERSISTENT)
 target_link_libraries(splinterp_test PRIVATE splinter_p_shared)
+
 add_executable(splinterp_stress splinter_stress.c)
 target_compile_definitions(splinterp_stress PRIVATE SPLINTER_PERSISTENT)
 target_link_libraries(splinterp_stress PRIVATE splinter_p_shared)
 
+# 2. Fix RPATH (The fix for your "stopped running" issue)
+# This ensures binaries find libsplinter.so in the build dir before installation
+set_target_properties(
+    splinter_test 
+    splinter_stress 
+    splinterp_test 
+    splinterp_stress 
+    PROPERTIES
+    SKIP_BUILD_RPATH FALSE
+    BUILD_WITH_INSTALL_RPATH FALSE
+)
+
+# 3. Register Tests (The fix for "No tests were found!!!")
+add_test(NAME standard_unit_test COMMAND splinter_test)
+add_test(NAME persistent_unit_test COMMAND splinterp_test)
+add_test(NAME standard_stress_test COMMAND splinter_stress --duration-ms 7500)
+
+# Valgrind Tests (only added if valgrind is found)
+if(VALGRIND_EXEC)
+    # Replicate your Makefile's flags: -s (silent) and --leak-check=full
+    set(VALGRIND_ARGS "-s" "--leak-check=full" "--error-exitcode=1")
+
+    add_test(NAME "MemCheck_Core" 
+             COMMAND ${VALGRIND_EXEC} ${VALGRIND_ARGS} ./splinter_test)
+             
+    add_test(NAME "MemCheck_Persistent" 
+             COMMAND ${VALGRIND_EXEC} ${VALGRIND_ARGS} ./splinterp_test)
+
+    add_test(NAME "MemCheck_CLI_Regression"
+            COMMAND ${VALGRIND_EXEC} /bin/bash ./splinterctl_tests.sh)
+
+endif()
+
+# 4. Install Targets
 install(TARGETS splinter_test splinter_stress splinterp_test splinterp_stress 
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 install(FILES splinterrc_example DESTINATION ${CMAKE_INSTALL_DATADIR}/splinter RENAME splinterrc.example)
+
+install(CODE "
+    message(STATUS \"\")
+    message(STATUS \"------------------------------------------------------------------\")
+    message(STATUS \"  CONFIGURATION NOTE:\")
+    message(STATUS \"  A sample bloom configuration file for Splinter has been installed to:\")
+    message(STATUS \"  ${CMAKE_INSTALL_FULL_DATADIR}/splinter/splinterrc.example\")
+    message(STATUS \"\")
+    message(STATUS \"  To customize Splinter's bloom label functionality, copy this to:\")
+    message(STATUS \"  ~/.splinterrc\")
+    message(STATUS \"------------------------------------------------------------------\")
+    message(STATUS \"\")
+")
