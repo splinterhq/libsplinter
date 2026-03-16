@@ -176,6 +176,7 @@ void cli_show_key_config(const char *key, const char *caller) {
 
     printf("hash:     %lu\n", snap.hash);
     printf("epoch:    %lu\n", snap.epoch);
+    printf("bloom:    %lu\n", snap.bloom);
     printf("val_off:  %u\n", snap.val_off);
     printf("val_len:  %u\n", snap.val_len);
     printf("ctime:    %lu\n", snap.ctime);
@@ -192,7 +193,7 @@ void cli_show_key_config(const char *key, const char *caller) {
     
     // Show the first few elements for easy visual update comparison
     // (not always guaranteed to be helpful but it is what it is)
-    printf("vec[0..2]: [%.3f, %.3f, %.3f...]\n", 
+    printf("vec[0-2]: [%.3f, %.3f, %.3f...]\n", 
            snap.embedding[0], snap.embedding[1], snap.embedding[2]);
 #endif
 
