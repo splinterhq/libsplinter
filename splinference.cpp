@@ -6,6 +6,8 @@
  */
 
 #include <atomic>
+#include <math.h>
+
 // Bridge the C/C++ atomic divide before including the C header
 using atomic_uint_least64_t = std::atomic_uint_least64_t;
 using atomic_uint_least32_t = std::atomic_uint_least32_t;
@@ -24,6 +26,106 @@ using atomic_uint_least8_t  = std::atomic_uint_least8_t;
 
 volatile sig_atomic_t keep_running = 1;
 
+// Helper to check if a vector is zeroed out
+bool needs_embedding(const float* vec, size_t len) {
+    double sum = 0.0;
+    for (size_t i = 0; i < len; i++) sum += vec[i] * vec[i];
+    return std::sqrt(sum) < 1e-6; // Effectively zero
+}
+
+void record_tokens(const std::vector<llama_token>& tokens) {
+    size_t len = 0;
+    // Get the raw pointer to the reserved 2k slot
+    uint64_t* table = (uint64_t*)splinter_get_raw_ptr("__sys_res_gp.0", &len, nullptr);
+    if (!table || len < 1600) return;
+
+    for (auto t : tokens) {
+       // this is top-100 max so .. it doesn't have to be supersonic
+        uint64_t tid = (uint64_t)t;
+        bool found = false;
+        for (int i = 0; i < 100; i++) {
+            // table[i*2] is the ID, table[i*2 + 1] is the Count
+            if (table[i*2] == tid) {
+                __atomic_fetch_add(&table[i*2 + 1], 1, __ATOMIC_RELAXED);
+                found = true;
+                break;
+            }
+            if (table[i*2] == 0) {
+                uint64_t expected = 0;
+                if (__atomic_compare_exchange_n(&table[i*2], &expected, tid, false, __ATOMIC_RELAXED, __ATOMIC_RELAXED)) {
+                    __atomic_fetch_add(&table[i*2 + 1], 1, __ATOMIC_RELAXED);
+                    found = true;
+                    break;
+                }
+            }
+        }
+        if (! found) {
+            // we're overflowing tokens at this point
+            std::cout << "The top-100 log table is full - tokens are being dropped from logit scope.\n";
+        }
+    }
+}
+
+bool process_key(const char* key, llama_context* ctx, const llama_vocab* vocab) {
+    size_t val_len = 0;
+    uint64_t current_epoch = splinter_get_epoch(key);
+
+    // odd epochs mean busy writers
+    if (current_epoch & 1) return false;
+
+    const void* raw_ptr = splinter_get_raw_ptr(key, &val_len, nullptr);
+    if (!raw_ptr || val_len == 0) return false;
+
+    // tokenization
+    std::vector<llama_token> tokens(val_len + 8);
+    int n_tokens = llama_tokenize(vocab, static_cast<const char*>(raw_ptr), val_len, 
+                                  tokens.data(), tokens.size(), true, false);
+
+    if (n_tokens < 0) {
+        tokens.resize(-n_tokens);
+        n_tokens = llama_tokenize(vocab, static_cast<const char*>(raw_ptr), val_len, 
+                                  tokens.data(), tokens.size(), true, false);
+    }
+
+    if (splinter_get_epoch(key) != current_epoch) {
+        return false;
+    }
+
+    // inference
+    llama_batch batch = llama_batch_get_one(tokens.data(), n_tokens);
+    if (llama_decode(ctx, batch) != 0) {
+        return false;
+    }
+
+    // commit
+    float* embedding = llama_get_embeddings_seq(ctx, 0);
+    if (embedding && splinter_set_embedding(key, embedding) == 0) {
+        return true;
+    }
+
+    return false;
+}
+
+void perform_backfill(llama_context* ctx, const llama_vocab* vocab) {
+    std::cout << "Starting backfill for VARTEXT keys...\n";
+    
+    char *keys[1024];
+    size_t key_count = 0;
+    if (splinter_list(keys, 1024, &key_count) != 0) return;
+
+    for (size_t i = 0; i < key_count; ++i) {
+        splinter_slot_snapshot_t snap = {};
+        if (splinter_get_slot_snapshot(keys[i], &snap) != 0) continue;
+
+        // Only process if it's explicitly VARTEXT and hasn't been embedded yet
+        if ((snap.type_flag & SPL_SLOT_TYPE_VARTEXT) && needs_embedding(snap.embedding, SPLINTER_EMBED_DIM)) {
+            std::cout << "Backfilling: " << keys[i] << "...\n";
+            process_key(keys[i], ctx, vocab);
+        }
+    }
+    std::cout << "Backfill complete.\n";
+}
+
 void handle_signal(int sig) {
     if (sig == SIGINT || sig == SIGTERM) {
         keep_running = 0;
@@ -31,14 +133,28 @@ void handle_signal(int sig) {
 }
 
 int main(int argc, char **argv) {
-    if (argc < 4) {
-        std::cerr << "Usage: " << argv[0] << " <bus_name> <path_to_nomic_gguf> <signal_group_id>\n";
+if (argc < 4) {
+        std::cerr << "Usage: " << argv[0] << " [--backfill-text-keys] <bus_name> <path_to_nomic_gguf> <signal_group_id>\n";
         return 1;
     }
 
-    const char* bus_name = argv[1];
-    const char* model_path = argv[2];
-    uint8_t signal_group = static_cast<uint8_t>(std::stoi(argv[3]));
+    bool backfill = false;
+    int arg_offset = 1;
+
+    if (std::string(argv[1]) == "--backfill-text-keys") {
+        backfill = true;
+        arg_offset = 2; // shift
+        
+        // Ensure we still have the 3 required positional arguments after the flag
+        if (argc < 5) {
+            std::cerr << "Error: Missing required arguments after --backfill-text-keys\n";
+            return 1;
+        }
+    }
+
+    const char* bus_name = argv[arg_offset];
+    const char* model_path = argv[arg_offset + 1];
+    uint8_t signal_group = static_cast<uint8_t>(std::stoi(argv[arg_offset + 2]));
 
     if (signal_group >= SPLINTER_MAX_GROUPS) {
         std::cerr << "Invalid signal group. Must be 0-" << (SPLINTER_MAX_GROUPS - 1) << ".\n";
@@ -77,6 +193,10 @@ int main(int argc, char **argv) {
     llama_context *ctx = llama_init_from_model(model, ctx_params);
     const llama_vocab *vocab = llama_model_get_vocab(model);
 
+    if (backfill) {
+        perform_backfill(ctx, vocab);
+    }
+
     std::cout << "Daemon active. Listening on signal group " << (int)signal_group << "...\n";
 
     // state tracking
@@ -105,46 +225,18 @@ int main(int argc, char **argv) {
             std::string key_str(keys[i]);
             uint64_t current_epoch = splinter_get_epoch(keys[i]);
 
-            // skip if a writer is currently locking the slot (odd epoch)
-            if (current_epoch & 1) continue; 
-
-            // if we've never seen this key, or its epoch increased, it needs processed.
+            // If we've never seen this key, or its epoch increased, it needs processing.
             if (processed_epochs.find(key_str) == processed_epochs.end() || 
                 processed_epochs[key_str] < current_epoch) {
                 
-                size_t val_len = 0;
-                const void *raw_ptr = splinter_get_raw_ptr(keys[i], &val_len, nullptr);
-                
-                if (raw_ptr && val_len > 0) {
-                    std::vector<llama_token> tokens(val_len + 8); 
-                    int n_tokens = llama_tokenize(vocab, static_cast<const char*>(raw_ptr), val_len, tokens.data(), tokens.size(), true, false);
-
-                    if (n_tokens < 0) {
-                        tokens.resize(-n_tokens);
-                        n_tokens = llama_tokenize(vocab, static_cast<const char*>(raw_ptr), val_len, tokens.data(), tokens.size(), true, false);
-                    }
-
-                    // verify seqlock hasn't torn during tokenization
-                    if (splinter_get_epoch(keys[i]) != current_epoch) {
-                        std::cerr << "Torn read on " << key_str << ", skipping.\n";
-                        continue;
-                    }
-
-                    // finally, run batch for whatever changed
-                    llama_batch batch = llama_batch_get_one(tokens.data(), n_tokens);
-                    if (llama_decode(ctx, batch) == 0) {
-                        float *embedding = llama_get_embeddings_seq(ctx, 0);
-                        if (embedding && splinter_set_embedding(keys[i], embedding) == 0) {
-                            std::cout << "Updated embedding for: " << key_str << "\n";
-
-                            // we MUST read the brand new epoch created by our write,
-                            // so we don't trigger ourselves on the next loop.
-                            processed_epochs[key_str] = splinter_get_epoch(keys[i]);
-                        }
-                    }
+                // FIX: Use 'ctx' and 'vocab' (the variables), NOT the types.
+                if (process_key(keys[i], ctx, vocab)) {
+                    // Update tracker with the NEW epoch created by our write
+                    processed_epochs[key_str] = splinter_get_epoch(keys[i]);
                 }
             }
         }
+
     }
 
     std::cout << "\nShutting down splinference daemon safely...\n";
