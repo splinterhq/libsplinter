@@ -174,26 +174,26 @@ void cli_show_key_config(const char *key, const char *caller) {
         return;
     }
 
-    printf("hash:     %lu\n", snap.hash);
-    printf("epoch:    %lu\n", snap.epoch);
-    printf("bloom:    %#lx\n", snap.bloom);
-    printf("val_off:  %u\n", snap.val_off);
-    printf("val_len:  %u\n", snap.val_len);
-    printf("ctime:    %lu\n", snap.ctime);
-    printf("atime:    %lu\n", snap.atime);
-    printf("type:     %s\n", cli_show_key_type(snap.type_flag));
-    printf("key:      %s\n", snap.key);
+    printf("hash:       %lu\n", snap.hash);
+    printf("epoch:      %lu\n", snap.epoch);
+    printf("bloom:      %#lx\n", snap.bloom);
+    printf("val_off:    %u\n", snap.val_off);
+    printf("val_len:    %u\n", snap.val_len);
+    printf("ctime:      %lu\n", snap.ctime);
+    printf("atime:      %lu\n", snap.atime);
+    printf("type:       %s\n", cli_show_key_type(snap.type_flag));
+    printf("key:        %s\n", snap.key);
 
 #ifdef SPLINTER_EMBEDDINGS
     double mag = calculate_magnitude(snap.embedding, SPLINTER_EMBED_DIM);
     uint32_t vcheck = calculate_vec_checksum(snap.embedding, SPLINTER_EMBED_DIM);
     
-    printf("embed:    DIM=%d, Mag=%.4f, Checksum=0x%08x\n", 
+    printf("embed:      DIM=%d, Mag=%.4f, Checksum=0x%08x\n", 
            SPLINTER_EMBED_DIM, mag, vcheck);
     
     // Show the first few elements for easy visual update comparison
     // (not always guaranteed to be helpful but it is what it is)
-    printf("vec[0-2]: [%.3f, %.3f, %.3f...]\n", 
+    printf("vec[0..2]:  [%.3f, %.3f, %.3f, ...]\n", 
            snap.embedding[0], snap.embedding[1], snap.embedding[2]);
 #endif
 
