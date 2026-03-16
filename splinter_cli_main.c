@@ -211,6 +211,15 @@ cli_module_t command_modules[] = {
         &cmd_orders,
         &help_cmd_orders
     },
+    {
+        19,
+        "bind",
+        4,
+        "Bind bloom labels to signal arena groups",
+        -1,
+        &cmd_bind, 
+        &help_cmd_bind
+    },
     // The last null-filled element 
     { 0, NULL, 0, NULL, -1,  NULL , NULL }
 };
@@ -329,6 +338,9 @@ static void completion(const char *buf, linenoiseCompletions *lc) {
     if (buf[0] == '\0') return;
 
     switch (buf[0]) {
+        case 'b':
+            linenoiseAddCompletion(lc, "bind");
+            break;
         case 'c':
             linenoiseAddCompletion(lc, "clear");
             linenoiseAddCompletion(lc, "config");
@@ -391,6 +403,12 @@ static char *hints(const char *buf, int *color, int *bold) {
      * cyan = 36
      * white = 37;
      */
+    
+    if(!strncasecmp(buf, "b", 4)) {
+        *color = 36;
+        *bold = 1;
+        return "ind ";
+    }
 
     if (!strncasecmp(buf, "cle", 5)) {
         *color = 36;
