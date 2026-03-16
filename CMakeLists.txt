@@ -14,6 +14,7 @@ option(WITH_LUA        "Enable Lua CLI integration" ON)
 option(WITH_LLAMA      "Enable llama.cpp inference sidecar" OFF)
 option(WITH_RUST       "Enable Rust bindings via Cargo" OFF)
 
+
 # --- Dependency Detection ---
 find_package(PkgConfig REQUIRED)
 find_program(VALGRIND_EXEC NAMES valgrind)
@@ -75,7 +76,7 @@ endif()
 file(GLOB CLI_SOURCES "splinter_cli_*.c")
 
 # Standard CLI
-add_executable(splinter_cli ${CLI_SOURCES} 3rdparty/linenoise.c 3rdparty/libgrawk.c)
+add_executable(splinter_cli ${CLI_SOURCES} 3rdparty/linenoise.c 3rdparty/libgrawk.c 3rdparty/argparse.c)
 target_link_libraries(splinter_cli PRIVATE splinter_shared ${LUA_LDFLAGS} ${MATH_LIBRARY})
 target_include_directories(splinter_cli PRIVATE 
     ${CMAKE_CURRENT_SOURCE_DIR}
@@ -84,7 +85,7 @@ target_include_directories(splinter_cli PRIVATE
 )
 
 # Persistent CLI
-add_executable(splinterp_cli ${CLI_SOURCES} 3rdparty/linenoise.c 3rdparty/libgrawk.c)
+add_executable(splinterp_cli ${CLI_SOURCES} 3rdparty/linenoise.c 3rdparty/libgrawk.c 3rdparty/argparse.c)
 target_compile_definitions(splinterp_cli PRIVATE SPLINTER_PERSISTENT)
 target_include_directories(splinterp_cli PRIVATE 
     ${CMAKE_CURRENT_SOURCE_DIR}

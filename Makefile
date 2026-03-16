@@ -3,7 +3,7 @@
 # We use git to clean 
 GIT := /bin/git
 
-.PHONY: all prod sense dev mini tiny clean distclean install uninstall setup_build tests help
+.PHONY: all prod stainless sense dev mini tiny clean distclean install uninstall setup_build tests help
 
 help:
 	@echo "Splinter's build is managed by CMake. This Makefile is a shim"
@@ -34,8 +34,13 @@ help:
 setup_build:
 	@mkdir -p build
 
+# "no rust :P" 
+stainless: setup_build
+	cd build && cmake -DWITH_EMBEDDINGS=ON -DWITH_LLAMA=ON -DWITH_LUA=ON -DWITH_NUMA=ON ..
+	@$(MAKE) -C build
+
 dev: setup_build
-	cd build && cmake -DWITH_EMBEDDINGS=ON -DWITH_LLAMA=ON -DWITH_LUA=ON -DWITH_NUMA=ON -DWITH_RUST=ON -DWITH_VALGRIND=ON ..
+	cd build && cmake -DWITH_EMBEDDINGS=ON -DWITH_LLAMA=ON -DWITH_LUA=ON -DWITH_NUMA=ON -DWITH_RUST=ON ..
 	@$(MAKE) -C build
 
 sense: setup_build
