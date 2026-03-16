@@ -36,7 +36,7 @@ bool needs_embedding(const float* vec, size_t len) {
 void record_tokens(const std::vector<llama_token>& tokens) {
     size_t len = 0;
     // Get the raw pointer to the reserved 2k slot
-    uint64_t* table = (uint64_t*)splinter_get_raw_ptr("__sys_res_gp.0", &len, nullptr);
+    uint64_t* table = (uint64_t*)splinter_get_raw_ptr("__sys_res_gp", &len, nullptr);
     if (!table || len < 1600) return;
 
     for (auto t : tokens) {
