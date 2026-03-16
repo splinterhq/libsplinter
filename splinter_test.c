@@ -334,6 +334,29 @@ TEST("enumerate matches found correct number of keys (2)", tracker.count == 2);
 TEST("enumerate matches found expected key names", 
      strcmp(tracker.last_key, "enum_02") == 0 || strcmp(tracker.last_key, "enum_01") == 0);
 
+
+/* --- Bloom Label Unset Test --- */
+const uint64_t LABEL_A = (1ULL << 10);
+const uint64_t LABEL_B = (1ULL << 20);
+const char *label_key = "label_toggle_test";
+
+splinter_set(label_key, "data", 4);
+
+// Set two distinct labels
+splinter_set_label(label_key, LABEL_A);
+splinter_set_label(label_key, LABEL_B);
+
+splinter_slot_snapshot_t label_snap = { 0 };
+splinter_get_slot_snapshot(label_key, &label_snap);
+TEST("both labels applied", (label_snap.bloom & LABEL_A) && (label_snap.bloom & LABEL_B));
+
+// Unset only LABEL_A
+TEST("unset specific label mask", splinter_unset_label(label_key, LABEL_A) == 0);
+
+splinter_get_slot_snapshot(label_key, &label_snap);
+TEST("label A is cleared", (label_snap.bloom & LABEL_A) == 0);
+TEST("label B is preserved", (label_snap.bloom & LABEL_B) != 0);
+
 /* --- Hybrid Auto-Scrub & Hygiene Tests --- */
 
 // Test the "One Fell Swoop" transition

@@ -311,17 +311,15 @@ void splinter_purge(void) {
     for (uint32_t i = 0; i < H->slots; ++i) {
         struct splinter_slot *slot = &S[i];
         
-        // 1. Snapshot the state to avoid 'squatting' on a busy slot
         uint64_t e = atomic_load_explicit(&slot->epoch, memory_order_acquire);
         if (e & 1ull) continue; // Strike was already in progress
 
-        // 2. Acquire the seqlock
         if (!atomic_compare_exchange_strong(&slot->epoch, &e, e + 1)) continue;
 
         uint32_t len = atomic_load_explicit(&slot->val_len, memory_order_relaxed);
         uint8_t *dst = VALUES + slot->val_off;
 
-        // 3. The Sweep: If active, mop the tail; if empty, boil the slot.
+        // The Sweep: If active, mop the tail; if empty, boil the slot.
         if (atomic_load_explicit(&slot->hash, memory_order_acquire) == 0) {
             memset(dst, 0, H->max_val_sz);
         } else if (len < H->max_val_sz) {
@@ -329,7 +327,6 @@ void splinter_purge(void) {
             memset(dst + len, 0, H->max_val_sz - len);
         }
 
-        // 4. Release and return to silence
         atomic_fetch_add_explicit(&slot->epoch, 1, memory_order_release);
     }
 }
@@ -680,6 +677,7 @@ int splinter_get_slot_snapshot(const char *key, splinter_slot_snapshot_t *snapsh
                 snapshot->user_flag = atomic_load_explicit(&slot->user_flag, memory_order_acquire);
                 snapshot->ctime = atomic_load_explicit(&slot->ctime, memory_order_acquire);
                 snapshot->atime = atomic_load_explicit(&slot->atime, memory_order_acquire);
+                snapshot->bloom = atomic_load_explicit(&slot->bloom, memory_order_acquire);
                 strncpy(snapshot->key, slot->key, SPLINTER_KEY_MAX);
 #ifdef SPLINTER_EMBEDDINGS                
                 // Copy the large vector (the high-risk area for tearing)
@@ -1071,6 +1069,32 @@ int splinter_set_label(const char *key, uint64_t mask) {
             atomic_fetch_or_explicit(&slot->bloom, mask, memory_order_release);
             
             // Optional: Bump global epoch to alert watchers of metadata change
+            atomic_fetch_add_explicit(&H->epoch, 1, memory_order_relaxed);
+            return 0;
+        }
+    }
+    errno = ENOENT;
+    return -1;
+}
+
+/**
+ * @brief Atomically clear a label mask from a slot's Bloom filter.
+ * @return 0 on success, -1 if key not found.
+ */
+int splinter_unset_label(const char *key, uint64_t mask) {
+    if (!H || !key) return -1;
+    uint64_t h = fnv1a(key);
+    size_t idx = slot_idx(h, H->slots);
+
+    for (size_t i = 0; i < H->slots; ++i) {
+        struct splinter_slot *slot = &S[(idx + i) % H->slots];
+        if (atomic_load_explicit(&slot->hash, memory_order_acquire) == h &&
+            strncmp(slot->key, key, SPLINTER_KEY_MAX) == 0) {
+            
+            // Atomic AND with the inverse (NOT) of the mask clears only those bits
+            atomic_fetch_and_explicit(&slot->bloom, ~mask, memory_order_release);
+            
+            // Bump global epoch to alert watchers that metadata has changed
             atomic_fetch_add_explicit(&H->epoch, 1, memory_order_relaxed);
             return 0;
         }

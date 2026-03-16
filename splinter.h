@@ -228,6 +228,8 @@ typedef struct splinter_slot_snapshot {
     uint64_t ctime;
     /** @brief Storage for access time */
     uint64_t atime;
+    /** @brief Bloom bits */
+    uint64_t bloom;
     /** @brief The null-terminated key string. */
     char key[SPLINTER_KEY_MAX];
 #ifdef SPLINTER_EMBEDDINGS
@@ -564,6 +566,12 @@ uint64_t splinter_get_epoch(const char *key);
  * @return 0 on success, -1 if key not found.
  */
 int splinter_set_label(const char *key, uint64_t mask);
+
+/**
+ * @brief Atomically remove a previously applied bloom label
+ * @return 0 on success, negative on failure
+ */
+int splinter_unset_label(const char *key, uint64_t mask);
 
 
 // Splinter client functions (combined library calls for convenience)
