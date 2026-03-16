@@ -18,6 +18,8 @@ option(WITH_RUST       "Enable Rust bindings via Cargo" OFF)
 find_package(PkgConfig REQUIRED)
 find_program(VALGRIND_EXEC NAMES valgrind)
 
+find_library(MATH_LIBRARY m)
+
 if(WITH_LUA)
     pkg_check_modules(LUA lua5.4)
     if(LUA_FOUND)
@@ -74,7 +76,7 @@ file(GLOB CLI_SOURCES "splinter_cli_*.c")
 
 # Standard CLI
 add_executable(splinter_cli ${CLI_SOURCES} 3rdparty/linenoise.c 3rdparty/libgrawk.c)
-target_link_libraries(splinter_cli PRIVATE splinter_shared ${LUA_LDFLAGS})
+target_link_libraries(splinter_cli PRIVATE splinter_shared ${LUA_LDFLAGS} ${MATH_LIBRARY})
 target_include_directories(splinter_cli PRIVATE 
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty
@@ -89,7 +91,7 @@ target_include_directories(splinterp_cli PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty 
     ${LUA_INCLUDE_DIRS}
 )
-target_link_libraries(splinterp_cli PRIVATE splinter_p_shared ${LUA_LDFLAGS})
+target_link_libraries(splinterp_cli PRIVATE splinter_p_shared ${LUA_LDFLAGS} ${MATH_LIBRARY})
 
 # --- llama.cpp Inference Sidecar ---
 if(WITH_LLAMA)
