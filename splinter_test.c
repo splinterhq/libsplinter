@@ -399,6 +399,13 @@ TEST("active data survives hygiene sweep",
 verify_buf[verify_sz] = '\0';
 TEST("verified content integrity after purge", strcmp(verify_buf, "data_to_keep") == 0);
 
+const char *system_key = "__system_key";
+TEST("Set system key as __system_key with one byte length", splinter_set(system_key, "0", 1) == 0);
+TEST("Promote system key to system", splinter_set_as_system(system_key) == 0);
+splinter_slot_snapshot_t verify_system = { 0 };
+TEST("Get system slot snapshot", splinter_get_slot_snapshot(system_key, &verify_system) == 0);
+TEST("Verify val len is larger than 1 (system promoted)", (verify_system.val_len > 1));
+
 splinter_close();
 splinter_header_snapshot_t closed = { 0 };
 TEST("store actually closed", splinter_get_header_snapshot(&closed) != 0);

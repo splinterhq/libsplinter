@@ -624,6 +624,12 @@ uint64_t splinter_get_signal_count(uint8_t group_id);
  */
 void splinter_enumerate_matches(uint64_t mask, 
     void (*callback)(const char *key, uint64_t version, void *data), void *user_data);
+
+/**
+ * @brief Promotes a key to "system" usage
+ */
+int splinter_set_as_system(const char *key);
+
 #ifdef __cplusplus
 }
 #endif

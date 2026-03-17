@@ -1302,3 +1302,26 @@ void splinter_enumerate_matches(uint64_t mask,
         }
     }
 }
+
+/**
+ * @brief Promotes a key to a system-reserved binary slot with maximum capacity.
+ * This ensures accounting tables have room to breathe.
+ */
+int splinter_set_as_system(const char *key) {
+    if (!H || !S) return -2;
+    size_t idx = 0;
+    uint64_t h = fnv1a(key);
+
+    for (size_t i = 0; i < H->slots; ++i) {
+        struct splinter_slot *slot = &S[(idx + i) % H->slots];
+        if (atomic_load_explicit(&slot->hash, memory_order_acquire) == h &&
+            strncmp(slot->key, key, SPLINTER_KEY_MAX) == 0) {
+                atomic_store_explicit(&slot->type_flag, SPL_SLOT_TYPE_BINARY, memory_order_release);
+                uint32_t system_sz = H->max_val_sz;
+                atomic_store_explicit(&slot->val_len, system_sz, memory_order_release);
+                return 0;
+        }
+    }
+    // not found
+    return -1;
+}
