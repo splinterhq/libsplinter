@@ -24,72 +24,13 @@ using atomic_uint_least8_t  = std::atomic_uint_least8_t;
 #include "splinter.h"
 #include "llama-cpp.h"
 
-
 volatile sig_atomic_t keep_running = 1;
-
-struct ShardConfig {
-    bool accounting_enabled = false;
-    bool backfill_enabled = false;
-    uint8_t signal_group = 0;
-    std::string model_path;
-};
-
-// Helper: Tokenization using the explicit llama_vocab
-std::vector<llama_token> get_tokens(const struct llama_model* model, const std::string& text) {
-    const struct llama_vocab* vocab = llama_model_get_vocab(model);
-    
-    // Initial guess at size (text length + BOS)
-    std::vector<llama_token> tokens(text.size() + 1);
-    
-    // Note: Use vocab as the first argument as required by your build
-    int n_tokens = llama_tokenize(vocab, text.c_str(), text.size(), tokens.data(), tokens.size(), true, false);
-    
-    if (n_tokens < 0) {
-        tokens.resize(-n_tokens);
-        n_tokens = llama_tokenize(vocab, text.c_str(), text.size(), tokens.data(), tokens.size(), true, false);
-    }
-    tokens.resize(n_tokens);
-    return tokens;
-}
 
 // Helper to check if a vector is zeroed out
 bool needs_embedding(const float* vec, size_t len) {
     double sum = 0.0;
     for (size_t i = 0; i < len; i++) sum += vec[i] * vec[i];
     return std::sqrt(sum) < 1e-6; // Effectively zero
-}
-
-void record_tokens(const std::vector<llama_token>& tokens) {
-    size_t len = 0;
-    // Get the raw pointer to the reserved 2k slot
-    uint64_t* table = (uint64_t*)splinter_get_raw_ptr("__sys_res_gp", &len, nullptr);
-    if (!table || len < 1600) return;
-
-    for (auto t : tokens) {
-       // this is top-100 max so .. it doesn't have to be supersonic
-        uint64_t tid = (uint64_t)t;
-        bool found = false;
-        for (int i = 0; i < 100; i++) {
-            // table[i*2] is the ID, table[i*2 + 1] is the Count
-            if (table[i*2] == tid) {
-                __atomic_fetch_add(&table[i*2 + 1], 1, __ATOMIC_RELAXED);
-                found = true;
-                break;
-            }
-            if (table[i*2] == 0) {
-                uint64_t expected = 0;
-                if (__atomic_compare_exchange_n(&table[i*2], &expected, tid, false, __ATOMIC_RELAXED, __ATOMIC_RELAXED)) {
-                    __atomic_fetch_add(&table[i*2 + 1], 1, __ATOMIC_RELAXED);
-                    found = true;
-                    break;
-                }
-            }
-        }
-        if (! found) {
-            // we're overflowing tokens at this point
-            std::cout << "The top-100 log table is full - tokens are being dropped from logit scope.\n";
-        }
-    }
 }
 
 bool process_key(const char* key, llama_context* ctx, const llama_vocab* vocab) {
@@ -155,59 +96,6 @@ void perform_backfill(llama_context* ctx, const llama_vocab* vocab) {
 void handle_signal(int sig) {
     if (sig == SIGINT || sig == SIGTERM) {
         keep_running = 0;
-    }
-}
-
-void run_inference_shard(ShardConfig cfg, llama_context* ctx, const llama_model* model) {
-    uint64_t last_sig = 0;
-    std::unordered_map<std::string, uint64_t> processed_epochs;
-
-    while (keep_running) {
-        uint64_t current_sig = splinter_get_signal_count(cfg.signal_group);
-        if (current_sig == last_sig) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(20));
-            continue;
-        }
-        last_sig = current_sig;
-
-        char* keys[1024];
-        size_t n_keys = 0;
-        splinter_list(keys, 1024, &n_keys);
-
-        for (size_t i = 0; i < n_keys; ++i) {
-            uint64_t epoch = splinter_get_epoch(keys[i]);
-            if (processed_epochs[keys[i]] >= epoch) continue;
-
-            // 1. DATA ACQUISITION
-            size_t val_len = 0;
-            char* raw_text = (char*)splinter_get_raw_ptr(keys[i], &val_len, NULL);
-            if (!raw_text || val_len == 0) continue;
-
-            // 2. KINETIC TOKENIZATION
-            auto tokens = get_tokens(model, std::string(raw_text, val_len));
-
-            // 3. THE ACCOUNTING GATE (Group 0 only)
-            // This is where the Top-100 frequency tracker lives.
-            // It sees the tokens before the math happens.
-            if (cfg.accounting_enabled) {
-                record_tokens(tokens); 
-            }
-
-            // 4. EMBEDDING GENERATION (The "Physics Engine")
-            // llama_kv_cache_seq_rm(ctx, -1, -1, -1);
-            llama_batch batch = llama_batch_get_one(tokens.data(), tokens.size());
-
-            if (llama_decode(ctx, batch) == 0) {
-                // For Nomic/Embedding models, we pull the pooled output
-                const float* embd = llama_get_embeddings(ctx);
-                
-                // 5. COMMIT VECTORS
-                // This updates the key's epoch, signaling the manifold is ready.
-                splinter_set_embedding(keys[i], embd);
-            }
-
-            processed_epochs[keys[i]] = splinter_get_epoch(keys[i]);
-        }
     }
 }
 
