@@ -15,17 +15,19 @@
 #include <linux/limits.h>
 #include "splinter_cli.h"
 
-// for printf / bloom rendering to the CLI
-#define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
-#define BYTE_TO_BINARY(byte)  \
-  ((byte) & 0x80 ? '1' : '0'), \
-  ((byte) & 0x40 ? '1' : '0'), \
-  ((byte) & 0x20 ? '1' : '0'), \
-  ((byte) & 0x10 ? '1' : '0'), \
-  ((byte) & 0x08 ? '1' : '0'), \
-  ((byte) & 0x04 ? '1' : '0'), \
-  ((byte) & 0x02 ? '1' : '0'), \
-  ((byte) & 0x01 ? '1' : '0')
+// Give some approximation of what bloom bits are set
+static const char *fmt_binary(uint64_t mask) {
+    static char b[65];
+    b[64] = '\0';
+    for (int i = 0; i < 64; i++) {
+        b[63 - i] = (mask & (1ULL << i)) ? '1' : '0';
+    }
+    // Return pointer to first '1' or the last '0' to avoid a full 
+    // bloom64 firehose.
+    char *p = b;
+    while (*p == '0' && *(p + 1) != '\0') p++;
+    return p;
+}
 
 /**
  * Returns the index of the module in the modules array given its 
@@ -188,7 +190,7 @@ void cli_show_key_config(const char *key, const char *caller) {
 
     printf("hash:       %lu\n", snap.hash);
     printf("epoch:      %lu\n", snap.epoch);
-    printf("bloom:      "BYTE_TO_BINARY_PATTERN"\n", BYTE_TO_BINARY(snap.bloom));
+    printf("bloom:      %lu (0b%s)\n", snap.bloom, fmt_binary(snap.bloom));
     printf("val_off:    %u\n", snap.val_off);
     printf("val_len:    %u\n", snap.val_len);
     printf("ctime:      %lu\n", snap.ctime);
