@@ -7,15 +7,6 @@
 
 #include <atomic>
 #include <math.h>
-
-// Bridge the C/C++ atomic divide before including the C header
-using atomic_uint_least64_t = std::atomic_uint_least64_t;
-using atomic_uint_least32_t = std::atomic_uint_least32_t;
-using atomic_uint_least8_t  = std::atomic_uint_least8_t;
-
-#include "splinter.h"
-#include "llama.h"
-
 #include <iostream>
 #include <vector>
 #include <string>
@@ -24,7 +15,42 @@ using atomic_uint_least8_t  = std::atomic_uint_least8_t;
 #include <chrono>
 #include <thread>
 
+// Bridge the C/C++ atomic divide before including the C header
+using atomic_uint_least64_t = std::atomic_uint_least64_t;
+using atomic_uint_least32_t = std::atomic_uint_least32_t;
+using atomic_uint_least8_t  = std::atomic_uint_least8_t;
+
+// Now Splinter / llama 
+#include "splinter.h"
+#include "llama-cpp.h"
+
+
 volatile sig_atomic_t keep_running = 1;
+
+struct ShardConfig {
+    bool accounting_enabled = false;
+    bool backfill_enabled = false;
+    uint8_t signal_group = 0;
+    std::string model_path;
+};
+
+// Helper: Tokenization using the explicit llama_vocab
+std::vector<llama_token> get_tokens(const struct llama_model* model, const std::string& text) {
+    const struct llama_vocab* vocab = llama_model_get_vocab(model);
+    
+    // Initial guess at size (text length + BOS)
+    std::vector<llama_token> tokens(text.size() + 1);
+    
+    // Note: Use vocab as the first argument as required by your build
+    int n_tokens = llama_tokenize(vocab, text.c_str(), text.size(), tokens.data(), tokens.size(), true, false);
+    
+    if (n_tokens < 0) {
+        tokens.resize(-n_tokens);
+        n_tokens = llama_tokenize(vocab, text.c_str(), text.size(), tokens.data(), tokens.size(), true, false);
+    }
+    tokens.resize(n_tokens);
+    return tokens;
+}
 
 // Helper to check if a vector is zeroed out
 bool needs_embedding(const float* vec, size_t len) {
@@ -132,8 +158,62 @@ void handle_signal(int sig) {
     }
 }
 
+void run_inference_shard(ShardConfig cfg, llama_context* ctx, const llama_model* model) {
+    uint64_t last_sig = 0;
+    std::unordered_map<std::string, uint64_t> processed_epochs;
+
+    while (keep_running) {
+        uint64_t current_sig = splinter_get_signal_count(cfg.signal_group);
+        if (current_sig == last_sig) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(20));
+            continue;
+        }
+        last_sig = current_sig;
+
+        char* keys[1024];
+        size_t n_keys = 0;
+        splinter_list(keys, 1024, &n_keys);
+
+        for (size_t i = 0; i < n_keys; ++i) {
+            uint64_t epoch = splinter_get_epoch(keys[i]);
+            if (processed_epochs[keys[i]] >= epoch) continue;
+
+            // 1. DATA ACQUISITION
+            size_t val_len = 0;
+            char* raw_text = (char*)splinter_get_raw_ptr(keys[i], &val_len, NULL);
+            if (!raw_text || val_len == 0) continue;
+
+            // 2. KINETIC TOKENIZATION
+            auto tokens = get_tokens(model, std::string(raw_text, val_len));
+
+            // 3. THE ACCOUNTING GATE (Group 0 only)
+            // This is where the Top-100 frequency tracker lives.
+            // It sees the tokens before the math happens.
+            if (cfg.accounting_enabled) {
+                record_tokens(tokens); 
+            }
+
+            // 4. EMBEDDING GENERATION (The "Physics Engine")
+            // llama_kv_cache_seq_rm(ctx, -1, -1, -1);
+            llama_batch batch = llama_batch_get_one(tokens.data(), tokens.size());
+
+            if (llama_decode(ctx, batch) == 0) {
+                // For Nomic/Embedding models, we pull the pooled output
+                const float* embd = llama_get_embeddings(ctx);
+                
+                // 5. COMMIT VECTORS
+                // This updates the key's epoch, signaling the manifold is ready.
+                splinter_set_embedding(keys[i], embd);
+            }
+
+            processed_epochs[keys[i]] = splinter_get_epoch(keys[i]);
+        }
+    }
+}
+
 int main(int argc, char **argv) {
-if (argc < 4) {
+
+    if (argc < 4) {
         std::cerr << "Usage: " << argv[0] << " [--backfill-text-keys] <bus_name> <path_to_nomic_gguf> <signal_group_id>\n";
         return 1;
     }
@@ -214,6 +294,7 @@ if (argc < 4) {
         }
 
         last_signal_count = current_signal_count;
+
         std::cout << "Pulse received! Scanning bus for changed epochs...\n";
 
         // Grab a list of all active keys
@@ -225,11 +306,12 @@ if (argc < 4) {
             std::string key_str(keys[i]);
             uint64_t current_epoch = splinter_get_epoch(keys[i]);
 
+            // just continue if already processed:
+            if (processed_epochs[keys[i]] >= current_epoch) continue;
+
             // If we've never seen this key, or its epoch increased, it needs processing.
             if (processed_epochs.find(key_str) == processed_epochs.end() || 
                 processed_epochs[key_str] < current_epoch) {
-                
-                // FIX: Use 'ctx' and 'vocab' (the variables), NOT the types.
                 if (process_key(keys[i], ctx, vocab)) {
                     // Update tracker with the NEW epoch created by our write
                     processed_epochs[key_str] = splinter_get_epoch(keys[i]);
