@@ -22,7 +22,7 @@ work!
 This is stated simply to set some expectations:
 
  - Pull requests may make sudden, erratic strides forward and then
-   languish for a week or more. That's because the maintainer is doing
+   languish for a week or more; that's because the maintainer is doing
    exactly the same thing.
 
  - Chat environments, even asynchronous, aren't really accessible to the
