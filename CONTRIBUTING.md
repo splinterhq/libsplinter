@@ -27,9 +27,8 @@ This is stated simply to set some expectations:
 
  - Chat environments, even asynchronous, aren't really accessible to the
    maintainer - this includes Discord. The maintainer also does not have 
-   social media accounts, does not socialize outwardly and does not wish
-   to be anyone's inspiration. I'm here to share code on the chance that
-   you might find ways to improve it and share them with me.
+   social media accounts. It's nothing personal, I'm just my best self when
+   mostly unplugged.
 
  - Most of the maintainer's time is taken up actively doing research 
    even into early disability retirement. Splinter evolves with the actual
