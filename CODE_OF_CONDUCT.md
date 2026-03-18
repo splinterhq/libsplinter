@@ -1,6 +1,6 @@
 # Contributor Covenant Code of Conduct
 
-***Please also see the [contributing guidelines](https://github.com/splinterhq/libsplinter?tab=contributing-ov-file) (or just click the tab above). Thank you!**
+***Please also see the [contributing guidelines](https://github.com/splinterhq/libsplinter?tab=contributing-ov-file) (or just click the tab above). Thank you!***
 
 ## Our Pledge
 
