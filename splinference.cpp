@@ -106,7 +106,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    bool backfill = false;
+    bool backfill = false, oneshot = false;
     int arg_offset = 1;
 
     if (std::string(argv[1]) == "--backfill-text-keys") {
@@ -117,6 +117,12 @@ int main(int argc, char **argv) {
         if (argc < 5) {
             std::cerr << "Error: Missing required arguments after --backfill-text-keys\n";
             return 1;
+        }
+
+        // see if they also supplied --oneshot 
+        if ((argc >= 5) && std::string(argv[5]) == "--oneshot") {
+            // exit after backfill (terraform mode)
+            oneshot = true;
         }
     }
 
@@ -165,6 +171,11 @@ int main(int argc, char **argv) {
         perform_backfill(ctx, vocab);
     }
 
+    if (oneshot) {
+        splinter_close();
+        return 0;
+    }
+
     std::cout << "Daemon active. Listening on signal group " << (int)signal_group << "...\n";
 
     // state tracking
@@ -210,6 +221,7 @@ int main(int argc, char **argv) {
     }
 
     std::cout << "\nShutting down splinference daemon safely...\n";
+
     llama_free(ctx);
     llama_model_free(model);
     llama_backend_free();
