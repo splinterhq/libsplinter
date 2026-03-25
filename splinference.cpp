@@ -214,6 +214,7 @@ int main(int argc, char **argv) {
                 if (process_key(keys[i], ctx, vocab)) {
                     // Update tracker with the NEW epoch created by our write
                     processed_epochs[key_str] = splinter_get_epoch(keys[i]);
+                    splinter_pulse_keygroup("__lane_dw");
                 }
             }
         }
