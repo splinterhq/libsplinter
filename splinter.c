@@ -1215,6 +1215,32 @@ int splinter_watch_label_register(uint64_t bloom_mask, uint8_t group_id) {
 }
 
 /**
+ * Shortcut to pulse a signal group if you know a key attached
+ * to it.
+ * @param key string key to look for
+ * @return 0 on success, -2 on system error, -1 if not found.
+ */
+int splinter_pulse_keygroup(const char *key) {
+    if (!H || !key) return -2;
+    
+    uint64_t h = fnv1a(key);
+    size_t idx = slot_idx(h, H->slots);  
+
+    for (size_t i = 0; i < H->slots; ++i) {
+        struct splinter_slot *slot = &S[(idx + i) % H->slots];
+        // find the target slot
+        if (atomic_load_explicit(&slot->hash, memory_order_acquire) == h &&
+            strncmp(slot->key, key, SPLINTER_KEY_MAX) == 0) {
+            // pulse it
+            splinter_pulse_watchers(slot);
+            return 0;
+        }
+    }
+
+    // not found 
+    return -1;
+}
+/**
  * @brief pulse the watchers of a slot 
  */
 void splinter_pulse_watchers(struct splinter_slot *slot) {

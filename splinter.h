@@ -610,6 +610,13 @@ int splinter_watch_label_register(uint64_t bloom_mask, uint8_t group_id);
 void splinter_pulse_watchers(struct splinter_slot *slot);
 
 /**
+ * @brief Pulse a key group by one of its members (if known)
+ * @param key string key to find
+ * @return 0 on success, -2 on system failure, -1 if key is not found
+ */
+int splinter_pulse_keygroup(const char *key);
+
+/**
  * @brief Safely retrieve the current pulse count for a signal group. Good for debugging.
  * @param group_id The signal group (0-63).
  * @return The 64-bit pulse count, or 0 if invalid.
