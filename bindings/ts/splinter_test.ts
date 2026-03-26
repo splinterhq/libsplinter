@@ -1,7 +1,7 @@
 import { assertEquals, assertNotEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import { Splinter, SPL_SLOT_TYPE } from "./splinter.ts";
 
-const BUS_NAME = "test_bus_123";
+const BUS_NAME = "splinter_debug";
 
 /**
  * TEST 1: Connectivity & Basic IO

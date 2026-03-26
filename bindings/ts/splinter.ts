@@ -205,17 +205,32 @@ class DenoSplinter implements SplinterStore {
     }
 }
 
+// splinter.ts
+
 export class Splinter {
     static connect(busName: string, customLibPath?: string): SplinterStore {
         const libPath = customLibPath || `./${getLibFilename()}`;
+        
         // @ts-ignore
         const isBun = typeof process !== "undefined" && process.versions?.bun;
         // @ts-ignore
         const isDeno = typeof Deno !== "undefined";
 
-        if (isBun) return new BunSplinter(libPath);
-        if (isDeno) return new DenoSplinter(libPath);
-        throw new Error("Runtime not supported");
+        let store: SplinterStore;
+        if (isBun) {
+            store = new BunSplinter(libPath);
+        } else if (isDeno) {
+            store = new DenoSplinter(libPath);
+        } else {
+            throw new Error("Runtime not supported");
+        }
+
+        // CRITICAL FIX: Actually open the bus before returning the store
+        if (!store.open(busName)) {
+            throw new Error(`Failed to open Splinter bus: ${busName}.`);
+        }
+
+        return store;
     }
 }
 
