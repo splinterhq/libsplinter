@@ -1107,8 +1107,13 @@ int splinter_unset_label(const char *key, uint64_t mask) {
 
 /**
  * @brief Client-side helper to write multiple orders of a key.
- * * Since we've backed out library-side linking, this helper manages
- * the naming convention for the caller.
+ * This helper manages the naming convention for the caller.
+ * It uses a temporary array to copy the "victim" keys.
+ * @param base_key The main key (e.g. car)
+ * @param vals An array of values from keys that will be merged in
+ * @param lens An array of lengths corresponding with vals
+ * @param orders How many tandems to create
+ * @return 0 on success, -1 on failure, -2 if underlying basic I/O calls fail
  */
 int splinter_client_set_tandem(const char *base_key, const void **vals, 
                                const size_t *lens, uint8_t orders) {
@@ -1143,24 +1148,23 @@ void splinter_client_unset_tandem(const char *base_key, uint8_t orders) {
     }
 }
 
-// HERE BE DRAGONS!
-// splinter_poll() is okay for devOps workflows and smarter shell scripts, but
-// it's too pedestrian for orchestrating real signal processing. We may need
-// to watch the whole vector space of a Rank 2 tensor 'simultaneously', so 
-// we need to set up signal groups that can coordinate with client-backed 
-// eventfd / epoll() assistance from the kernel. This is the only place 
-// where Splinter deliberately talks to Linux, and it's only to ask for 
-// wake-up service, not arbitration or sockets :)
+// This is the only place where Splinter deliberately talks to Linux, and it's 
+// only to ask for wake-up service, not arbitration or sockets :)
 //
 // To pull this off, we have to be able to pulse FD references based on bitmask
 // subscription (and unsubscription) within the time that we can 'stand' on
-// the seqlock with a syscall. If we stand on it *too* long, other writers will
-// spin in EAGAIN loops unless they have exponential backoff logic, and readers
-// are way more likely to see torn reads even with deliberate and defensive 
-// atomic fencing.
+// the seqlock with a syscall. 
+
+// If we stand on it *too* long, other writers will spin in EAGAIN loops unless 
+// they have exponential backoff logic, and readers are way more likely to see 
+// torn reads even with deliberate and defensive atomic fencing.
 //
 // It is 99.9% bitmask traversal and .1% write() (as a process). If you try
-// to cram any more into it than what's here, expect subtle problems. 
+// to cram any more into it than what's here, expect subtle problems.
+//
+// tl;dr - once you flip an epoch odd, do ONE thing REALLY fast and get
+// off of it (flip it over to even again, then deliberately fence for weaker
+// memory model support (ARM/Throttled/Mobile)) 
 
 /**
  * @brief Register the current process's interest in a key's group signal.

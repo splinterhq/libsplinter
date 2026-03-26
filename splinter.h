@@ -316,7 +316,6 @@ int splinter_create_or_open(const char *name_or_path, size_t slots, size_t max_v
  */
 void splinter_close(void);
 
-
 // About Splinter AV / Auto Scrub
 // Because splinter has static geometry, there's no 'row level' cleanup required.
 // We only have key -> value, where value can be up to max_val_sz.
@@ -584,13 +583,15 @@ int splinter_set_label(const char *key, uint64_t mask);
  */
 int splinter_unset_label(const char *key, uint64_t mask);
 
-
-// Splinter client functions (combined library calls for convenience)
-
 /**
  * @brief Client-side helper to write multiple orders of a key.
- * * Since we've backed out library-side linking, this helper manages
- * the naming convention for the caller.
+ * This helper manages the naming convention for the caller.
+ * It uses a temporary array to copy the "victim" keys.
+ * @param base_key The main key (e.g. car)
+ * @param vals An array of values from keys that will be merged in
+ * @param lens An array of lengths corresponding with vals
+ * @param orders How many tandems to create
+ * @return 0 on success, -1 on failure, -2 if underlying basic I/O calls fail
  */
 int splinter_client_set_tandem(const char *base_key, const void **vals, 
                                const size_t *lens, uint8_t orders);
@@ -617,6 +618,7 @@ int splinter_watch_label_register(uint64_t bloom_mask, uint8_t group_id);
 
 /**
  * @brief Internal helper to pulse the Signal Arena for a slot.
+ * @param slot pointer to a splinter_slot structure
  */
 void splinter_pulse_watchers(struct splinter_slot *slot);
 
@@ -645,6 +647,7 @@ void splinter_enumerate_matches(uint64_t mask,
 
 /**
  * @brief Promotes a key to "system" usage
+ * @param key the key to scope
  */
 int splinter_set_as_system(const char *key);
 
