@@ -3,6 +3,22 @@
  * Listens to a Splinter signal group, computes embeddings for modified keys
  * using llama.cpp (Nomic Text v2 (Quantized, 1.3B params)), and writes the 
  * 768-d vector back to the slot.
+ * 
+ * Copyright (C) 2026 Tim Post <timthepost@protonmail.com>
+ * License: Apache 2
+ * 
+ * TODO:
+ * 
+ *  - Multi-thread (one per signal group) operation to centralize model
+ *    use. (Low Priority)
+ * 
+ *  - Uncertainty & Confidence Logging (High-entropy low-probability lysis 
+ *    events) for governance. (High Priority)
+ *
+ *  - Implement argparse (see 3rdparty/) for argument parsing. (Low Priority)
+ * 
+ *  - Dynamically allocate keys[] array in main() based on the store's 
+ *    geometry. (High Priority)
  */
 
 #include <atomic>
@@ -20,11 +36,13 @@ using atomic_uint_least64_t = std::atomic_uint_least64_t;
 using atomic_uint_least32_t = std::atomic_uint_least32_t;
 using atomic_uint_least8_t  = std::atomic_uint_least8_t;
 
+// Already defined at build (required for this target), but
+// set explicitly for the language server's comfort.
 #ifndef SPLINTER_EMBEDDINGS
 #define SPLINTER_EMBEDDINGS
 #endif
 
-// Now Splinter / llama 
+// Now Splinter / llama (last) 
 #include "splinter.h"
 #include "llama-cpp.h"
 
@@ -88,7 +106,7 @@ void perform_backfill(llama_context* ctx, const llama_vocab* vocab) {
         splinter_slot_snapshot_t snap = {};
         if (splinter_get_slot_snapshot(keys[i], &snap) != 0) continue;
 
-        // Only process if it's explicitly VARTEXT and hasn't been embedded yet
+        // only process if it's explicitly VARTEXT and hasn't been embedded yet
         if ((snap.type_flag & SPL_SLOT_TYPE_VARTEXT) && needs_embedding(snap.embedding, SPLINTER_EMBED_DIM)) {
             std::cout << "Backfilling: " << keys[i] << "...\n";
             process_key(keys[i], ctx, vocab);
@@ -104,7 +122,7 @@ void handle_signal(int sig) {
 }
 
 int main(int argc, char **argv) {
-    // We need at least 4 arguments: <bin> <bus> <model> <group>
+    // we need at least 4 arguments: <bin> <bus> <model> <group>
     if (argc < 4) {
         std::cerr << "Usage: " << argv[0] << " [--backfill-text-keys] [--oneshot] <bus_name> <path_to_nomic_gguf> <signal_group_id>\n";
         return 1;
@@ -114,7 +132,6 @@ int main(int argc, char **argv) {
     bool oneshot = false;
     std::vector<char*> positionals;
 
-    // Robust parsing: Separate flags from positional arguments
     for (int i = 1; i < argc; ++i) {
         std::string arg(argv[i]);
         if (arg == "--backfill-text-keys") {
@@ -126,7 +143,7 @@ int main(int argc, char **argv) {
         }
     }
 
-    // Ensure we have exactly the 3 required positional arguments
+    // make sure we have required positional arguments
     if (positionals.size() < 3) {
         std::cerr << "Error: Missing required positional arguments (bus_name, model_path, signal_group_id)\n";
         return 1;
@@ -157,7 +174,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    std::cout << "Loading model (this may take a moment)...\n";
+    std::cout << "Loading GGUF model (this may take a moment) ...\n";
     llama_backend_init();
 
     llama_log_set([](ggml_log_level level, const char * text, void * user_data) {
@@ -190,7 +207,7 @@ int main(int argc, char **argv) {
         return 0;
     }
 
-    std::cout << "Daemon active. Listening on signal group " << (int)signal_group << "...\n";
+    std::cout << "[Service Active]: Listening on signal group " << (int)signal_group << "...\n";
 
     // state tracking
     std::unordered_map<std::string, uint64_t> processed_epochs;
@@ -208,9 +225,10 @@ int main(int argc, char **argv) {
 
         last_signal_count = current_signal_count;
 
-        std::cout << "Pulse received! Scanning bus for changed epochs...\n";
+        std::cout << "[Pulse Received]: Scanning bus for changed epochs ...\n";
 
-        // Grab a list of all active keys
+        // TODO: keys[] either needs to be a circular buffer, or 
+        // allocated dynamically from the store geometry.
         char *keys[1024]; 
         size_t key_count = 0;
         if (splinter_list(keys, 1024, &key_count) != 0) continue;
@@ -227,37 +245,34 @@ int main(int argc, char **argv) {
                 processed_epochs[key_str] < current_epoch) {
                 
                 if (process_key(keys[i], ctx, vocab)) {
-                    // Update tracker with the epoch created by our write
                     processed_epochs[key_str] = splinter_get_epoch(keys[i]);
                     
                     char lane_name[32]; 
                     std::snprintf(lane_name, sizeof(lane_name), "__lane_dw_%u", signal_group);
                     
-                    // Grab internal tick waypoint (for duration/latency)
+                    // we use the CPU wall clock (cheap) to grab a relative time fix so 
+                    // that we can skew a timestamp in the past. 
                     int64_t tick_start = splinter_now(); 
-
-                    // Wake up the watchers
+                    
                     splinter_pulse_keygroup(lane_name);
-                                        
-                    // Grab Wall-Clock Unix Epoch (for TTL/LRU)
                     auto duration = std::chrono::system_clock::now().time_since_epoch();
                     uint64_t unix_timestamp = std::chrono::duration_cast<std::chrono::seconds>(duration).count();
                     
-                    // Grab end tick to calculate delta
+                    // now we see how much time passed since our first
+                    // cpu wall clock reference point
                     int64_t tick_end = splinter_now();
-                    
-                    // Calculate delta and cast to size_t for the metadata
+
+                    // this tells us how long ago we need to "skew" this timestamp.
                     size_t processing_delta = static_cast<size_t>(tick_end - tick_start);
 
-                    // Commit: Set the Access/Creation time and the latency delta
+                    // commit: Set the Access/Creation time and the latency delta
                     splinter_set_slot_time(keys[i], SPL_TIME_CTIME, unix_timestamp, processing_delta);
                 }
             }
         }
-
     }
 
-    std::cout << "\nShutting down splinference daemon safely...\n";
+    std::cout << "\n[Signal Received]: Shutting down splinference daemon safely...\n";
 
     llama_free(ctx);
     llama_model_free(model);
