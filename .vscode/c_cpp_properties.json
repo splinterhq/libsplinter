@@ -1,13 +1,24 @@
 {
     "configurations": [
         {
-            "name": "Linux",
+            "name": "Splinter-Inference",
             "includePath": [
-                "${workspaceFolder}/**"
+                "${workspaceFolder}/**",
+                "/usr/include",
+                "/usr/local/include"
             ],
-            "defines": [],
-            "compilerPath": "/usr/bin/clang",
-            "intelliSenseMode": "linux-clang-x64"
+            "defines": [
+                "_GNU_SOURCE",
+                "__STDC_FORMAT_MACROS"
+            ],
+            "compilerPath": "/usr/bin/g++",
+            "cStandard": "gnu17",
+            "cppStandard": "gnu++17",
+            "intelliSenseMode": "linux-gcc-x64",
+            "browse": {
+                "path": ["${workspaceFolder}"],
+                "limitSymbolsToIncludedHeaders": true
+            }
         }
     ],
     "version": 4
