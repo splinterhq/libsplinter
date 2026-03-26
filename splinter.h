@@ -79,11 +79,19 @@ extern "C" {
 #define SPL_TIME_ATIME         1
 
 /**
- * @brief The special character that accesses standard ordered sets in tandem keys.
- * If you change it, change it to something that you're sure you won't see in your data.
- * Emojis are fine.
+ * @brief The special character that accesses standard ordered sets in 
+ * tandem keys. If you change it, change it to something that you're 
+ * sure you won't see in your data. If keys might contain URLs, use
+ * a very uncommon emoji.
+ * 
+ * If you set this to "." and your key is "car", then "car.1" would 
+ * get you velocity of car, and so on. But if your keys look like:
+ * 
+ * 244cc1eb-baf8-41ea-beee-f634f3c00f61::yelp.com/rq/ray/z62h32
+ * 
+ * Then you have limited choices. 
  */
-#define SPL_ORDER_ACCESSOR "."
+#define SPL_ORDER_ACCESSOR "💩"
 
 /**
  * @brief Individual signal lane, aligned to prevent false sharing.
