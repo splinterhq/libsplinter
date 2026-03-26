@@ -100,35 +100,45 @@ void handle_signal(int sig) {
 }
 
 int main(int argc, char **argv) {
-
+    // We need at least 4 arguments: <bin> <bus> <model> <group>
     if (argc < 4) {
-        std::cerr << "Usage: " << argv[0] << " [--backfill-text-keys] <bus_name> <path_to_nomic_gguf> <signal_group_id>\n";
+        std::cerr << "Usage: " << argv[0] << " [--backfill-text-keys] [--oneshot] <bus_name> <path_to_nomic_gguf> <signal_group_id>\n";
         return 1;
     }
 
-    bool backfill = false, oneshot = false;
-    int arg_offset = 1;
+    bool backfill = false;
+    bool oneshot = false;
+    std::vector<char*> positionals;
 
-    if (std::string(argv[1]) == "--backfill-text-keys") {
-        backfill = true;
-        arg_offset = 2; // shift
-        
-        // Ensure we still have the 3 required positional arguments after the flag
-        if (argc < 5) {
-            std::cerr << "Error: Missing required arguments after --backfill-text-keys\n";
-            return 1;
-        }
-
-        // see if they also supplied --oneshot 
-        if ((argc >= 5) && std::string(argv[5]) == "--oneshot") {
-            // exit after backfill (terraform mode)
+    // Robust parsing: Separate flags from positional arguments
+    for (int i = 1; i < argc; ++i) {
+        std::string arg(argv[i]);
+        if (arg == "--backfill-text-keys") {
+            backfill = true;
+        } else if (arg == "--oneshot") {
             oneshot = true;
+        } else {
+            positionals.push_back(argv[i]);
         }
     }
 
-    const char* bus_name = argv[arg_offset];
-    const char* model_path = argv[arg_offset + 1];
-    uint8_t signal_group = static_cast<uint8_t>(std::stoi(argv[arg_offset + 2]));
+    // Ensure we have exactly the 3 required positional arguments
+    if (positionals.size() < 3) {
+        std::cerr << "Error: Missing required positional arguments (bus_name, model_path, signal_group_id)\n";
+        return 1;
+    }
+
+    const char* bus_name = positionals[0];
+    const char* model_path = positionals[1];
+    
+    // std::stoi is safe here as we've confirmed the positional exists
+    uint8_t signal_group = 0;
+    try {
+        signal_group = static_cast<uint8_t>(std::stoi(positionals[2]));
+    } catch (...) {
+        std::cerr << "Error: signal_group_id must be a number.\n";
+        return 1;
+    }
 
     if (signal_group >= SPLINTER_MAX_GROUPS) {
         std::cerr << "Invalid signal group. Must be 0-" << (SPLINTER_MAX_GROUPS - 1) << ".\n";
@@ -214,7 +224,9 @@ int main(int argc, char **argv) {
                 if (process_key(keys[i], ctx, vocab)) {
                     // Update tracker with the NEW epoch created by our write
                     processed_epochs[key_str] = splinter_get_epoch(keys[i]);
-                    splinter_pulse_keygroup("__lane_dw");
+                    char lane_name[32]; 
+                    std::snprintf(lane_name, sizeof(lane_name), "__lane_dw_%u", signal_group);
+                    splinter_pulse_keygroup(lane_name);
                 }
             }
         }
