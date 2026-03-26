@@ -147,6 +147,27 @@ code efficiency).
 | **Footprint**  | Static & Deterministic                                         | Dynamic & Volatile       |
 | **Complexity** | 890 Lines of obsessively-optimized C (Will never exceed 999) | 100k+ Lines of Code      |
 
+It's not fair to other stores to compare them competitively against Splinter
+because they'd be competing with their "hands tied" due to mutexes and socket
+layers. And, it's not fair to Splinter, because Splinter deliberately eschews
+any calculation on-write that it can't do with simple bitwise math; Splinter
+_**tries**_ to stay boring.
+
+As far as feature references go, Splinter is somewhat like Redis in how it
+stores data and the kind of data it stores, but doesn't have nearly as much of
+an advanced concept of types, or even really enforceable types, mostly because
+it just doesn't need them. Splinter is designed to be used _**with**_ other
+things, not always necessarily in lieu of them.
+
+Splinter works perfectly fine on DenoKV with FFI, but it's local-only to
+whatever isolate its running on, so it's definitely no replacement for DenoKV
+(it's just a good caching system in that scenario).
+
+Thinking in terms of other stores limits how you'll think to use Splinter. Think
+about what you can do once TypeScript, Rust, Python and Go can all share the
+same address space and embeddings **safely**, without socket or even `memcpy()`
+overhead instead `:)`.
+
 ### Supported Platforms:
 
 Splinter is designed to work on any modern GNU/Linux flavor. Windows users could
@@ -235,29 +256,6 @@ These can be extended (or replaced entirely) at the user's discretion.
 
 Have a look at [use cases on Splinter's documentation site](https://splinterhq.github.io/use-cases/)
 for the most up-to-date information (Splinter is under active development).
-
-### Comparison With Other Stores
-
-It's not fair to other stores to compare them competitively against Splinter
-because they'd be competing with their "hands tied" due to mutexes and socket
-layers. And, it's not fair to Splinter, because Splinter deliberately eschews
-any calculation on-write that it can't do with simple bitwise math; Splinter
-_**tries**_ to stay boring.
-
-As far as feature references go, Splinter is somewhat like Redis in how it
-stores data and the kind of data it stores, but doesn't have nearly as much of
-an advanced concept of types, or even really enforceable types, mostly because
-it just doesn't need them. Splinter is designed to be used _**with**_ other
-things, not always necessarily in lieu of them.
-
-Splinter works perfectly fine on DenoKV with FFI, but it's local-only to
-whatever isolate its running on, so it's definitely no replacement for DenoKV
-(it's just a good caching system in that scenario).
-
-Thinking in terms of other stores limits how you'll think to use Splinter. Think
-about what you can do once TypeScript, Rust, Python and Go can all share the
-same address space and embeddings **safely**, without socket or even `memcpy()`
-overhead instead `:)`.
 
 ### RDMA Scaling
 
