@@ -413,7 +413,7 @@ int splinter_unset(const char *key) {
  * @return 0 on success, -1 on failure (e.g., store is full, len is too large).
  */
 int splinter_set(const char *key, const void *val, size_t len) {
-    if (!H || !key) return -1;
+    if (!H || !key) return -2;
     if (len == 0 || len > H->max_val_sz) return -1;
 
     uint64_t h = fnv1a(key);
@@ -485,7 +485,7 @@ int splinter_set(const char *key, const void *val, size_t len) {
  * errno = EAGAIN. If the buffer is too small, returns -1 and sets errno = EMSGSIZE.
  */
 int splinter_get(const char *key, void *buf, size_t buf_sz, size_t *out_sz) {
-    if (!H || !key) return -1;
+    if (!H || !key) return -2;
     uint64_t h = fnv1a(key);
     size_t idx = slot_idx(h, H->slots);
 
@@ -542,7 +542,7 @@ int splinter_get(const char *key, void *buf, size_t buf_sz, size_t *out_sz) {
  * @return 0 on success, -1 on failure.
  */
 int splinter_list(char **out_keys, size_t max_keys, size_t *out_count) {
-    if (!H || !out_keys || !out_count) return -1;
+    if (!H || !out_keys || !out_count) return -2;
     size_t count = 0, i;
     
     for (i = 0; i < H->slots && count < max_keys; ++i) {
@@ -572,7 +572,7 @@ int splinter_list(char **out_keys, size_t max_keys, size_t *out_count) {
  *         if a write was observed in progress.
  */
 int splinter_poll(const char *key, uint64_t timeout_ms) {
-    if (!H || !key) return -1;
+    if (!H || !key) return -2;
     uint64_t h = fnv1a(key);
     size_t idx = slot_idx(h, H->slots);
     struct splinter_slot *slot = NULL;
@@ -629,7 +629,7 @@ int splinter_poll(const char *key, uint64_t timeout_ms) {
  * @return void
  */
 int splinter_get_header_snapshot(splinter_header_snapshot_t *snapshot) {
-    if (!H) return -1;
+    if (!H) return -2;
 
     snapshot->magic = H->magic;
     snapshot->version = H->version;
@@ -652,7 +652,7 @@ int splinter_get_header_snapshot(splinter_header_snapshot_t *snapshot) {
  * @return -1 on failure, 0 on success.
  */
 int splinter_get_slot_snapshot(const char *key, splinter_slot_snapshot_t *snapshot) {
-    if (!H || !key || !snapshot) return -1;
+    if (!H || !key || !snapshot) return -2;
     uint64_t h = fnv1a(key);
     size_t idx = slot_idx(h, H->slots), i = 0;
     
@@ -696,7 +696,7 @@ int splinter_get_slot_snapshot(const char *key, splinter_slot_snapshot_t *snapsh
 
 #ifdef SPLINTER_EMBEDDINGS
 int splinter_set_embedding(const char *key, const float *vec) {
-    if (!H || !key || !vec) return -1;
+    if (!H || !key || !vec) return -2;
     uint64_t h = fnv1a(key);
     size_t idx = slot_idx(h, H->slots);
 
@@ -729,7 +729,7 @@ int splinter_set_embedding(const char *key, const float *vec) {
 }
 
 int splinter_get_embedding(const char *key, float *embedding_out) {
-    if (!H || !key || !embedding_out) return -1;
+    if (!H || !key || !embedding_out) return -2;
     uint64_t h = fnv1a(key);
     size_t idx = slot_idx(h, H->slots);
 
@@ -834,7 +834,7 @@ uint16_t splinter_slot_usr_snapshot(struct splinter_slot *slot) {
  * @return -1 or on error (sets errno), 0 on success
  */
 int splinter_set_named_type(const char *key, uint16_t mask) {
-    if (!H || !key) return -1;
+    if (!H || !key) return -2;
     uint64_t h = fnv1a(key);
     size_t idx = slot_idx(h, H->slots);
 
@@ -903,7 +903,7 @@ int splinter_set_named_type(const char *key, uint16_t mask) {
  * @return -1/-2 or on error (sets errno), 0 on success
  */
 int splinter_set_slot_time(const char *key, unsigned short mode, uint64_t epoch, size_t offset) {
-  if (!H || !key) return -1;
+  if (!H || !key) return -2;
   uint64_t h = fnv1a(key);
   size_t idx = slot_idx(h, H->slots), i;
 
@@ -1056,7 +1056,7 @@ uint64_t splinter_get_epoch(const char *key) {
  * @return 0 on success, -1 if key not found.
  */
 int splinter_set_label(const char *key, uint64_t mask) {
-    if (!H || !key) return -1;
+    if (!H || !key) return -2;
     uint64_t h = fnv1a(key);
     size_t idx = slot_idx(h, H->slots);
 
@@ -1082,7 +1082,7 @@ int splinter_set_label(const char *key, uint64_t mask) {
  * @return 0 on success, -1 if key not found.
  */
 int splinter_unset_label(const char *key, uint64_t mask) {
-    if (!H || !key) return -1;
+    if (!H || !key) return -2;
     uint64_t h = fnv1a(key);
     size_t idx = slot_idx(h, H->slots);
 
@@ -1167,7 +1167,7 @@ void splinter_client_unset_tandem(const char *base_key, uint8_t orders) {
  * @return 0 on success, -1 if key not found, -2 if invalid group.
  */
 int splinter_watch_register(const char *key, uint8_t group_id) {
-    if (!H || !key) return -1;
+    if (!H || !key) return -2;
     if (group_id >= SPLINTER_MAX_GROUPS) {
         errno = EINVAL;
         return -2;
@@ -1201,7 +1201,7 @@ int splinter_watch_register(const char *key, uint8_t group_id) {
  * @return 0 on success, -1 on invalid group.
  */
 int splinter_watch_label_register(uint64_t bloom_mask, uint8_t group_id) {
-    if (!H || group_id >= SPLINTER_MAX_GROUPS) return -1;
+    if (!H || group_id >= SPLINTER_MAX_GROUPS) return -2;
 
     // Iterate through all 64 possible bloom bits
     for (int i = 0; i < 64; i++) {
@@ -1273,7 +1273,7 @@ void splinter_pulse_watchers(struct splinter_slot *slot) {
  * @return 0 on success, -1 if key not found or invalid group.
  */
 int splinter_watch_unregister(const char *key, uint8_t group_id) {
-    if (!H || !key || group_id >= SPLINTER_MAX_GROUPS) return -1;
+    if (!H || !key || group_id >= SPLINTER_MAX_GROUPS) return -2;
 
     uint64_t h = fnv1a(key);
     size_t idx = slot_idx(h, H->slots);
