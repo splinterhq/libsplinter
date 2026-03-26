@@ -517,12 +517,14 @@ pub struct splinter_slot_snapshot {
     pub ctime: u64,
     #[doc = " @brief Storage for access time"]
     pub atime: u64,
+    #[doc = " @brief Bloom bits"]
+    pub bloom: u64,
     #[doc = " @brief The null-terminated key string."]
     pub key: [::std::os::raw::c_char; 64usize],
 }
 #[allow(clippy::unnecessary_operation, clippy::identity_op)]
 const _: () = {
-    ["Size of splinter_slot_snapshot"][::std::mem::size_of::<splinter_slot_snapshot>() - 112usize];
+    ["Size of splinter_slot_snapshot"][::std::mem::size_of::<splinter_slot_snapshot>() - 120usize];
     ["Alignment of splinter_slot_snapshot"]
         [::std::mem::align_of::<splinter_slot_snapshot>() - 8usize];
     ["Offset of field: splinter_slot_snapshot::hash"]
@@ -541,8 +543,10 @@ const _: () = {
         [::std::mem::offset_of!(splinter_slot_snapshot, ctime) - 32usize];
     ["Offset of field: splinter_slot_snapshot::atime"]
         [::std::mem::offset_of!(splinter_slot_snapshot, atime) - 40usize];
+    ["Offset of field: splinter_slot_snapshot::bloom"]
+        [::std::mem::offset_of!(splinter_slot_snapshot, bloom) - 48usize];
     ["Offset of field: splinter_slot_snapshot::key"]
-        [::std::mem::offset_of!(splinter_slot_snapshot, key) - 48usize];
+        [::std::mem::offset_of!(splinter_slot_snapshot, key) - 56usize];
 };
 #[doc = " @structure splinter_slot_snapshot\n @brief A structure to hold a snapshot of a single slot"]
 pub type splinter_slot_snapshot_t = splinter_slot_snapshot;
@@ -725,6 +729,13 @@ unsafe extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 unsafe extern "C" {
+    #[doc = " @brief Atomically remove a previously applied bloom label\n @return 0 on success, negative on failure"]
+    pub fn splinter_unset_label(
+        key: *const ::std::os::raw::c_char,
+        mask: u64,
+    ) -> ::std::os::raw::c_int;
+}
+unsafe extern "C" {
     #[doc = " @brief Client-side helper to write multiple orders of a key.\n * Since we've backed out library-side linking, this helper manages\n the naming convention for the caller."]
     pub fn splinter_client_set_tandem(
         base_key: *const ::std::os::raw::c_char,
@@ -760,6 +771,10 @@ unsafe extern "C" {
     pub fn splinter_pulse_watchers(slot: *mut splinter_slot);
 }
 unsafe extern "C" {
+    #[doc = " @brief Pulse a key group by one of its members (if known)\n @param key string key to find\n @return 0 on success, -2 on system failure, -1 if key is not found"]
+    pub fn splinter_pulse_keygroup(key: *const ::std::os::raw::c_char) -> ::std::os::raw::c_int;
+}
+unsafe extern "C" {
     #[doc = " @brief Safely retrieve the current pulse count for a signal group. Good for debugging.\n @param group_id The signal group (0-63).\n @return The 64-bit pulse count, or 0 if invalid."]
     pub fn splinter_get_signal_count(group_id: u8) -> u64;
 }
@@ -776,4 +791,8 @@ unsafe extern "C" {
         >,
         user_data: *mut ::std::os::raw::c_void,
     );
+}
+unsafe extern "C" {
+    #[doc = " @brief Promotes a key to \"system\" usage"]
+    pub fn splinter_set_as_system(key: *const ::std::os::raw::c_char) -> ::std::os::raw::c_int;
 }
