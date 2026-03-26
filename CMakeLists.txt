@@ -267,6 +267,7 @@ install(TARGETS splinter_test splinter_stress splinterp_test splinterp_stress
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 install(FILES splinterrc_example DESTINATION ${CMAKE_INSTALL_DATADIR}/splinter RENAME splinterrc.example)
+install(FILES bindings/ts/splinter.ts DESTINATION ${CMAKE_INSTALL_DATADIR}/splinter)
 
 install(CODE "
     message(STATUS \"\")
