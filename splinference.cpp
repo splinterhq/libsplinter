@@ -221,12 +221,32 @@ int main(int argc, char **argv) {
             // If we've never seen this key, or its epoch increased, it needs processing.
             if (processed_epochs.find(key_str) == processed_epochs.end() || 
                 processed_epochs[key_str] < current_epoch) {
+                
                 if (process_key(keys[i], ctx, vocab)) {
-                    // Update tracker with the NEW epoch created by our write
+                    // Update tracker with the epoch created by our write
                     processed_epochs[key_str] = splinter_get_epoch(keys[i]);
+                    
                     char lane_name[32]; 
                     std::snprintf(lane_name, sizeof(lane_name), "__lane_dw_%u", signal_group);
+                    
+                    // Grab internal tick waypoint (for duration/latency)
+                    int64_t tick_start = splinter_now(); 
+
+                    // Wake up the watchers
                     splinter_pulse_keygroup(lane_name);
+                                        
+                    // Grab Wall-Clock Unix Epoch (for TTL/LRU)
+                    auto duration = std::chrono::system_clock::now().time_since_epoch();
+                    uint64_t unix_timestamp = std::chrono::duration_cast<std::chrono::seconds>(duration).count();
+                    
+                    // Grab end tick to calculate delta
+                    int64_t tick_end = splinter_now();
+                    
+                    // Calculate delta and cast to size_t for the metadata
+                    size_t processing_delta = static_cast<size_t>(tick_end - tick_start);
+
+                    // Commit: Set the Access/Creation time and the latency delta
+                    splinter_set_slot_time(keys[i], SPL_TIME_CTIME, unix_timestamp, processing_delta);
                 }
             }
         }
