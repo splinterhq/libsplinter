@@ -10,7 +10,8 @@
  * communication (IPC), particularly for building process communities around 
  * local Large Language Model (LLM) runtimes.
  * 
- * See docs for more.
+ * You can use it like semantic "breadboard" - Have a good time!
+ * https://splinterhq.github.io for docs
  */
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
@@ -27,6 +28,7 @@
 #include <time.h>
 #include <stdint.h>
 #include <stdlib.h>
+
 #ifdef SPLINTER_NUMA_AFFINITY
 #include <numa.h>
 #include <numaif.h>
@@ -843,7 +845,7 @@ int splinter_set_named_type(const char *key, uint16_t mask) {
         if (atomic_load_explicit(&slot->hash, memory_order_acquire) == h &&
             strncmp(slot->key, key, SPLINTER_KEY_MAX) == 0) {
 
-            // 1. Writer Check & Lock
+            // Writer Check & Lock
             uint64_t e = atomic_load_explicit(&slot->epoch, memory_order_relaxed);
             if (e & 1) { errno = EAGAIN; return -1; }
             if (!atomic_compare_exchange_strong(&slot->epoch, &e, e + 1)) {
@@ -852,7 +854,7 @@ int splinter_set_named_type(const char *key, uint16_t mask) {
 
             atomic_thread_fence(memory_order_acquire);
 
-            // 2. Expansion Logic for BIGUINT
+            // Expansion Logic for BIGUINT
             uint32_t current_len = atomic_load(&slot->val_len);
             if ((mask & SPL_SLOT_TYPE_BIGUINT) && current_len < 8) {
                 uint32_t new_off = atomic_fetch_add(&H->val_brk, 8);
@@ -881,7 +883,7 @@ int splinter_set_named_type(const char *key, uint16_t mask) {
                 atomic_store_explicit(&slot->val_len, 8, memory_order_relaxed);
             }
 
-            // 3. Apply Type and Unlock
+            // Apply Type and Unlock
             atomic_store_explicit(&slot->type_flag, mask, memory_order_release);
             atomic_fetch_add_explicit(&slot->epoch, 1, memory_order_release);
             
@@ -1179,19 +1181,14 @@ int splinter_watch_register(const char *key, uint8_t group_id) {
     for (size_t i = 0; i < H->slots; ++i) {
         struct splinter_slot *slot = &S[(idx + i) % H->slots];
         
-        // Find the target slot
         if (atomic_load_explicit(&slot->hash, memory_order_acquire) == h &&
             strncmp(slot->key, key, SPLINTER_KEY_MAX) == 0) {
-            
-            // Atomically set the bit for the desired group
-            // This ensures we don't wipe out other watchers in different groups.
             atomic_fetch_or_explicit(&slot->watcher_mask, (1ULL << group_id), memory_order_release);
-            
             return 0;
         }
     }
 
-    return -1; // Key not found
+    return -1; // not found
 }
 
 /**
@@ -1240,6 +1237,7 @@ int splinter_pulse_keygroup(const char *key) {
     // not found 
     return -1;
 }
+
 /**
  * @brief pulse the watchers of a slot 
  */
@@ -1281,19 +1279,15 @@ int splinter_watch_unregister(const char *key, uint8_t group_id) {
     for (size_t i = 0; i < H->slots; ++i) {
         struct splinter_slot *slot = &S[(idx + i) % H->slots];
         
-        // Find the slot matching the key
         if (atomic_load_explicit(&slot->hash, memory_order_acquire) == h &&
             strncmp(slot->key, key, SPLINTER_KEY_MAX) == 0) {
-            
             // Atomically clear ONLY the bit for this specific group_id
-            // We use bitwise AND with the bitwise NOT of our group bit
             atomic_fetch_and_explicit(&slot->watcher_mask, ~(1ULL << group_id), memory_order_release);
-            
             return 0;
         }
     }
 
-    return -1; // Key not found
+    return -1; // not found
 }
 
 /**
@@ -1310,6 +1304,8 @@ uint64_t splinter_get_signal_count(uint8_t group_id) {
 
 /**
  * @brief Iterates through all slots matching a bloom mask.
+ * @param uint64_t mask bitmask (bloom) mask to check
+ * @param callback function to receive row-by-row matches.
  */
 void splinter_enumerate_matches(uint64_t mask, 
     void (*callback)(const char *key, uint64_t epoch, void *data), void *user_data) 
@@ -1332,6 +1328,8 @@ void splinter_enumerate_matches(uint64_t mask,
 /**
  * @brief Promotes a key to a system-reserved binary slot with maximum capacity.
  * This ensures accounting tables have room to breathe.
+ * @param key string key to promote
+ * @return 0 on success, -1 if key isn't found, -2 if system is broken
  */
 int splinter_set_as_system(const char *key) {
     if (!H || !S) return -2;

@@ -6,7 +6,10 @@
  *
  * This header defines the public functions for creating, opening, interacting
  * with, and closing a splinter store.
+ * 
+ * https://splinterhq.github.io for docs
  */
+
 #ifndef SPLINTER_H
 #define SPLINTER_H
 
@@ -91,7 +94,7 @@ extern "C" {
  * 
  * Then you have limited choices. 
  */
-#define SPL_ORDER_ACCESSOR "💩"
+#define SPL_ORDER_ACCESSOR "."
 
 /**
  * @brief Individual signal lane, aligned to prevent false sharing.
