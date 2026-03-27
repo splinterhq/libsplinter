@@ -1054,6 +1054,42 @@ uint64_t splinter_get_epoch(const char *key) {
 }
 
 /**
+ * @brief Advance the epoch of a slot without otherwise doing work
+ * Useful in conjunction with labeling for automation to fire.
+ * @param key Current key name associated with the slot.
+ */
+int splinter_bump_slot(const char *key)  {
+    if (!H || !key) return -2;
+    uint64_t h = fnv1a(key);
+    size_t idx = slot_idx(h, H->slots);
+
+    for (size_t i = 0; i < H->slots; ++i) {
+        struct splinter_slot *slot = &S[(idx + i) % H->slots];
+        if (atomic_load_explicit(&slot->hash, memory_order_acquire) == h &&
+            strncmp(slot->key, key, SPLINTER_KEY_MAX) == 0) {
+            
+            uint64_t e = atomic_load_explicit(&slot->epoch, memory_order_relaxed);
+            
+            // writer busy, bail
+            if (e & 1ull) return -1; 
+
+            uint64_t want = e + 1;
+            // writer finalizing lock, bail
+            if (!atomic_compare_exchange_strong(&slot->epoch, &e, want)) return -1;
+            
+            // do no work, but fence as if we did (we could bump atime here)
+            atomic_thread_fence(memory_order_release);
+            
+            // now advance the epoch again (to even)
+            atomic_fetch_add_explicit(&slot->epoch, 1, memory_order_release);
+            return 0;
+        }
+    }
+    return -1;
+}
+
+
+/**
  * @brief Atomically apply a label mask to a slot's Bloom filter.
  * @return 0 on success, -1 if key not found.
  */

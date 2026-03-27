@@ -572,6 +572,13 @@ const void *splinter_get_raw_ptr(const char *key, size_t *out_sz, uint64_t *out_
 uint64_t splinter_get_epoch(const char *key);
 
 /**
+ * @brief Advance the epoch of a slot without otherwise doing work
+ * Useful in conjunction with labeling for automation to fire.
+ * @param key Current key name associated with the slot.
+ */
+int splinter_bump_slot(const char *key);
+
+/**
  * @brief Atomically apply a label mask to a slot's Bloom filter.
  * @return 0 on success, -1 if key not found.
  */
