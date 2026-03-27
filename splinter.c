@@ -1067,10 +1067,8 @@ int splinter_bump_slot(const char *key)  {
         struct splinter_slot *slot = &S[(idx + i) % H->slots];
         if (atomic_load_explicit(&slot->hash, memory_order_acquire) == h &&
             strncmp(slot->key, key, SPLINTER_KEY_MAX) == 0) {
-            
             uint64_t e = atomic_load_explicit(&slot->epoch, memory_order_relaxed);
-            
-            // writer busy, bail
+            // writer busy, bail out
             if (e & 1ull) return -1; 
 
             uint64_t want = e + 1;
@@ -1080,6 +1078,9 @@ int splinter_bump_slot(const char *key)  {
             // do no work, but fence as if we did (we could bump atime here)
             atomic_thread_fence(memory_order_release);
             
+            // the whole point of this (mostly)
+            splinter_pulse_watchers(slot);
+
             // now advance the epoch again (to even)
             atomic_fetch_add_explicit(&slot->epoch, 1, memory_order_release);
             return 0;
