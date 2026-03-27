@@ -722,6 +722,10 @@ unsafe extern "C" {
     pub fn splinter_get_epoch(key: *const ::std::os::raw::c_char) -> u64;
 }
 unsafe extern "C" {
+    #[doc = " @brief Advance the epoch of a slot without otherwise doing work\n Useful in conjunction with labeling for automation to fire.\n @param key Current key name associated with the slot."]
+    pub fn splinter_bump_slot(key: *const ::std::os::raw::c_char) -> ::std::os::raw::c_int;
+}
+unsafe extern "C" {
     #[doc = " @brief Atomically apply a label mask to a slot's Bloom filter.\n @return 0 on success, -1 if key not found."]
     pub fn splinter_set_label(
         key: *const ::std::os::raw::c_char,
@@ -736,7 +740,7 @@ unsafe extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 unsafe extern "C" {
-    #[doc = " @brief Client-side helper to write multiple orders of a key.\n * Since we've backed out library-side linking, this helper manages\n the naming convention for the caller."]
+    #[doc = " @brief Client-side helper to write multiple orders of a key.\n This helper manages the naming convention for the caller.\n It uses a temporary array to copy the \"victim\" keys.\n @param base_key The main key (e.g. car)\n @param vals An array of values from keys that will be merged in\n @param lens An array of lengths corresponding with vals\n @param orders How many tandems to create\n @return 0 on success, -1 on failure, -2 if underlying basic I/O calls fail"]
     pub fn splinter_client_set_tandem(
         base_key: *const ::std::os::raw::c_char,
         vals: *mut *const ::std::os::raw::c_void,
@@ -767,7 +771,7 @@ unsafe extern "C" {
     pub fn splinter_watch_label_register(bloom_mask: u64, group_id: u8) -> ::std::os::raw::c_int;
 }
 unsafe extern "C" {
-    #[doc = " @brief Internal helper to pulse the Signal Arena for a slot."]
+    #[doc = " @brief Internal helper to pulse the Signal Arena for a slot.\n @param slot pointer to a splinter_slot structure"]
     pub fn splinter_pulse_watchers(slot: *mut splinter_slot);
 }
 unsafe extern "C" {
@@ -793,6 +797,6 @@ unsafe extern "C" {
     );
 }
 unsafe extern "C" {
-    #[doc = " @brief Promotes a key to \"system\" usage"]
+    #[doc = " @brief Promotes a key to \"system\" usage\n @param key the key to scope"]
     pub fn splinter_set_as_system(key: *const ::std::os::raw::c_char) -> ::std::os::raw::c_int;
 }
