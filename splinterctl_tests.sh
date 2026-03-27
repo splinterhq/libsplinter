@@ -95,4 +95,12 @@ test "Export store metadata"
 ./splinterctl --use $TEST_STORE export || fail "Could not export JSON"
 pass
 
+test "Set a new bump key"
+./splinterctl --use $TEST_STORE set bump_key "Bump Value" || fail "Could not set bump key"
+pass
+
+test "Bump the bump key"
+./splinterctl --use $TEST_STORE bump bump_key || fail "Could not bump the bump key"
+pass
+
 report

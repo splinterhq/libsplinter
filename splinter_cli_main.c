@@ -220,6 +220,15 @@ cli_module_t command_modules[] = {
         &cmd_bind, 
         &help_cmd_bind
     },
+    {
+        20,
+        "bump",
+        4,
+        "Bump a slot's epoch without doing any other work",
+        -1,
+        &cmd_bump,
+        &help_cmd_bump
+    },
     // The last null-filled element 
     { 0, NULL, 0, NULL, -1,  NULL , NULL }
 };
@@ -340,6 +349,7 @@ static void completion(const char *buf, linenoiseCompletions *lc) {
     switch (buf[0]) {
         case 'b':
             linenoiseAddCompletion(lc, "bind");
+            linenoiseAddCompletion(lc, "bump");
             break;
         case 'c':
             linenoiseAddCompletion(lc, "clear");
@@ -408,6 +418,12 @@ static char *hints(const char *buf, int *color, int *bold) {
         *color = 36;
         *bold = 1;
         return "ind ";
+    }
+
+    if(!strncasecmp(buf, "bu", 4)) {
+        *color = 36;
+        *bold = 1;
+        return "mp ";
     }
 
     if (!strncasecmp(buf, "cle", 5)) {

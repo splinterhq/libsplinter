@@ -407,26 +407,25 @@ TEST("Get system slot snapshot", splinter_get_slot_snapshot(system_key, &verify_
 TEST("Verify val len is larger than 1 (system promoted)", (verify_system.val_len > 1));
 
 /* --- splinter_pulse_keygroup() coverage --- */
-  const char *pulse_key = "pulse_test_key";
-  uint8_t target_group = 7; 
-  
-  // 1. Setup: Create a key and register it to a specific signal group
-  TEST("Create key for pulsing", splinter_set(pulse_key, "data", 4) == 0);
-  TEST("Register key to signal group", splinter_watch_register(pulse_key, target_group) == 0);
+const char *pulse_key = "pulse_test_key";
+uint8_t target_group = 7; 
+TEST("Create key for pulsing", splinter_set(pulse_key, "data", 4) == 0);
+TEST("Register key to signal group", splinter_watch_register(pulse_key, target_group) == 0);
+uint64_t initial_count = splinter_get_signal_count(target_group);
+TEST("Pulse key group by member name", splinter_pulse_keygroup(pulse_key) == 0);
+uint64_t post_pulse_count = splinter_get_signal_count(target_group);
+TEST("Verify signal count incremented", post_pulse_count == (initial_count + 1));
+TEST("Pulse non-existent key returns error", splinter_pulse_keygroup("ghost_key") == -1);
 
-  // 2. Capture initial signal count
-  uint64_t initial_count = splinter_get_signal_count(target_group);
-
-  // 3. Pulse the group using the key name
-  // Note: splinter_pulse_keygroup finds the slot for the key and pulses its group(s)
-  TEST("Pulse key group by member name", splinter_pulse_keygroup(pulse_key) == 0);
-
-  // 4. Verify the signal arena reflected the pulse
-  uint64_t post_pulse_count = splinter_get_signal_count(target_group);
-  TEST("Verify signal count incremented", post_pulse_count == (initial_count + 1));
-
-  // 5. Verify failure on non-existent key
-  TEST("Pulse non-existent key returns error", splinter_pulse_keygroup("ghost_key") == -1);
+/* --- slot epoch bumper --- */
+const char *bump_key = "bump_test_key";
+struct splinter_slot_snapshot bump_snap = { 0 };
+struct splinter_slot_snapshot bump_snap_1 = { 0 };
+TEST("Set bump test key", splinter_set(bump_key, "Bump",  4) == 0);
+TEST("Get snapshot of first bump", splinter_get_slot_snapshot(bump_key, &bump_snap) == 0);
+TEST("Bump bump key", splinter_bump_slot(bump_key) == 0);
+TEST("Get bumped snapshot", splinter_get_slot_snapshot(bump_key, &bump_snap_1) == 0);
+TEST("Snap epochs are not equal (bump1 should be greater)", (bump_snap_1.epoch > bump_snap.epoch));
 
 splinter_close();
 splinter_header_snapshot_t closed = { 0 };
