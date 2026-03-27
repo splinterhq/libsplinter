@@ -4,17 +4,18 @@
  * Minor adjustments applied
  * License: MIT 
  */
+import process from "node:process";
 
 const LIB_NAME = "libsplinter";
 
 function getLibFilename(): string {
     // @ts-ignore: Deno/Bun cross-compatibility
     const isWindows = typeof process !== "undefined" && process.platform === "win32" || 
-                      // @ts-ignore
+                      // @ts-ignore: Deno
                       typeof Deno !== "undefined" && Deno.build.os === "windows";
-    // @ts-ignore
+    // @ts-ignore: Deno
     const isMac = typeof process !== "undefined" && process.platform === "darwin" || 
-                  // @ts-ignore
+                  // @ts-ignore: Deno
                   typeof Deno !== "undefined" && Deno.build.os === "darwin";
     return isWindows ? `${LIB_NAME}.dll` : isMac ? `${LIB_NAME}.dylib` : `${LIB_NAME}.so`;
 }
@@ -43,6 +44,7 @@ export interface SplinterStore {
     getSignalCount(groupId: number): bigint;
     watchRegister(key: string, groupId: number): number;
     watchLabelRegister(bloomMask: bigint, groupId: number): number;
+    bumpSlot(key: string): number;
 }
 
 const encoder = new TextEncoder();
@@ -77,7 +79,7 @@ class BunSplinter implements SplinterStore {
 
     set(key: string, value: string | Uint8Array): boolean {
         const data = typeof value === "string" ? encoder.encode(value) : value;
-        // @ts-ignore
+        // @ts-ignore: Deno
         const { ptr } = require("bun:ffi");
         return this.ffi.symbols.splinter_set(encoder.encode(key + "\0"), ptr(data), data.length) === 0;
     }
@@ -86,7 +88,7 @@ class BunSplinter implements SplinterStore {
         const maxLen = 4096;
         const buffer = new Uint8Array(maxLen);
         const outLen = new BigUint64Array(1);
-        // @ts-ignore
+        // @ts-ignore: Bun
         const { ptr } = require("bun:ffi");
         const rc = this.ffi.symbols.splinter_get(encoder.encode(key + "\0"), ptr(buffer), maxLen, ptr(outLen));
         return rc !== 0 ? null : buffer.slice(0, Number(outLen[0]));
@@ -104,6 +106,7 @@ class BunSplinter implements SplinterStore {
     setNamedType(key: string, mask: number): number { return this.ffi.symbols.splinter_set_named_type(encoder.encode(key + "\0"), mask); }
     watchRegister(key: string, gid: number): number { return this.ffi.symbols.splinter_watch_register(encoder.encode(key + "\0"), gid); }
     watchLabelRegister(mask: bigint, gid: number): number { return this.ffi.symbols.splinter_watch_label_register(mask, gid); }
+    bumpSlot(key: string): number { return this.ffi.symbols.splinter_bump_slot(key); }
 }
 
 // --- Deno Implementation ---
@@ -125,6 +128,7 @@ class DenoSplinter implements SplinterStore {
             splinter_set_named_type: { parameters: ["buffer", "u16"], result: "i32" },
             splinter_watch_register: { parameters: ["buffer", "u8"], result: "i32" },
             splinter_watch_label_register: { parameters: ["u64", "u8"], result: "i32" },
+            splinter_bump_slot: { parameters: ["buffer"], result: "i32"},
         });
         this.symbols = this.dylib.symbols as Record<string, (...args: any[]) => any>;
     }
@@ -203,6 +207,10 @@ class DenoSplinter implements SplinterStore {
     watchLabelRegister(mask: bigint, gid: number): number { 
         return this.symbols.splinter_watch_label_register(mask, gid); 
     }
+
+    bumpSlot(key: string): number {
+        return this.symbols.splinter_bump_slot(this.cstr(key));
+    }
 }
 
 // splinter.ts
@@ -211,9 +219,9 @@ export class Splinter {
     static connect(busName: string, customLibPath?: string): SplinterStore {
         const libPath = customLibPath || `./${getLibFilename()}`;
         
-        // @ts-ignore
+        // @ts-ignore: Deno
         const isBun = typeof process !== "undefined" && process.versions?.bun;
-        // @ts-ignore
+        // @ts-ignore: Deno
         const isDeno = typeof Deno !== "undefined";
 
         let store: SplinterStore;
@@ -225,7 +233,6 @@ export class Splinter {
             throw new Error("Runtime not supported");
         }
 
-        // CRITICAL FIX: Actually open the bus before returning the store
         if (!store.open(busName)) {
             throw new Error(`Failed to open Splinter bus: ${busName}.`);
         }

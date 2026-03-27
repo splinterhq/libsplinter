@@ -3,10 +3,6 @@ import { Splinter, SPL_SLOT_TYPE } from "./splinter.ts";
 
 const BUS_NAME = "splinter_debug";
 
-/**
- * TEST 1: Connectivity & Basic IO
- * Ensures we can open the store and do a round-trip write/read.
- */
 Deno.test("Splinter: Basic Set/Get", () => {
     const store = Splinter.connect(BUS_NAME);
     
@@ -22,11 +18,6 @@ Deno.test("Splinter: Basic Set/Get", () => {
     store.close();
 });
 
-/**
- * TEST 2: Epoch Tracking
- * Verifies that the Global Epoch increments on write.
- * This is the 'heartbeat' of your performance monitoring.
- */
 Deno.test("Splinter: Epoch Increment", () => {
     const store = Splinter.connect(BUS_NAME);
     const key = "epoch_trigger";
@@ -40,27 +31,15 @@ Deno.test("Splinter: Epoch Increment", () => {
     store.close();
 });
 
-/**
- * TEST 3: Slot Typing (The Lysis Setup)
- * Ensures we can tag a slot as VARTEXT so the sidecar knows to process it.
- */
 Deno.test("Splinter: Named Types", () => {
     const store = Splinter.connect(BUS_NAME);
     const key = "lysis_target";
     
     store.set(key, "raw_input_text");
-    store.setNamedType(key, SPL_SLOT_TYPE.VARTEXT);
-    
-    // In a real scenario, splinference.cpp would see this 
-    // and replace the text with a Similarity JSON.
-    
+    store.setNamedType(key, SPL_SLOT_TYPE.VARTEXT); 
     store.close();
 });
 
-/**
- * TEST 4: Signal Pulse Counting
- * Checks if the hardware-level signal group count is accessible.
- */
 Deno.test("Splinter: Signal Group Monitoring", () => {
     const store = Splinter.connect(BUS_NAME);
     
@@ -71,5 +50,17 @@ Deno.test("Splinter: Signal Group Monitoring", () => {
     // We just want to ensure the call doesn't crash and returns a bigint.
     assertEquals(typeof count, "bigint");
     
+    store.close();
+});
+
+Deno.test("Splinter: Key Bumping With Signaling", () => {
+    const store = Splinter.connect(BUS_NAME);
+
+    const key = "bump_target";
+    store.set(key, "bump test");
+    store.setNamedType(key, SPL_SLOT_TYPE.VARTEXT);
+    store.setLabel(key, 0x4n);
+    store.bumpSlot(key);
+
     store.close();
 });
