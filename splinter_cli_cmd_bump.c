@@ -1,15 +1,15 @@
 /**
- * Copyright 2025 Tim Post
- * License: Apache 2 (MIT available upon request to timthepost@protonmail.com)
+ * Copyright 2026 Tim Post
+ * License: Apache 2
  *
  * @file splinter_cli_cmd_bump.c
- * @brief Implements the CLI 'bump' command.
+ * @brief Implements the CLI 'bump' command; useful for triggering many
+ * label applications simultaneously by bumping once they're applied.
  */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 #include "splinter_cli.h"
 
@@ -35,7 +35,6 @@ int cmd_bump(int argc, char *argv[]) {
 
     snprintf(key, sizeof(key) - 1, "%s%s", tmp == NULL ? "" : tmp, argv[1]);
     rc = splinter_bump_slot(key);
-    cli_show_key_config(key, modname);
-    
+
     return rc;
 }
