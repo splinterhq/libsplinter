@@ -65,6 +65,8 @@ bool process_key(const char* key, llama_context* ctx, const llama_vocab* vocab) 
     const void* raw_ptr = splinter_get_raw_ptr(key, &val_len, nullptr);
     if (!raw_ptr || val_len == 0) return false;
 
+    std::cout << "[Processing]: Processing key " << key << " ...\n";
+
     // tokenization
     std::vector<llama_token> tokens(val_len + 8);
     int n_tokens = llama_tokenize(vocab, static_cast<const char*>(raw_ptr), val_len, 
@@ -254,7 +256,9 @@ int main(int argc, char **argv) {
                     // that we can skew a timestamp in the past. 
                     int64_t tick_start = splinter_now(); 
                     
+                    std::cout << "[Pulsing]: Waking up lane " << lane_name << " ...\n";
                     splinter_pulse_keygroup(lane_name);
+
                     auto duration = std::chrono::system_clock::now().time_since_epoch();
                     uint64_t unix_timestamp = std::chrono::duration_cast<std::chrono::seconds>(duration).count();
                     
@@ -266,6 +270,7 @@ int main(int argc, char **argv) {
                     size_t processing_delta = static_cast<size_t>(tick_end - tick_start);
 
                     // commit: Set the Access/Creation time and the latency delta
+                    std::cout << "[Backfill]: Backfilling access timestamp for key " << keys[i] << " ...\n";
                     splinter_set_slot_time(keys[i], SPL_TIME_CTIME, unix_timestamp, processing_delta);
                 }
             }
