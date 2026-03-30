@@ -45,6 +45,8 @@ export interface SplinterStore {
     watchRegister(key: string, groupId: number): number;
     watchLabelRegister(bloomMask: bigint, groupId: number): number;
     bumpSlot(key: string): number;
+    getEmbedding(key: string): Float32Array | null;
+    setEmbedding(key: string, embedding: Float32Array): boolean;
 }
 
 const encoder = new TextEncoder();
@@ -71,6 +73,9 @@ class BunSplinter implements SplinterStore {
             splinter_set_named_type: { args: [FFIType.cstring, FFIType.u16], returns: FFIType.i32 },
             splinter_watch_register: { args: [FFIType.cstring, FFIType.u8], returns: FFIType.i32 },
             splinter_watch_label_register: { args: [FFIType.u64, FFIType.u8], returns: FFIType.i32 },
+            splinter_bump_slot: { args: [FFIType.cstring], returns: FFIType.i32 },
+            splinter_get_embedding: { args: [FFIType.cstring, FFIType.ptr], returns: FFIType.i32 },
+            splinter_set_embedding: { args: [FFIType.cstring, FFIType.ptr], returns: FFIType.i32 }
         });
     }
 
@@ -107,6 +112,8 @@ class BunSplinter implements SplinterStore {
     watchRegister(key: string, gid: number): number { return this.ffi.symbols.splinter_watch_register(encoder.encode(key + "\0"), gid); }
     watchLabelRegister(mask: bigint, gid: number): number { return this.ffi.symbols.splinter_watch_label_register(mask, gid); }
     bumpSlot(key: string): number { return this.ffi.symbols.splinter_bump_slot(key); }
+    setEmbedding(key: string, embedding: Float32Array): boolean { return this.ffi.symbols.splinter_set_embedding(encoder.encode(key + "\0"), embedding) }
+    getEmbedding(key: string): Float32Array | null { return this.ffi.symbols.splinter_get_embedding(encoder.encode(key + "\0")) }
 }
 
 // --- Deno Implementation ---
@@ -129,6 +136,8 @@ class DenoSplinter implements SplinterStore {
             splinter_watch_register: { parameters: ["buffer", "u8"], result: "i32" },
             splinter_watch_label_register: { parameters: ["u64", "u8"], result: "i32" },
             splinter_bump_slot: { parameters: ["buffer"], result: "i32"},
+            splinter_get_embedding: { parameters: ["buffer", "buffer"], result: "i32" },
+            splinter_set_embedding: { parameters: ["buffer", "buffer"], result: "i32" }
         });
         this.symbols = this.dylib.symbols as Record<string, (...args: any[]) => any>;
     }
@@ -210,6 +219,25 @@ class DenoSplinter implements SplinterStore {
 
     bumpSlot(key: string): number {
         return this.symbols.splinter_bump_slot(this.cstr(key));
+    }
+
+    getEmbedding(key: string): Float32Array | null {
+        const keyBuf = new TextEncoder().encode(key + "\0");
+        const floatArray = new Float32Array(768);
+        const result = this.symbols.splinter_get_embedding(keyBuf, floatArray);
+
+        return result === 0 ? floatArray : null;
+    }
+
+    setEmbedding(key: string, embedding: Float32Array): boolean {
+        if (embedding.length !== 768) {
+            throw new Error("Embedding must be exactly 768 dimensions.");
+        }
+
+        const keyBuf = new TextEncoder().encode(key + "\0");
+        const result = this.symbols.splinter_set_embedding(keyBuf, embedding);
+
+        return result === 0;
     }
 }
 
