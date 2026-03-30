@@ -55,17 +55,17 @@ bool needs_embedding(const float* vec, size_t len) {
     return std::sqrt(sum) < 1e-6; // Effectively zero
 }
 
-bool process_key(const char* key, llama_context* ctx, const llama_vocab* vocab) {
+uint64_t process_key(const char* key, llama_context* ctx, const llama_vocab* vocab) {
     size_t val_len = 0;
     uint64_t current_epoch = splinter_get_epoch(key);
 
     // odd epochs mean busy writers
-    if (current_epoch & 1) return false;
+    if (current_epoch & 1) return 0;
 
-    const void* raw_ptr = splinter_get_raw_ptr(key, &val_len, nullptr);
-    if (!raw_ptr || val_len == 0) return false;
-
-    std::cout << "[Processing]: Processing key " << key << " ...\n";
+    uint64_t ptr_epoch = 0;
+    const void* raw_ptr = splinter_get_raw_ptr(key, &val_len, &ptr_epoch);
+    if (!raw_ptr || val_len == 0) return 0;
+    if (ptr_epoch != current_epoch) return 0;
 
     // tokenization
     std::vector<llama_token> tokens(val_len + 8);
@@ -79,22 +79,22 @@ bool process_key(const char* key, llama_context* ctx, const llama_vocab* vocab) 
     }
 
     if (splinter_get_epoch(key) != current_epoch) {
-        return false;
+        return 0;
     }
 
     // inference
     llama_batch batch = llama_batch_get_one(tokens.data(), n_tokens);
     if (llama_decode(ctx, batch) != 0) {
-        return false;
+        return 0;
     }
 
     // commit
     float* embedding = llama_get_embeddings_seq(ctx, 0);
     if (embedding && splinter_set_embedding(key, embedding) == 0) {
-        return true;
+        return current_epoch;
     }
 
-    return false;
+    return 0;
 }
 
 void perform_backfill(llama_context* ctx, const llama_vocab* vocab) {
@@ -239,40 +239,21 @@ int main(int argc, char **argv) {
             std::string key_str(keys[i]);
             uint64_t current_epoch = splinter_get_epoch(keys[i]);
 
-            // just continue if already processed:
-            if (processed_epochs[keys[i]] >= current_epoch) continue;
+            auto it = processed_epochs.find(key_str);
+            if (it != processed_epochs.end() && it->second >= current_epoch) {
+                continue;
+            }
 
-            // If we've never seen this key, or its epoch increased, it needs processing.
-            if (processed_epochs.find(key_str) == processed_epochs.end() || 
-                processed_epochs[key_str] < current_epoch) {
-                
-                if (process_key(keys[i], ctx, vocab)) {
-                    processed_epochs[key_str] = splinter_get_epoch(keys[i]);
-                    
-                    char lane_name[32]; 
-                    std::snprintf(lane_name, sizeof(lane_name), "__lane_dw_%u", signal_group);
-                    
-                    // we use the CPU wall clock (cheap) to grab a relative time fix so 
-                    // that we can skew a timestamp in the past. 
-                    int64_t tick_start = splinter_now(); 
-                    
-                    std::cout << "[Pulsing]: Waking up lane " << lane_name << " ...\n";
-                    splinter_pulse_keygroup(lane_name);
-
-                    auto duration = std::chrono::system_clock::now().time_since_epoch();
-                    uint64_t unix_timestamp = std::chrono::duration_cast<std::chrono::seconds>(duration).count();
-                    
-                    // now we see how much time passed since our first
-                    // cpu wall clock reference point
-                    int64_t tick_end = splinter_now();
-
-                    // this tells us how long ago we need to "skew" this timestamp.
-                    size_t processing_delta = static_cast<size_t>(tick_end - tick_start);
-
-                    // commit: Set the Access/Creation time and the latency delta
-                    std::cout << "[Backfill]: Backfilling access timestamp for key " << keys[i] << " ...\n";
-                    splinter_set_slot_time(keys[i], SPL_TIME_CTIME, unix_timestamp, processing_delta);
-                }
+            uint64_t tick_start = splinter_now();
+            uint64_t observed_epoch = process_key(keys[i], ctx, vocab);  // 0 = failed/skipped
+            if (observed_epoch != 0) {
+                auto duration = std::chrono::system_clock::now().time_since_epoch();
+                uint64_t unix_timestamp = std::chrono::duration_cast<std::chrono::seconds>(duration).count();
+                int64_t tick_end = splinter_now();
+                size_t processing_delta = static_cast<size_t>(tick_end - tick_start);
+                splinter_set_slot_time(keys[i], SPL_TIME_CTIME, unix_timestamp, processing_delta);
+                processed_epochs[key_str] = observed_epoch;  // The epoch process_key captured, pre-write
+                splinter_pulse_keygroup("__lane_dw_2");
             }
         }
     }
