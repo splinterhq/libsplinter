@@ -216,7 +216,7 @@ int main(int argc, char **argv) {
     }
 
     if (processed_epochs.empty()) {
-        std::cout << "[Startup]: Cold start detected. Populating baseline epochs based on what's here ...\n";
+        std::cout << "[Startup]: Cold start detected; populating baseline epochs ...\n";
         splinter_list(keys, 1024, &key_count);
         for (size_t i = 0; i < key_count; ++i) {
             std::string key_str(keys[i]);
@@ -256,7 +256,6 @@ int main(int argc, char **argv) {
         key_count = 0;
         
         if (splinter_list(keys, 1024, &key_count) != 0) continue;
-        std::cout << "dbg " << key_count << "\n" << std::flush;
         for (size_t i = 0; i < key_count; ++i) {
             std::string key_str(keys[i]);
             uint64_t current_epoch = splinter_get_epoch(keys[i]);
@@ -275,9 +274,9 @@ int main(int argc, char **argv) {
                 size_t processing_delta = static_cast<size_t>(tick_end - tick_start);
                 splinter_set_slot_time(keys[i], SPL_TIME_CTIME, unix_timestamp, processing_delta);
                 processed_epochs[key_str] = observed_epoch;  // The epoch process_key captured, pre-write
-                // TODO - make this command line-able (pulse after update)
+                // TODO - make this command line set-able (pulse after update)
                 splinter_pulse_keygroup("__lane_dw_2");
-                std::cout << "[Processed]: Key " << keys[i] << " after update.\n" << std::flush;
+                std::cout << "[Processed]: Key " << keys[i] << " embedded after update.\n" << std::flush;
             }
         }
         last_signal_count = current_signal_count;
