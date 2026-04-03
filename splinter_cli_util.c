@@ -241,11 +241,12 @@ void cli_load_config(const char *rcpath) {
     char *home = getenv("HOME");
     if (!home) return;
 
-    if (rcpath == NULL)
+    if (rcpath[0] == '\0') {
         snprintf(path, sizeof(path), "%s/.splinterrc", home);
-    else
+    } else {
         snprintf(path, sizeof(path), "%s", rcpath);
-
+    }
+    
     FILE *fp = fopen(path, "r");
     if (!fp) return;
 

@@ -684,7 +684,7 @@ int main (int argc, char *argv[]) {
         }
     }
 
-    fflush(stderr);
+    // cli_load_config knows if rc_path is null, no check needed here.
     cli_load_config(rc_path);
     
     if (m == MODE_REPL) {
