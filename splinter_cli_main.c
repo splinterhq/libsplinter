@@ -329,6 +329,7 @@ void print_usage(char *progname) {
     fprintf(stderr, "  --list-modules / -L          List available commands.\n");
     fprintf(stderr, "  --no-repl / -n               Don't enter interactive mode.\n");
     fprintf(stderr, "  --prefix / -p <prefix>       Prepend <prefix> to read/write ops (namespace)\n");
+    fprintf(stderr, "  --rc-file / -r <file>        Use a specific .splinterrc file.\n");
     fprintf(stderr, "  --use / -u <store>           Connect to <store> after starting.\n");
     fprintf(stderr, "  --version / -v               Print splinter version information and exit.\n");
     fprintf(stderr, "\n%s will look for SPLINTER_HISTORY_FILE and SPLINTER_HISTORY_LEN in the\n", progname);
@@ -539,13 +540,14 @@ static const struct option long_options[] = {
     { "history-len", required_argument, NULL, 'l' },
     { "list-modules", no_argument, NULL, 'L' },
     { "no-repl", no_argument, NULL, 'n' },
+    { "rc-file", required_argument, NULL, 'r' },
     { "prefix", required_argument, NULL, 'p' },
     { "use", required_argument, NULL, 'u' },
     { "version", no_argument, NULL, 'v' },
     {NULL, 0, NULL, 0}
 };
 
-static const char *optstring = "+h::H:l:Lnv";
+static const char *optstring = "+h::H:l:Lnr:v";
 
 static void cli_at_exit(void) {
     if (thisuser.store_conn)
@@ -560,6 +562,7 @@ int main (int argc, char *argv[]) {
     char *progname = basename(argv[0]), *buff = NULL, *ptmp = NULL;
     char prompt[128] = { 0 };
     char **mod_args = { 0 };
+    char rc_path[PATH_MAX] = { 0 };
 
     // These can also be set via command line. 
     char *historyfile = getenv("SPLINTER_HISTORY_FILE");
@@ -611,6 +614,10 @@ int main (int argc, char *argv[]) {
                     perror("setenv");
                     exit(EXIT_FAILURE);
                 }
+                break;
+            // --rc-file / -r
+            case 'r':
+                snprintf(rc_path, sizeof(rc_path) - 1, "%s", optarg);
                 break;
             // --use / -u
             case 'u':
@@ -677,7 +684,8 @@ int main (int argc, char *argv[]) {
         }
     }
 
-    cli_load_config();
+    fflush(stderr);
+    cli_load_config(rc_path);
     
     if (m == MODE_REPL) {
         if (cli_set_signal_handlers() < 0) {

@@ -236,12 +236,16 @@ int cli_safer_atoi(const char *string) {
  * @brief Parses ~/.splinterrc to populate the label map in thisuser.
  * Format: LABEL_NAME 0xMASK (e.g., ANGRY 0x1)
  */
-void cli_load_config(void) {
+void cli_load_config(const char *rcpath) {
     char path[PATH_MAX];
     char *home = getenv("HOME");
     if (!home) return;
 
-    snprintf(path, sizeof(path), "%s/.splinterrc", home);
+    if (rcpath == NULL)
+        snprintf(path, sizeof(path), "%s/.splinterrc", home);
+    else
+        snprintf(path, sizeof(path), "%s", rcpath);
+
     FILE *fp = fopen(path, "r");
     if (!fp) return;
 
