@@ -124,6 +124,9 @@ void handle_signal(int sig) {
 }
 
 int main(int argc, char **argv) {
+    size_t key_count = -1;
+    char *keys[1024] = { 0 };
+
     // we need at least 4 arguments: <bin> <bus> <model> <group>
     if (argc < 4) {
         std::cerr << "Usage: " << argv[0] << " [--backfill-text-keys] [--oneshot] <bus_name> <path_to_nomic_gguf> <signal_group_id>\n";
@@ -176,7 +179,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    std::cout << "Loading GGUF model (this may take a moment) ...\n";
+    std::cout << "[Startup]: Loading GGUF model `" << model_path << "` (this may take a moment) ...\n";
     llama_backend_init();
 
     llama_log_set([](ggml_log_level level, const char * text, void * user_data) {
@@ -200,6 +203,9 @@ int main(int argc, char **argv) {
     llama_context *ctx = llama_init_from_model(model, ctx_params);
     const llama_vocab *vocab = llama_model_get_vocab(model);
 
+    uint64_t last_signal_count = splinter_get_signal_count(signal_group);
+    std::unordered_map<std::string, uint64_t> processed_epochs;
+
     if (backfill) {
         perform_backfill(ctx, vocab);
     }
@@ -209,32 +215,48 @@ int main(int argc, char **argv) {
         return 0;
     }
 
-    std::cout << "[Service Active]: Listening on signal group " << (int)signal_group << "...\n";
+    if (processed_epochs.empty()) {
+        std::cout << "[Startup]: Cold start detected. Populating baseline epochs based on what's here ...\n";
+        splinter_list(keys, 1024, &key_count);
+        for (size_t i = 0; i < key_count; ++i) {
+            std::string key_str(keys[i]);
+            uint64_t current_epoch = splinter_get_epoch(keys[i]);
+            
+            std::cout << "[Startup]: Checking key: `" << keys[i] << "` ...\n" << std::flush;
+            
+            auto it = processed_epochs.find(key_str);
+            if (it != processed_epochs.end() && it->second >= current_epoch) {
+                continue;
+            }
 
-    // state tracking
-    std::unordered_map<std::string, uint64_t> processed_epochs;
-    uint64_t last_signal_count = splinter_get_signal_count(signal_group);
+            uint64_t observed_epoch = splinter_get_epoch(keys[i]);
+            if (observed_epoch != 0) {
+                processed_epochs[key_str] = observed_epoch;
+            }
+        }
+    }
+
+    last_signal_count = splinter_get_signal_count(signal_group);
+
+    std::cout << "[Active]: Last signal count on group " << (int)signal_group;
+    std::cout << " was " << last_signal_count << ".\n" << std::flush;
+
 
     // main inference event loop
     while (keep_running) {
         uint64_t current_signal_count = splinter_get_signal_count(signal_group);
         
-        // if the atomic counter hasn't bumped, sleep and yield the core
         if (current_signal_count == last_signal_count) {
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
             continue;
         }
 
-        last_signal_count = current_signal_count;
+        std::cout << "[Pulse Received]: Signal Count (" << current_signal_count << ") scanning bus for changed epochs ...\n";            
 
-        std::cout << "[Pulse Received]: Scanning bus for changed epochs ...\n";
-
-        // TODO: keys[] either needs to be a circular buffer, or 
-        // allocated dynamically from the store geometry.
-        char *keys[1024]; 
-        size_t key_count = 0;
+        key_count = 0;
+        
         if (splinter_list(keys, 1024, &key_count) != 0) continue;
-
+        std::cout << "dbg " << key_count << "\n" << std::flush;
         for (size_t i = 0; i < key_count; ++i) {
             std::string key_str(keys[i]);
             uint64_t current_epoch = splinter_get_epoch(keys[i]);
@@ -253,9 +275,12 @@ int main(int argc, char **argv) {
                 size_t processing_delta = static_cast<size_t>(tick_end - tick_start);
                 splinter_set_slot_time(keys[i], SPL_TIME_CTIME, unix_timestamp, processing_delta);
                 processed_epochs[key_str] = observed_epoch;  // The epoch process_key captured, pre-write
+                // TODO - make this command line-able (pulse after update)
                 splinter_pulse_keygroup("__lane_dw_2");
+                std::cout << "[Processed]: Key " << keys[i] << " after update.\n" << std::flush;
             }
         }
+        last_signal_count = current_signal_count;
     }
 
     std::cout << "\n[Signal Received]: Shutting down splinference daemon safely...\n";
