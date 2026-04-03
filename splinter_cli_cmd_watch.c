@@ -139,6 +139,7 @@ int cmd_watch(int argc, char *argv[]) {
         }
     } else {
         // hyper-focused poll loop
+        puts("Press `<ctrl> + ]` to leave the continuous watch loop ...");
         while (! thisuser.abort) {
             if (read(STDIN_FILENO, &c, 1) == 1) {
                 if (c == 29) {  // Ctrl-] is ASCII 29
