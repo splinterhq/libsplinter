@@ -47,6 +47,7 @@ export interface SplinterStore {
     bumpSlot(key: string): number;
     getEmbedding(key: string): Float32Array | null;
     setEmbedding(key: string, embedding: Float32Array): boolean;
+    append(key: string, data: string | Uint8Array): bigint | null;
 }
 
 const encoder = new TextEncoder();
@@ -55,6 +56,7 @@ const decoder = new TextDecoder();
 // --- Bun Implementation ---
 
 class BunSplinter implements SplinterStore {
+    // deno-lint-ignore no-explicit-any
     private ffi: any;
 
     constructor(libPath: string) {
@@ -75,7 +77,8 @@ class BunSplinter implements SplinterStore {
             splinter_watch_label_register: { args: [FFIType.u64, FFIType.u8], returns: FFIType.i32 },
             splinter_bump_slot: { args: [FFIType.cstring], returns: FFIType.i32 },
             splinter_get_embedding: { args: [FFIType.cstring, FFIType.ptr], returns: FFIType.i32 },
-            splinter_set_embedding: { args: [FFIType.cstring, FFIType.ptr], returns: FFIType.i32 }
+            splinter_set_embedding: { args: [FFIType.cstring, FFIType.ptr], returns: FFIType.i32 },
+            splinter_append: { args: [FFIType.cstring, FFIType.ptr, FFIType.usize, FFIType.ptr], returns: FFIType.i32 }
         });
     }
 
@@ -87,6 +90,19 @@ class BunSplinter implements SplinterStore {
         // @ts-ignore: Deno
         const { ptr } = require("bun:ffi");
         return this.ffi.symbols.splinter_set(encoder.encode(key + "\0"), ptr(data), data.length) === 0;
+    }
+
+    append(key: string, data: string | Uint8Array): bigint | null {
+        const bytes = typeof data === "string" ? encoder.encode(data) : data;
+        const { ptr } = require("bun:ffi");
+        const outLen = new BigUint64Array(1);
+        const rc = this.ffi.symbols.splinter_append(
+            encoder.encode(key + "\0"),
+            ptr(bytes),
+            bytes.length,
+            ptr(outLen)
+        );
+        return rc === 0 ? outLen[0] : null;
     }
 
     get(key: string): Uint8Array | null {
@@ -104,6 +120,28 @@ class BunSplinter implements SplinterStore {
         return data ? decoder.decode(data) : null;
     }
 
+    getEmbedding(key: string): Float32Array | null {
+        const { ptr } = require("bun:ffi");
+        const buffer = new Float32Array(768);
+        const rc = this.ffi.symbols.splinter_get_embedding(
+            encoder.encode(key + "\0"),
+            ptr(buffer)
+        );
+        return rc === 0 ? buffer : null;
+    }
+
+    setEmbedding(key: string, embedding: Float32Array): boolean {
+        if (embedding.length !== 768) {
+            throw new Error("Embedding must be exactly 768 dimensions.");
+        }
+        const { ptr } = require("bun:ffi");
+        const rc = this.ffi.symbols.splinter_set_embedding(
+            encoder.encode(key + "\0"),
+            ptr(embedding)
+        );
+        return rc === 0;
+    }
+
     unset(key: string): number { return this.ffi.symbols.splinter_unset(encoder.encode(key + "\0")); }
     getEpoch(key: string): bigint { return BigInt(this.ffi.symbols.splinter_get_epoch(encoder.encode(key + "\0"))); }
     getSignalCount(groupId: number): bigint { return BigInt(this.ffi.symbols.splinter_get_signal_count(groupId)); }
@@ -111,15 +149,15 @@ class BunSplinter implements SplinterStore {
     setNamedType(key: string, mask: number): number { return this.ffi.symbols.splinter_set_named_type(encoder.encode(key + "\0"), mask); }
     watchRegister(key: string, gid: number): number { return this.ffi.symbols.splinter_watch_register(encoder.encode(key + "\0"), gid); }
     watchLabelRegister(mask: bigint, gid: number): number { return this.ffi.symbols.splinter_watch_label_register(mask, gid); }
-    bumpSlot(key: string): number { return this.ffi.symbols.splinter_bump_slot(key); }
-    setEmbedding(key: string, embedding: Float32Array): boolean { return this.ffi.symbols.splinter_set_embedding(encoder.encode(key + "\0"), embedding) }
-    getEmbedding(key: string): Float32Array | null { return this.ffi.symbols.splinter_get_embedding(encoder.encode(key + "\0")) }
+    bumpSlot(key: string): number { return this.ffi.symbols.splinter_bump_slot(encoder.encode(key + "\0")); }
 }
 
 // --- Deno Implementation ---
 
 class DenoSplinter implements SplinterStore {
+    // deno-lint-ignore no-explicit-any
     private dylib: Deno.DynamicLibrary<any>;
+    // deno-lint-ignore no-explicit-any
     private symbols: Record<string, (...args: any[]) => any>;
 
     constructor(libPath: string) {
@@ -137,8 +175,10 @@ class DenoSplinter implements SplinterStore {
             splinter_watch_label_register: { parameters: ["u64", "u8"], result: "i32" },
             splinter_bump_slot: { parameters: ["buffer"], result: "i32"},
             splinter_get_embedding: { parameters: ["buffer", "buffer"], result: "i32" },
-            splinter_set_embedding: { parameters: ["buffer", "buffer"], result: "i32" }
+            splinter_set_embedding: { parameters: ["buffer", "buffer"], result: "i32" },
+            splinter_append: { parameters: ["buffer", "buffer", "usize", "buffer"], result: "i32" }
         });
+        // deno-lint-ignore no-explicit-any
         this.symbols = this.dylib.symbols as Record<string, (...args: any[]) => any>;
     }
 
@@ -167,6 +207,18 @@ class DenoSplinter implements SplinterStore {
         // Ensure we handle the return code: 0 is success in C
         const rc = this.symbols.splinter_set(this.cstr(key), data, data.length);
         return rc === 0;
+    }
+
+    append(key: string, data: string | Uint8Array): bigint | null {
+        const bytes = typeof data === "string" ? encoder.encode(data) : data;
+        const outLen = new BigUint64Array(1);
+        const rc = this.symbols.splinter_append(
+            this.cstr(key),
+            bytes,
+            bytes.length,
+            new Uint8Array(outLen.buffer)
+        );
+        return rc === 0 ? outLen[0] : null;
     }
 
     get(key: string): Uint8Array | null {

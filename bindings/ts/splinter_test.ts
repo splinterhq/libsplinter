@@ -188,3 +188,34 @@ Deno.test("Splinter: getEmbedding returns null for missing key", () => {
 
     store.close();
 });
+
+Deno.test("Splinter: Append extends value and returns correct length", () => {
+    const store = Splinter.connect(BUS_NAME);
+
+    const key = "append_test_01";
+    const initial = "dog";
+    const suffix  = "leash";
+
+    store.set(key, initial);
+
+    const newLen = store.append(key, suffix);
+
+    assertNotEquals(newLen, null, "append should return a length, not null");
+    assertEquals(newLen, BigInt(initial.length + suffix.length),
+        `Expected new length ${initial.length + suffix.length}, got ${newLen}`);
+
+    // Verify the actual stored content while we're here
+    const result = store.getString(key);
+    assertEquals(result, initial + suffix, "Stored value should be concatenation of both writes");
+
+    store.close();
+});
+
+Deno.test("Splinter: Append returns null for missing key", () => {
+    const store = Splinter.connect(BUS_NAME);
+
+    const result = store.append("key_that_does_not_exist_append", "data");
+    assertEquals(result, null, "append on missing key should return null");
+
+    store.close();
+});
