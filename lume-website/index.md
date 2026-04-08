@@ -289,7 +289,12 @@ If you have hardware to spare, please reach out!
 
 ## Documentation
 
-Splinter has a [work-in-progress documentation site](https://splinterhq.github.io).
+See the navigation links to the left.
+
+The core library is documented with Doxygen-style comments that can do for now;
+soon there will be one-page-per-method to explain the rationale and such.
+
+All of the tools support a `--help` / `help` syntax with explanations.
 
 ### Contact The Author
 
