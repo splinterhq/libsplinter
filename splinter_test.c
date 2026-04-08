@@ -320,7 +320,6 @@ TEST("label watch triggered pulse (global epoch check)", b_after.epoch > b_befor
 struct enum_tracker tracker = { 0, "" };
 const uint64_t ENUM_LABEL = (1ULL << 5);
 
-// Setup: two keys with the same label, one without
 splinter_set("enum_01", "val", 3);
 splinter_set_label("enum_01", ENUM_LABEL);
 splinter_set("enum_02", "val", 3);
@@ -377,17 +376,12 @@ TEST("get regular av returns 0 after full reset", splinter_get_av() == 0);
 
 /* --- Purge / Centerline Sweep Tests --- */
 
-// Setup the bus for a sweep: one active key, one empty slot
 const char *active_key = "survivor_key";
 const char *purge_key = "ghost_key";
 splinter_set(active_key, "data_to_keep", 12);
 splinter_set(purge_key, "temporary_data", 14);
-
-// Unset the ghost key so the purge has an empty slot to boil
 splinter_unset(purge_key);
 splinter_purge(); 
-
-// if we get here without access violations, it worked.
 TEST("splinter_purge execution completed", 1); 
 
 // Verify that the 'passive substrate' still holds valid data for active keys
@@ -399,6 +393,7 @@ TEST("active data survives hygiene sweep",
 verify_buf[verify_sz] = '\0';
 TEST("verified content integrity after purge", strcmp(verify_buf, "data_to_keep") == 0);
 
+/* -- system key (binary scratchpads) -- */
 const char *system_key = "__system_key";
 TEST("Set system key as __system_key with one byte length", splinter_set(system_key, "0", 1) == 0);
 TEST("Promote system key to system", splinter_set_as_system(system_key) == 0);
@@ -427,6 +422,13 @@ TEST("Bump bump key", splinter_bump_slot(bump_key) == 0);
 TEST("Get bumped snapshot", splinter_get_slot_snapshot(bump_key, &bump_snap_1) == 0);
 TEST("Snap epochs are not equal (bump1 should be greater)", (bump_snap_1.epoch > bump_snap.epoch));
 
+/* -- append key -- */
+const char *append_key = "append_test_key";
+const void *to_append = "leash";
+TEST("Set append test key as 'dog'", splinter_set(append_key, "dog", 3) == 0);
+size_t append_new_len = 0;
+TEST("Append test key with 'leash'", splinter_append(append_key, to_append, 5, &append_new_len) == 0);
+TEST("New appended key length is 8 (dog + leash)", (append_new_len == 8));
 splinter_close();
 splinter_header_snapshot_t closed = { 0 };
 TEST("store actually closed", splinter_get_header_snapshot(&closed) != 0);
