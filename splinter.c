@@ -1390,3 +1390,70 @@ int splinter_set_as_system(const char *key) {
     // not found
     return -1;
 }
+
+/**
+ * @brief Appends data to an existing key's value in-place.
+ *
+ * Uses seqlock semantics (odd epoch = write in progress) to safely extend
+ * the value of an existing key without relocating it. The append will fail
+ * if the result would exceed the slot's allocated max_val_sz.
+ *
+ * @param key      The null-terminated key string.
+ * @param data     Pointer to the data to append.
+ * @param data_len Number of bytes to append.
+ * @param new_len  Output: set to the new total value length on success. May be NULL.
+ * @return 0 on success,
+ *         -1 if key not found or append would overflow the slot,
+ *         -2 if store/key/data pointer is invalid.
+ */
+int splinter_append(const char *key, const void *data, size_t data_len, size_t *new_len) {
+    if (!H || !key || !data) return -2;
+    if (data_len == 0) return -2;
+
+    uint64_t h = fnv1a(key);
+    size_t idx = slot_idx(h, H->slots);
+
+    for (size_t i = 0; i < H->slots; ++i) {
+        struct splinter_slot *slot = &S[(idx + i) % H->slots];
+
+        if (atomic_load_explicit(&slot->hash, memory_order_acquire) != h) continue;
+        if (strncmp(slot->key, key, SPLINTER_KEY_MAX) != 0) continue;
+
+        /* Seqlock acquire: spin if a writer is already active */
+        uint64_t e = atomic_load_explicit(&slot->epoch, memory_order_relaxed);
+        if (e & 1ull) { errno = EAGAIN; return -1; }
+
+        if (!atomic_compare_exchange_weak_explicit(&slot->epoch, &e, e + 1,
+                                                   memory_order_acq_rel,
+                                                   memory_order_relaxed)) {
+            errno = EAGAIN;
+            return -1;
+        }
+
+        /* We hold the lock (epoch is odd). Check capacity. */
+        size_t cur_len = (size_t)atomic_load_explicit(&slot->val_len, memory_order_relaxed);
+        if (cur_len + data_len > (size_t)H->max_val_sz) {
+            /* Release the lock before bailing */
+            atomic_fetch_add_explicit(&slot->epoch, 1, memory_order_release);
+            errno = EMSGSIZE;
+            return -1;
+        }
+
+        /* Write the new bytes immediately after existing data */
+        uint8_t *dst = VALUES + slot->val_off + cur_len;
+        memcpy(dst, data, data_len);
+
+        size_t total = cur_len + data_len;
+        atomic_store_explicit(&slot->val_len, (uint32_t)total, memory_order_release);
+
+        if (new_len) *new_len = total;
+
+        atomic_fetch_add_explicit(&slot->epoch, 1, memory_order_release);
+        splinter_pulse_watchers(slot);
+        atomic_fetch_add_explicit(&H->epoch, 1, memory_order_relaxed);
+
+        return 0;
+    }
+
+    return -1; /* key not found */
+}

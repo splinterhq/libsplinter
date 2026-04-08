@@ -658,6 +658,17 @@ void splinter_enumerate_matches(uint64_t mask,
  */
 int splinter_set_as_system(const char *key);
 
+
+/**
+ * @brief Appends data to an existing key's value in-place.
+ * @param key      The null-terminated key string.
+ * @param data     Pointer to the data to append.
+ * @param data_len Number of bytes to append.
+ * @param new_len  Output: set to the new total value length on success. May be NULL.
+ * @return 0 on success, -1 if key not found or overflow, -2 if args invalid.
+ */
+int splinter_append(const char *key, const void *data, size_t data_len, size_t *new_len);
+
 #ifdef __cplusplus
 }
 #endif
