@@ -15,7 +15,7 @@ metas:
   generator: true
 ---
 
-# Splinter ⚡ L3-Speed Shared Memory Vector & KV Store
+# Splinter ⚡ L3-Speed Shared Memory Vector & KV Store For Tight Inference Deployments
 
 Splinter is a minimalist, persistable lock-free and bloomable key-value store 
 designed to handle high-frequency data and vector ingestion/retrieval across 
@@ -164,9 +164,9 @@ code efficiency).
 | **Footprint**  | Static & Deterministic                                         | Dynamic & Volatile       |
 | **Complexity** | 890 Lines of obsessively-optimized C (Will never exceed 999) | 100k+ Lines of Code      |
 
-It's [not fair to other stores to compare them competitively against Splinter][1]
-because they'd be competing with their ["hands tied" due to mutexes and socket
-layers][2]. And, it's not fair to Splinter, because Splinter deliberately eschews
+It's not fair to other stores to compare them competitively against Splinter
+because they'd be competing with their "hands tied" due to mutexes and socket
+layers. And, it's not fair to Splinter, because Splinter deliberately eschews
 any calculation on-write that it can't do with simple bitwise math; Splinter
 _**tries**_ to stay boring.
 
@@ -295,6 +295,3 @@ Splinter has a [work-in-progress documentation site](https://splinterhq.github.i
 
 I'm Tim Post (former Stack Overflow Employee & Community Leader). You can reach
 me at `timthepost@protonmail.com` if you have questions.
-
-  [1]: /splinter-performance/
-  [2]: /splinter-and-linux/
