@@ -1,14 +1,19 @@
-# Splinter ⚡ L3-Speed Shared Memory Vector & KV Store
+# Splinter ⚡ L3-Speed Shared Memory Cache, Vector, Context, Semantic Transcript, KV Store & Sidecar Inference Pipeline
 
-Splinter is a minimalist, persistable lock-free and bloomable key-value store 
-designed to handle high-frequency data and vector ingestion/retrieval across 
-disjointed runtimes. 
+Most AI stacks connect their components with the equivalent of garden hoses:
+sockets, gRPC calls, serialization overhead, kernel arbitration. Every piece
+of context your inference stack needs gets pumped through that plumbing, one
+request at a time.
 
-It is built on the belief that for local inter-process communication (IPC), the
-kernel’s networking stack and arbitration services are expensive and unnecessary 
-couplings. Splinter provides "just enough" safety for processes to swim in the 
-same address space without conflict, and most importantly, without latency.
+## Splinter Provies "Tightly-Coupled" Inference & Governance Oversight
 
+Splinter takes the opposite approach. Put your processes in the same pool.
+Let them share memory directly, without copying, without sockets, without a
+daemon in the way. Writers publish; readers observe. The kernel only gets
+involved when absolutely necessary, and even then, only to deliver a wake-up
+signal, not to arbitrate a transaction.
+
+<<<<<<< HEAD
 Splinter emerged out of frustration resulting from attempting to stretch tools
 over gaps as they broke. It wasn't a question of more tuning; it was a need to 
 cut out the socket layer and kernel arbitration completely.
@@ -269,12 +274,3 @@ that make sense to be shared. There's some timing and accounting to do
 traffic and "shivering" on the bus. But it's a half-day project, most likely.
 
 If you have hardware to spare, please reach out!
-
-## Documentation
-
-Splinter has a [work-in-progress documentation site](https://splinterhq.github.io).
-
-### Contact The Author
-
-I'm Tim Post (former Stack Overflow Employee & Community Leader). You can reach
-me at `timthepost@protonmail.com` if you have questions.
