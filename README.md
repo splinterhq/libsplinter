@@ -45,7 +45,7 @@ If two divers try to hit the same lane simultaneously, the second one doesn't
 crash; they simply "bounce" back to the board (`EAGAIN`) and try again a 
 nanosecond later. No one ever stops the flow of the meet to wait for a key.
 
-### The Signal Pulse (The "Aha!" Moment)
+### The Signal Pulse (IPC answerbox-style signaling / Agentic Coordination)
 
 Now, imagine the water is connected. When a diver hits the water in Lane 1, 
 a ripple (signal) travels instantly across the surface. A coach 

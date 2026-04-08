@@ -17,7 +17,9 @@ metas:
 
 # Splinter ⚡ L3-Speed Shared Memory Vector & KV Store
 
-Splinter is a minimalist, persistable lock-free and bloomable key-value store designed to handle high-frequency data and vector ingestion/retrieval across disjointed runtimes.
+Splinter is a minimalist, persistable lock-free and bloomable key-value store 
+designed to handle high-frequency data and vector ingestion/retrieval across 
+disjointed runtimes. 
 
 It is built on the belief that for local inter-process communication (IPC), the
 kernel’s networking stack and arbitration services are expensive and unnecessary 
@@ -44,15 +46,15 @@ a multi-lane pool that rivals any YMCA.
 
 But ... with some twists.
 
-### 1. Pre-Allocated Lanes (Zero Overhead)
+### Pre-Allocated Lanes (Zero Overhead)
 
 Instead of building a new pool every time you have a guest (dynamic allocation), 
 we build one massive pool at the start. We divide it into perfectly equal lanes. 
 If you need a key, you don't "request" it from a lifeguard (the OS/Kernel); 
-you simply look at **Lane 4**. You have a direct line of sight to the water 
+you simply look at Lane 4. You have a direct line of sight to the water 
 because the memory is already mapped to your process.
 
-### 2. The Diving Boards (Lock-Free Access)
+### The Diving Boards (Lock-Free Access)
 
 Each lane has a diving board. Because of Splinter's atomic sequence epochs, 
 32 divers  can jump into their own lanes at the exact same time. They never collide. 
@@ -60,15 +62,15 @@ If two divers try to hit the same lane simultaneously, the second one doesn't
 crash; they simply "bounce" back to the board (`EAGAIN`) and try again a 
 nanosecond later. No one ever stops the flow of the meet to wait for a key.
 
-### 3. The Signal Pulse (The "Aha!" Moment)
+### The Signal Pulse (IPC answerbox-style signaling / Agentic Coordination)
 
 Now, imagine the water is connected. When a diver hits the water in Lane 1, 
-a **ripple** (signal) travels instantly across the surface. A coach 
+a ripple (signal) travels instantly across the surface. A coach 
 (inference) sitting at the far end doesn't have to keep staring at the lane; 
 they just wait to feel the ripple. The moment they feel it, they know exactly 
 which lane to look at. 
 
-### 4. No Jumping Out (Zero Copy)
+### No Jumping Out (Zero Copy)
 
 In a traditional system (like Redis or SQLite), if you want to inspect a 
 diver, you have to pull them out of the water, dry them off, and carry 
@@ -83,48 +85,54 @@ cycles and memory bandwidth are infinite. We invoke help from the kernel's
 socket layer to transfer a value that we already have in memory to another
 region in the same physical memory as standard practice.
 
-And now we're doing that with 768-dimensional vectors 😱. Splinter is a gesture
-back in the direction of efficiency for systems development. Here are the core
-tenets that set it apart (_**aka:
-[why Splinter is so fast](/splinter-performance/)**_):
+And lately, we're repeating this practice by adding vector embeddings - let's think
+more about what we actually need in this process. Splinter is a gesture back in the direction of efficiency for systems development. 
 
-- **Splinter Is a Passive Substrate:** Splinter is not a daemon. It is a
+Here's a list of the main things that set it apart:
+
+- **Splinter Is a Passive Substrate**: Splinter is not a daemon. It is a
   memory-mapped region that acts as a mutual option for every process on the
   system.
-- **(DRYD) Zero-Copy Intent:** _(D)on't (R)epeat (Y)our (D)ata._ In Splinter,
+
+- **(DRYD) Zero-Copy Intent**: _(D)on't (R)epeat (Y)our (D)ata_ In Splinter,
   information is never "sent"; it is published. Readers access the raw memory
   directly, crossing only the minimal checkpoints needed for safe coordination,
   eliminating the energetic tax of serialization and context switching.
-- **Static Geometry:** By using a fixed-geometry arena, Splinter eliminates the
-  complications that stem from dynamic heap fragmentation and background garbage
+
+- **Static Geometry**: By using a fixed-geometry arena, Splinter eliminates the
+  problems created by dynamic heap fragmentation and background garbage
   collection.
-- **Lock-Free Practicality:** No time is wasted acquiring blocking mutex locks;
-  Splinter uses standard portable atomic sequence locks (`epoch`).
-- **Unopinionated & Agnostic:** Implement LRU or TTL eviction how you like in a
-  loadable shard, or no eviction at all. Splinter doesn't care.
 
-### A Vector / K/V "Anti-Database" Design
+- **Lock-Free Practicality**: No time is wasted acquiring mutex locks; Splinter
+  uses standard portable atomic sequence locks.
 
-Most database designs combine storage and computation in one server layer, and
-then provide a client that can interact with it and abstract transactions.
+- **In-Place Atomic Operations**: `INCR/DECR` as well as `AND`, `OR`, `XOR` and
+  `NOT` happen in-place, atomically.
 
-Splinter takes another approach - in order to minimize disruption needed to 
-complete a transaction, the _client_ is required to do whatever computational 
-heap allocation is necessary while the storage layer remains gapped and only 
-performs only bitwise operations on keys in-place (twiddling existing bits).
+- **NUMA Compatible**: Splinter can optionally utilize NUMA pinning on more
+  modern hardware that, if combined with writers using the same affinity, could
+  reach write speeds of near 500MM ops/sec.
 
-Splinter does not provide automatic ANN clustering; it leaves that as an
-exercise for the client, if the client needs it. See [Splinter Shards](/shards/)
-for more about how this works. Splinter will include a set of default shards
-to handle basic clustering and eviction strategies as examples of how the library
-is intended to work.
+- **Persistent or RAM-only**: Splinter persists easily to/from disk using the
+  included CLI or just regular Unix tools like `dd`.
 
-While "clients" usually reside on the same machine, they have their own _heap_
-in addition to the shared pool, and that's what Splinter utilizes for computation.
-We never "slosh" in still water, and design to prevent thundering hurds through
-cooperative logic scheduling. 
+- **Inference Included**: Splinter includes a "sidecar" embedding engine that 
+  works asynchronously in the store on a signal group, utilizing a quantized
+  version of Nomic Text (`.gguf`) with a tiny llama.cpp wrapper.
 
-### The "Good Process Neighbor" Approach
+- **Lua Integration**: `splinter_cli` and `splinterctl` both feature easy lua
+  scripting for data transformation.
+
+- **Doesn't Corrupt**: Doesn't require checking, operates cleanly.
+
+- **Unopinionated**: Implement LRU or TTL eviction how you like in a loadable
+  shard, or no eviction at all. Splinter doesn't care.
+
+- **Scales Across RDMA**: Splinter uses UNIX permissions and scales "out" easily
+  so that other systems on the same RDMA network can access it at near-local
+  speeds too. The same seqlock protection covers it all.
+
+### The "Good Process" Approach:
 
 _(Even though technically only the CLI or client code is the process because
 Splinter itself is just a place, not a process)_
@@ -135,108 +143,158 @@ with `O_DIRECT` or complex paging logic. It provides the metadata (`ctime`,
 for engineers who would rather spend their thermal budget on the math, not the
 management.
 
-Relational databases attempt to shield themselves from the kernel by trying to
-_be_ the kernel. Splinter goes out of its way to not bother the kernel unless it
+Relational databases attempt to shield themselves from the kernel trying to be
+the kernel. Splinter goes out of its way to not bother the kernel unless it
 must, and its logic shards inform the kernel of how the memory is intended for
-use at every step of the way. Here's
-[more about why Splinter and Linux are great friends](/splinter-and-linux/).
+use at every step of the way.
 
-## Supported Platforms & Linkage
+You can read more on 
+[why Splinter and Linux get along](https://splinterhq.github.io/splinter_and_linux/) 
+so well on Splinter's doc site, as well as 
+[an overview](https://splinterhq.github.io/splinter_performance/) on why
+the gains are so appreciable (tl;dr: it's practical computational physics, not just 
+code efficiency). 
 
-Splinter is designed to work on any modern GNU/Linux flavor. Windows users can
-use WSL with a slight penalty. MacOS requires some questionable shimming around
-the lack of `memfd` (forcing anonymous file descriptors to work), but it
-_should_ otherwise function perfectly.
-
-**Optional Linkage (Enable during build):**
-
-- NUMA (`libnuma-dev`) for NUMA affinity | `WITH_NUMA=1`
-- LUA (`lua5.4-dev`) for LUA integration | `WITH_LUA=1`
-- llama.cpp for the nomic inference shard | `WITH_LLAMA=1`
-- Valgrind (`libvalgrind-dev`) for tighter Valgrind test integration |
-  `WITH_VALGRIND=1`
-
-## Quick Start / Building & Installing
-
-**See [Building & Intstalling Splinter](/installing/)**. Provided you have a
-working compiler (like GCC), Splinter has very few (and all optional)
-dependencies.
-
-## Comparison With Related Tools
-
-It's not entirely fair to compare active databases to Splinter because they are
-competing with their "hands tied" by mutexes and socket layers. Splinter
-deliberately eschews any calculation on-write that it can't do with simple
-bitwise math; Splinter _**tries**_ to stay boring.
+### Comparison With Related Tools:
 
 | Feature        | Splinter                                                       | Traditional Vector DBs   |
 | -------------- | -------------------------------------------------------------- | ------------------------ |
 | **Transport**  | `memfd()` that degrades gracefully to `mmap()` (L3 Speed)      | TCP/gRPC (Network Stack) |
 | **Daemon**     | None (Passive)                                                 | Active Service (Heavy)   |
 | **Footprint**  | Static & Deterministic                                         | Dynamic & Volatile       |
-| **Complexity** | ~ 875 Lines of obsessively-optimized C (Will never exceed 999) | 100k+ Lines of Code      |
+| **Complexity** | 890 Lines of obsessively-optimized C (Will never exceed 999) | 100k+ Lines of Code      |
 
-Think about what you can do once TypeScript, Rust, Python and Go can all share
-the same address space and embeddings **safely**, without socket or even
-`memcpy()` overhead instead `:)`.
+It's [not fair to other stores to compare them competitively against Splinter][1]
+because they'd be competing with their ["hands tied" due to mutexes and socket
+layers][2]. And, it's not fair to Splinter, because Splinter deliberately eschews
+any calculation on-write that it can't do with simple bitwise math; Splinter
+_**tries**_ to stay boring.
 
-## The Main Splinter Use Cases (What's it Good For?)
+As far as feature references go, Splinter is somewhat like Redis in how it
+stores data and the kind of data it stores, but doesn't have nearly as much of
+an advanced concept of types, or even really enforceable types, mostly because
+it just doesn't need them. Splinter is designed to be used _**with**_ other
+things, not always necessarily in lieu of them.
 
-Splinter can be anything from a simple configuration store to a Rank-2 tensor
-model scaffold. It's designed for **vector-heavy workflows** like Artificial
-Intelligence (AI) inference or high-resolution physics and linguistic research.
+Splinter works perfectly fine on DenoKV with FFI, but it's local-only to
+whatever isolate its running on, so it's definitely no replacement for DenoKV
+(it's just a good caching system in that scenario).
 
-See [use cases](/use-cases/) for an exhaustive list!
+Thinking in terms of other stores limits how you'll think to use Splinter. Think
+about what you can do once TypeScript, Rust, Python and Go can all share the
+same address space and embeddings **safely**, without socket or even `memcpy()`
+overhead instead `:)`.
 
-## Exhaustive Feature Overview
+### Supported Platforms:
+
+Splinter is designed to work on any modern GNU/Linux flavor. Windows users could
+consider using WSL with a slight penalty; MacOS would require some questionable
+shimming around the lack of `memfd` (You'd have to somehow force anonymous file
+descriptors to work), but it _should_ otherwise work perfectly.
+
+### Optional Linkage:
+
+These are _not_ required - but Splinter can use them if they're installed and
+you enable them during the build:
+
+- NUMA (`libnuma-dev`) for NUMA affinity | `WITH_NUMA=1` during build
+- LUA (`lua5.4-dev`) for LUA integration | `WITH_LUA=1` during build
+- llama.cpp ([Github](https://github.com/ggml-org/llama.cpp)) if you want to
+  enable the nomic inference shard | `WITH_LLAMA=1` during build
+- Valgrind (`libvalgrind-dev`) for tighter Valgrind test integration |
+  `WITH_VALGRIND=1` during build
+
+Splinter can be configured to just be KV (no space partitioned for embeddings)
+by passing `WITH_EMBEDDINGS=0` to the build command (for very lean
+configurations).
+
+### Exhaustive Feature Overview:
 
 #### 1. Performance & Scale
 
-- **Throughput:** Validated at **3.2M+ ops/sec** on early-gen, throttled
-  consumer hardware. With proper NUMA configuration on modern fast hardware, it
-  can reach near 500M ops/sec.
-- **Latency:** Resolves at L3 cache speeds by utilizing `memfd() / mmap()` for
+- **Throughput**: Validated at **3.2M+ ops/sec** on early-gen, throttled
+  consumer hardware commonly found in data loggers and underfunded physics labs,
+  which are the majority of physics labs.
+- **Latency**: Resolves at L3 cache speeds by utilizing `memfd() / mmap()` for
   the primary transport.
-- **Scalability:** Supports disjointed MRMW (Multiple Reader, Multiple Writer)
+- **Scalability**: Supports disjointed MRMW (Multiple Reader, Multiple Writer)
   semantics via per-slot atomic sequence locks.
 
 #### 2. Vector & Math Native
 
-- **Dimensional Storage:** Native support for **768-dimension vectors**
+- **Dimensional Storage**: Native support for **768-dimension vectors**
   (optimized for Nomic v2/LLM embeddings).
-- **In-Place Atomic Ops:** Keys tagged as `BIGUINT` support atomic `INC`, `DEC`,
+- **In-Place Atomic Ops**: Keys tagged as `BIGUINT` support atomic `INC`, `DEC`,
   `OR`, `XOR`, `AND`, and `NOT` operations directly in shared memory.
-- **Tandem Keys:** Multi-order support allows for atomic updates to related
-  signals (e.g., `sensor.1`, `sensor.2`).
+- **Tandem Keys**: Multi-order support allows for atomic updates to related
+  signals (e.g., `sensor.1` for velocity of `sensor`, `sensor.2` for acceleration).
 
 #### 3. Mechanical Hygiene (Auto-Scrubbing)
 
 Splinter offers three levels of sanitation to balance data integrity with
 computational thermodynamics:
 
-- **None:** Minimal movement; assumes readers strictly honor value length
+- **None**: Minimal movement; assumes readers strictly honor value length
   metadata.
-- **Hybrid (Fast Mop):** Zeroes the incoming byte length plus a **64-byte
+- **Hybrid (Fast Mop)**: Zeroes the incoming byte length plus a **64-byte
   aligned** tail to satisfy SIMD/Vectorized loads.
-- **Full (Boil):** Zeroes the entire pre-allocated value region, ensuring
+- **Full (Boil)**: Zeroes the entire pre-allocated value region, ensuring
   absolute isolation for verifiable research.
 
 #### 4. The Signal Arena
 
-- **Pulse Groups:** Up to 64 independent signal groups for `epoll()`-backed
+- **Pulse Groups**: Up to 64 independent signal groups for `epoll()`-backed
   notifications.
-- **Bloom Labeling:** High-performance key tagging allows watchers to filter for
+- **Bloom Labeling**: High-performance key tagging allows watchers to filter for
   specific signal "vibrations" without scanning the entire store.
 
-#### 5. Sidecars & Loadable Shards
+#### 5. Extensibility (Loadable Shards)
 
-- **Inference Included:** Splinter ships with a tiny inference daemon
-  (`splinference.cpp`) that loads Nomic Text locally and butlers embeddings for
-  you on a defined signal group—with zero socket overhead.
-- **Modular Logic:** Side-load specialized C logic (DSP, ANN search, Inference)
-  via `insmod`-like tooling (Coming soon!).
+- **Modular Logic**: Side-load specialized C logic (DSP, ANN search, Inference)
+  via `insmod`.
+- **Zero Core Bloat**: Keeps the core library under **1,000 LOC**, ensuring the
+  hot path stays in the instruction cache.
+
+#### 6. Loose Type Naming System
+
+Splinter allows you to "inform" a slot of the type of key it will be hosting.
+This has certain benefits, like:
+
+1. Automatically converting key bit-depth on conversion to unsigned integers
+   (`BIGUINT`)
+2. Knowing which keys are eligible for embeddings (`VARTEXT`)
+3. Knowing which keys contain serialized data (`JSON`)
+4. Knowing which keys can't be printed to the console (`BINARY`, `IMGDATA`,
+   `AUDIO`, `VIDEO`)
+
+These can be extended (or replaced entirely) at the user's discretion.
+
+### The Main Splinter Use Cases (What's it Good For?)
+
+Have a look at [use cases on Splinter's documentation site](https://splinterhq.github.io/use-cases/)
+for the most up-to-date information (Splinter is under active development).
+
+### RDMA Scaling
+
+Splinter works (in theory) perfectly well over RDMA. The value arena is easily
+exported via `ibv_*`, but the author lacks the hardware to bake the actual
+implementation in (even simulations exceed what I have access to currently).
+
+It *should not* be hard to map the arena, plus slot metadata, and most globals
+that make sense to be shared. There's some timing and accounting to do 
+(maybe 200 LOC? That sounds actually about right). We just want to avoid excess
+traffic and "shivering" on the bus. But it's a half-day project, most likely.
+
+If you have hardware to spare, please reach out!
+
+## Documentation
+
+Splinter has a [work-in-progress documentation site](https://splinterhq.github.io).
 
 ### Contact The Author
 
 I'm Tim Post (former Stack Overflow Employee & Community Leader). You can reach
 me at `timthepost@protonmail.com` if you have questions.
+
+  [1]: /splinter-performance/
+  [2]: /splinter-and-linux/

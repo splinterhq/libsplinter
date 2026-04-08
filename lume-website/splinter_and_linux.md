@@ -91,5 +91,14 @@ the VMM do what it has been optimized to do for 30 years: move pages
 efficiently. It doesn't try to call the shots because it operates in a way where
 it doesn't _need_ to.
 
+### 6. Does Not Disturb
+
+Splinter doesn't bother the Kernel's network stack (though RDMA can introduce 
+its own overhead, but less), doesn't ask the kernel to arbitrate locks, and 
+doesn't ask the kernel to exercise the VMM any more than it must.
+
+It also will [soon reinforce governed use of POSIX memory](/shards/) advisement 
+so that shards don't "slosh" the pool too much while running.
+
 Next, you might like to see
 [some math behind splinter's performance](/splinter-performance/).

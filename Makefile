@@ -15,6 +15,7 @@ help:
 	@echo "| Type 'make' + target_name to use |"
 	@echo "------------------------------------"
 	@echo "sense     | \"dev\" + Valgrind"
+	@echo "stainless | \"dev\" - Rust"
 	@echo "dev       | \"prod\" + Llama + Rust"
 	@echo "prod      | Numa + Lua + Embeddings"
 	@echo "mini      | Embeddings only"
