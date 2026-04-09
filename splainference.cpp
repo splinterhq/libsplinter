@@ -138,6 +138,7 @@ static uint64_t process_completion(
     const llama_vocab *vocab,
     int              n_threads)
 {
+    (void) n_threads;
     // --- Epoch consistency check before we touch anything ---
     uint64_t start_epoch = splinter_get_epoch(key);
     if (start_epoch & 1) {
@@ -204,14 +205,14 @@ static uint64_t process_completion(
     splinter_set(key, prompt.c_str(), prompt.size());
 
     // --- Build sampler chain ---
-    llama_sampler *sampler = llama_sampler_chain_init(llama_sampler_chain_default_params());
+    llama_sampler *slotSampler = llama_sampler_chain_init(llama_sampler_chain_default_params());
 
     // Add individual samplers
-    llama_sampler_chain_add(sampler, llama_sampler_init_top_p(0.9f, 1));
-    llama_sampler_chain_add(sampler, llama_sampler_init_temp(0.7f));
+    llama_sampler_chain_add(slotSampler, llama_sampler_init_top_p(0.9f, 1));
+    llama_sampler_chain_add(slotSampler, llama_sampler_init_temp(0.7f));
 
     // To select a token based on the final distribution:
-    llama_sampler_chain_add(sampler, llama_sampler_init_dist(LLAMA_DEFAULT_SEED));
+    llama_sampler_chain_add(slotSampler, llama_sampler_init_dist(LLAMA_DEFAULT_SEED));
 
     // --- Decode loop ---
     uint64_t tick_start = splinter_now();
@@ -220,7 +221,7 @@ static uint64_t process_completion(
     llama_batch batch = llama_batch_get_one(tokens.data(), n_tokens);
     if (llama_decode(ctx, batch) != 0) {
         debug_post(std::string("[splainference][ERROR]: Prefill decode failed for key: ") + key);
-        llama_sampler_free(sampler);
+        llama_sampler_free(slotSampler);
         splinter_unset_label(key, SPLAIN_LABEL_SERVICING);
         splinter_set_label(key,   SPLAIN_LABEL_READY);
         splinter_bump_slot(key);
@@ -238,7 +239,7 @@ static uint64_t process_completion(
     bool          oom       = false;
 
     while (keep_running) {
-        llama_token new_token = llama_sampler_sample(sampler, ctx, -1);
+        llama_token new_token = llama_sampler_sample(slotSampler, ctx, -1);
 
         // EOS / EOG -> done
         if (llama_vocab_is_eog(vocab, new_token)) break;
@@ -299,8 +300,7 @@ static uint64_t process_completion(
         }
     }
 
-    // The new way to clean up the sampler
-    llama_sampler_deleter(sampler);
+    llama_sampler_free(slotSampler);
 
     // Get and free the memory object from the context along with metadata ((true) in clear).
     llama_memory_t mem = llama_get_memory(ctx);

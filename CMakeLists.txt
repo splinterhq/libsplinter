@@ -112,6 +112,15 @@ if(WITH_LLAMA)
         target_compile_definitions(splinferencep PRIVATE SPLINTER_PERSISTENT)
         target_include_directories(splinferencep PRIVATE ${LLAMA_INCLUDE_DIR})
         target_link_libraries(splinferencep PRIVATE splinter_p_shared ${LLAMA_LIB})
+
+        add_executable(splainference splainference.cpp)
+        target_include_directories(splainference PRIVATE ${LLAMA_INCLUDE_DIR})
+        target_link_libraries(splainference PRIVATE splinter_shared ${LLAMA_LIB})
+
+        add_executable(splainferencep splainference.cpp)
+        target_compile_definitions(splainferencep PRIVATE SPLINTER_PERSISTENT)
+        target_include_directories(splainferencep PRIVATE ${LLAMA_INCLUDE_DIR})
+        target_link_libraries(splainferencep PRIVATE splinter_p_shared ${LLAMA_LIB})
     else()
         message(FATAL_ERROR "llama.cpp not found. Disable WITH_LLAMA to skip.")
     endif()
@@ -131,6 +140,7 @@ install(TARGETS splinter_cli splinterp_cli
 
 if(WITH_LLAMA AND TARGET splinference AND TARGET splinferencep)
     install(TARGETS splinference splinferencep RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+    install(TARGETS splainference splainferencep RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()
 
 # 3. Headers
