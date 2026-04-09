@@ -103,4 +103,8 @@ test "Bump the bump key"
 ./splinterctl --use $TEST_STORE bump bump_key || fail "Could not bump the bump key"
 pass
 
+test "Append the bump key"
+./splinterctl  --use $TEST_STORE append bump_key "\nDo the bumpty-bump." || fail "Could not append the bump key"
+pass
+
 report

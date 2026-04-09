@@ -229,6 +229,15 @@ cli_module_t command_modules[] = {
         &cmd_bump,
         &help_cmd_bump
     },
+    {
+        21, 
+        "append",
+        6,
+        "Append a value to an existing key (do not truncate prior to writing).",
+        -1,
+        &cmd_append,
+        &help_cmd_append
+    },
     // The last null-filled element 
     { 0, NULL, 0, NULL, -1,  NULL , NULL }
 };
@@ -236,13 +245,21 @@ cli_module_t command_modules[] = {
 // Initialize a shared session structure
 // (declared as extern in splinter_cli.h)
 cli_user_t thisuser = {
+    // char [] storing the name of the connected store
     { 0 },
+    // is the user connected?
     false,
+    // has the user requested abort?
     0,
+    // termios structure for the user
     { 0 },
+    // exit status of the last command
     0,
+    // errno after the last command
     0,
+    // map of bloom labels 
     {},
+    // how many bloom labels they have 
     0
 };
 
@@ -348,6 +365,9 @@ static void completion(const char *buf, linenoiseCompletions *lc) {
     if (buf[0] == '\0') return;
 
     switch (buf[0]) {
+        case 'a':
+            linenoiseAddCompletion(lc, "append");
+            break;
         case 'b':
             linenoiseAddCompletion(lc, "bind");
             linenoiseAddCompletion(lc, "bump");
@@ -414,6 +434,12 @@ static char *hints(const char *buf, int *color, int *bold) {
      * cyan = 36
      * white = 37;
      */
+    
+    if(!strncasecmp(buf, "a", 6)) {
+        *color = 36;
+        *bold = 1;
+        return "ppend ";
+    }
     
     if(!strncasecmp(buf, "b", 4)) {
         *color = 36;
