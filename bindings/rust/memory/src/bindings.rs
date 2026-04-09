@@ -800,3 +800,12 @@ unsafe extern "C" {
     #[doc = " @brief Promotes a key to \"system\" usage\n @param key the key to scope"]
     pub fn splinter_set_as_system(key: *const ::std::os::raw::c_char) -> ::std::os::raw::c_int;
 }
+unsafe extern "C" {
+    #[doc = " @brief Appends data to an existing key's value in-place.\n @param key      The null-terminated key string.\n @param data     Pointer to the data to append.\n @param data_len Number of bytes to append.\n @param new_len  Output: set to the new total value length on success. May be NULL.\n @return 0 on success, -1 if key not found or overflow, -2 if args invalid."]
+    pub fn splinter_append(
+        key: *const ::std::os::raw::c_char,
+        data: *const ::std::os::raw::c_void,
+        data_len: usize,
+        new_len: *mut usize,
+    ) -> ::std::os::raw::c_int;
+}
