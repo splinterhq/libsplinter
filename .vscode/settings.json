@@ -3,6 +3,8 @@
     "cSpell.words": [
         "bindgen",
         "libc",
-        "rlib"
+        "rlib",
+        "Splainference",
+        "tmpl"
     ]
 }
