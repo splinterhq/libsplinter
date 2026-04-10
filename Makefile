@@ -15,9 +15,9 @@ help:
 	@echo "| Type 'make' + target_name to use |"
 	@echo "------------------------------------"
 	@echo "sense     | \"dev\" + Valgrind"
-	@echo "stainless | \"dev\" - Rust"
-	@echo "dev       | \"prod\" + Llama + Rust"
-	@echo "prod      | Numa + Lua + Embeddings"
+	@echo "stainless | \"dev\" - Rust - WASM"
+	@echo "dev       | \"prod\" + Llama + Rust + WASM"
+	@echo "prod      | Numa + Lua + WASM + Embeddings"
 	@echo "mini      | Embeddings only"
 	@echo "tiny      | No Embeddings (KV Only)"
 	@echo "clean     | Clean build artifacts"
@@ -45,11 +45,11 @@ dev: setup_build
 	@$(MAKE) -C build
 
 sense: setup_build
-	cd build && cmake -DWITH_EMBEDDINGS=ON -DWITH_LLAMA=ON -DWITH_LUA=ON -DWITH_NUMA=ON -DWITH_RUST=ON ..
+	cd build && cmake -DWITH_EMBEDDINGS=ON -DWITH_LLAMA=ON -DWITH_LUA=ON -DWITH_NUMA=ON -DWITH_RUST=ON -DWITH_WASM=ON ..
 	@$(MAKE) -C build
 
 prod: setup_build
-	cd build && cmake -DWITH_EMBEDDINGS=ON -DWITH_LUA=ON -DWITH_NUMA=ON ..
+	cd build && cmake -DWITH_EMBEDDINGS=ON -DWITH_LUA=ON -DWITH_NUMA=ON -DWITH_WASM=ON ..
 	@$(MAKE) -C build
 
 mini: setup_build

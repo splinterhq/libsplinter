@@ -13,6 +13,7 @@ option(WITH_NUMA       "Enable NUMA memory affinity support" OFF)
 option(WITH_LUA        "Enable Lua CLI integration" ON)
 option(WITH_LLAMA      "Enable llama.cpp inference sidecar" OFF)
 option(WITH_RUST       "Enable Rust bindings via Cargo" OFF)
+option(WITH_WASM       "Enable WasmEdge CLI integration" OFF)
 
 
 # --- Dependency Detection ---
@@ -34,21 +35,63 @@ if(WITH_NUMA)
     find_library(NUMA_LIB NAMES numa HINTS /usr/lib/x86_64-linux-gnu /usr/lib64 /usr/lib)
     find_path(NUMA_INCLUDE_DIR NAMES numa.h HINTS /usr/include)
     if(NUMA_LIB AND NUMA_INCLUDE_DIR)
+        # SPLINTER_NUMA_AFFINITY will be deprecated in favor of HAVE_NUMA
         add_definitions(-DSPLINTER_NUMA_AFFINITY)
+        add_definitions(-DHAVE_NUMA)
     else()
         message(FATAL_ERROR "libnuma-dev not found. Disable WITH_NUMA to skip.")
+    endif()
+endif()
+
+if(WITH_WASM)
+    find_package(PkgConfig REQUIRED)
+    
+    # 1. Try PkgConfig first (cleanest for system installs)
+    pkg_check_modules(WasmEdge QUIET wasmedge)
+
+    if(NOT WasmEdge_FOUND)
+        # 2. Fallback to manual search if PkgConfig fails (common for ~/.wasmedge installs)
+        find_path(WasmEdge_INCLUDE_DIR NAMES wasmedge/wasmedge.h
+            HINTS "$ENV{HOME}/.wasmedge/include" /usr/local/include /usr/include)
+        
+        find_library(WasmEdge_LIBRARIES NAMES wasmedge
+            HINTS "$ENV{HOME}/.wasmedge/lib" /usr/local/lib /usr/lib)
+            
+        if(WasmEdge_INCLUDE_DIR AND WasmEdge_LIBRARIES)
+            set(WasmEdge_FOUND TRUE)
+        endif()
+    endif()
+
+    if(WasmEdge_FOUND)
+        message(STATUS "Found WasmEdge: ${WasmEdge_LIBRARIES}")
+        
+        # 3. Create a unified interface so you don't have to manage strings everywhere
+        add_library(wasmedge_lib INTERFACE)
+        target_include_directories(wasmedge_lib INTERFACE 
+            ${WasmEdge_INCLUDE_DIRS} ${WasmEdge_INCLUDE_DIR})
+        target_link_libraries(wasmedge_lib INTERFACE 
+            ${WasmEdge_LIBRARIES})
+        
+        add_definitions(-DHAVE_WASM)
+        
+        # Link this to your splinter_cli target later:
+        # target_link_libraries(splinter_cli PRIVATE wasmedge_lib)
+    else()
+        message(FATAL_ERROR "WasmEdge not found. Install it via 'curl -sSf https://raw.githubusercontent.com/WasmEdge/WasmEdge/master/utils/install.sh | bash' or set -DWITH_WASM=OFF")
     endif()
 endif()
 
 find_path(VALGRIND_INCLUDE_DIR names valgrind/valgrind.h)
 if(VALGRIND_INCLUDE_DIR)
     add_definitions(-DHAVE_VALGRIND_H)
+    add_definitions(-DHAVE_VALGRIND)
 endif()
 
 add_compile_options(-O3 -Wall -Wextra -D_GNU_SOURCE -fPIC)
 
 if(WITH_EMBEDDINGS)
     add_definitions(-DSPLINTER_EMBEDDINGS)
+    add_definitions(-DHAVE_EMBEDDINGS)
 endif()
 
 # --- Library Targets ---
@@ -58,6 +101,12 @@ set_target_properties(splinter_shared PROPERTIES OUTPUT_NAME splinter)
 if(WITH_NUMA)
     target_link_libraries(splinter_shared PRIVATE ${NUMA_LIB})
     target_include_directories(splinter_shared PRIVATE ${NUMA_INCLUDE_DIR})
+endif()
+
+if(WITH_WASM)
+    # This single line handles both the .so linking and the header search paths
+    target_link_libraries(splinter_shared PRIVATE wasmedge_lib)
+    target_compile_definitions(splinter_shared PRIVATE HAVE_WASM)
 endif()
 
 # Persistent Core Objects and Library
@@ -141,6 +190,11 @@ install(TARGETS splinter_cli splinterp_cli
 if(WITH_LLAMA AND TARGET splinference AND TARGET splinferencep)
     install(TARGETS splinference splinferencep RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
     install(TARGETS splainference splainferencep RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+endif()
+
+if(WITH_WASM)
+    target_link_libraries(splinter_cli PRIVATE wasmedge_lib)
+    target_link_libraries(splinterp_cli PRIVATE wasmedge_lib)
 endif()
 
 # 3. Headers
