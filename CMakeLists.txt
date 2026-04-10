@@ -45,37 +45,25 @@ endif()
 
 if(WITH_WASM)
     find_package(PkgConfig REQUIRED)
-    
-    # 1. Try PkgConfig first (cleanest for system installs)
     pkg_check_modules(WasmEdge QUIET wasmedge)
-
     if(NOT WasmEdge_FOUND)
         # 2. Fallback to manual search if PkgConfig fails (common for ~/.wasmedge installs)
         find_path(WasmEdge_INCLUDE_DIR NAMES wasmedge/wasmedge.h
             HINTS "$ENV{HOME}/.wasmedge/include" /usr/local/include /usr/include)
-        
         find_library(WasmEdge_LIBRARIES NAMES wasmedge
-            HINTS "$ENV{HOME}/.wasmedge/lib" /usr/local/lib /usr/lib)
-            
+            HINTS "$ENV{HOME}/.wasmedge/lib" /usr/local/lib /usr/lib) 
         if(WasmEdge_INCLUDE_DIR AND WasmEdge_LIBRARIES)
             set(WasmEdge_FOUND TRUE)
         endif()
     endif()
-
     if(WasmEdge_FOUND)
         message(STATUS "Found WasmEdge: ${WasmEdge_LIBRARIES}")
-        
-        # 3. Create a unified interface so you don't have to manage strings everywhere
         add_library(wasmedge_lib INTERFACE)
         target_include_directories(wasmedge_lib INTERFACE 
             ${WasmEdge_INCLUDE_DIRS} ${WasmEdge_INCLUDE_DIR})
         target_link_libraries(wasmedge_lib INTERFACE 
-            ${WasmEdge_LIBRARIES})
-        
+            ${WasmEdge_LIBRARIES})    
         add_definitions(-DHAVE_WASM)
-        
-        # Link this to your splinter_cli target later:
-        # target_link_libraries(splinter_cli PRIVATE wasmedge_lib)
     else()
         message(FATAL_ERROR "WasmEdge not found. Install it via 'curl -sSf https://raw.githubusercontent.com/WasmEdge/WasmEdge/master/utils/install.sh | bash' or set -DWITH_WASM=OFF")
     endif()
@@ -124,7 +112,6 @@ endif()
 # --- CLI Targets ---
 file(GLOB CLI_SOURCES "splinter_cli_*.c")
 
-# Standard CLI
 add_executable(splinter_cli ${CLI_SOURCES} 3rdparty/linenoise.c 3rdparty/libgrawk.c 3rdparty/argparse.c)
 target_link_libraries(splinter_cli PRIVATE splinter_shared ${LUA_LDFLAGS} ${MATH_LIBRARY})
 target_include_directories(splinter_cli PRIVATE 
@@ -133,7 +120,6 @@ target_include_directories(splinter_cli PRIVATE
     ${LUA_INCLUDE_DIRS}
 )
 
-# Persistent CLI
 add_executable(splinterp_cli ${CLI_SOURCES} 3rdparty/linenoise.c 3rdparty/libgrawk.c 3rdparty/argparse.c)
 target_compile_definitions(splinterp_cli PRIVATE SPLINTER_PERSISTENT)
 target_include_directories(splinterp_cli PRIVATE 
@@ -178,12 +164,10 @@ endif()
 # --- Installation Logic ---
 include(GNUInstallDirs)
 
-# 1. Libraries
 install(TARGETS splinter_shared splinter_p_shared
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
-# 2. Binaries (Standard, Persistent, and Sidecars)
 install(TARGETS splinter_cli splinterp_cli
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
@@ -197,10 +181,8 @@ if(WITH_WASM)
     target_link_libraries(splinterp_cli PRIVATE wasmedge_lib)
 endif()
 
-# 3. Headers
 install(FILES splinter.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
-# 4. System Symlinks and ldconfig
 install(CODE "
     execute_process(COMMAND ln -sf ${CMAKE_INSTALL_FULL_BINDIR}/splinter_cli ${CMAKE_INSTALL_FULL_BINDIR}/splinterctl)
     message(STATUS \"Created symlink: splinterctl -> splinter_cli\")
@@ -275,10 +257,8 @@ add_custom_command(
 )
 add_custom_target(copy_test_splinterctl ALL DEPENDS "${SPLINTERCTL_TEST_BINARY}")
 
-# --- Testing and Documentation ---
 enable_testing()
 
-# 1. Define Executables
 add_executable(splinter_test splinter_test.c)
 target_link_libraries(splinter_test PRIVATE splinter_shared)
 
@@ -293,8 +273,13 @@ add_executable(splinterp_stress splinter_stress.c)
 target_compile_definitions(splinterp_stress PRIVATE SPLINTER_PERSISTENT)
 target_link_libraries(splinterp_stress PRIVATE splinter_p_shared)
 
-# 2. Fix RPATH (The fix for your "stopped running" issue)
-# This ensures binaries find libsplinter.so in the build dir before installation
+add_executable(sidecar sidecar.c)
+target_link_libraries(sidecar PRIVATE splinter_shared)
+
+add_executable(sidecarp sidecar.c)
+target_compile_definitions(sidecarp PRIVATE SPLINTER_PERSISTENT)
+target_link_libraries(sidecarp PRIVATE splinter_p_shared)
+
 set_target_properties(
     splinter_test 
     splinter_stress 
@@ -327,7 +312,7 @@ if(VALGRIND_EXEC)
 endif()
 
 # 4. Install Targets
-install(TARGETS splinter_test splinter_stress splinterp_test splinterp_stress 
+install(TARGETS splinter_test splinter_stress splinterp_test splinterp_stress sidecar sidecarp
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 install(FILES splinterrc_example DESTINATION ${CMAKE_INSTALL_DATADIR}/splinter RENAME splinterrc.example)
