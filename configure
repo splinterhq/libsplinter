@@ -1,0 +1,65 @@
+#!/bin/bash
+set -e
+
+help() {
+    echo "$0 configures your Splinter build for you."
+    echo "Use: $0 [options], Where [optiona] are:"
+    echo "--with-lua"
+    echo "--with-wasm"
+    echo "--with-rust"
+    echo "--with-embeddings"
+    echo "--with-numa"
+    echo "--with-llama"
+    echo ""
+    echo "--dev can be passed as the only flag to just enable everything."
+    echo ""
+    echo "Once done, you can run 'make' / 'make install' / etc."
+    echo "To force re-compile, run 'rm -rf build'."
+    echo ""
+    echo "Valgrind is auto-detected during configuration."
+}
+
+CONFIG=""
+
+for arg in "$@"; do 
+    [ "${arg}" == "--help" ] && {
+        help
+        exit 0
+    }
+
+    [ "${arg}" == "--dev" ] && {
+        CONFIG="-DWITH_LUA=ON -DWITH_WASM=ON -DWITH_RUST=ON -DWITH_EMBEDDINGS=ON -DWITH_LLAMA=ON "
+        break
+    }
+
+    [ "${arg}" == "--with-lua" ] && {
+        CONFIG="${CONFIG}-DWITH_LUA=ON "
+    }
+
+    [ "${arg}" == "--with-wasm" ] && {
+        CONFIG="${CONFIG}-DWITH_WASM=ON "
+    }
+
+    [ "${arg}" == "--with-rust" ] && {
+        CONFIG="${CONFIG}-DWITH_RUST=ON "
+    }
+
+    [ "${arg}" == "--with-embeddings" ] && {
+        CONFIG="${CONFIG} -DWITH_EMBEDDINGS=ON "
+    }
+
+    [ "${arg}" == "--with-llama" ] && {
+        CONFIG="${CONFIG} -DWITH_LLAMA=ON "
+    }
+
+done
+
+CONFIG="${CONFIG}.."
+
+cmake -B build
+cd build && cmake ${CONFIG}
+
+echo ""
+echo "Build configured; you can now run 'make'."
+echo "To install afterwards, run 'sudo -E make install'."
+echo ""
