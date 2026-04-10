@@ -11,9 +11,6 @@
 #include <wasmedge/wasmedge.h>
 #include "splinter_cli.h"
 
-/* * HOST FUNCTIONS: These allow the WASM guest to call back into Splinter.
- * We use WasmEdge_MemoryInstanceContext to read/write from the guest's linear memory.
- */
 
 static WasmEdge_Result host_splinter_get(void *Data, 
                                         const WasmEdge_CallingFrameContext *CallFrameCtx,
@@ -33,11 +30,8 @@ static WasmEdge_Result host_splinter_get(void *Data,
     // Cast away const for SetData if needed, or ensure MemCtx is compatible
     WasmEdge_MemoryInstanceGetData(MemCtx, (uint8_t *)key, key_ptr, 
                                    key_len < SPLINTER_KEY_MAX ? key_len : SPLINTER_KEY_MAX - 1);
-    
-    // ... (Your splinter_get logic) ...
-    
-    // Example of returning a value
-    Out[0] = WasmEdge_ValueGenI32(0); // Success RC
+    .
+    Out[0] = WasmEdge_ValueGenI32(0);
     return WasmEdge_Result_Success;
 }
 
@@ -77,10 +71,6 @@ static WasmEdge_Result host_splinter_set(void *Data,
     
     return WasmEdge_Result_Success;
 }
-
-/*
- * CLI COMMAND MODULE
- */
 
 void help_cmd_wasm(unsigned int level) {
     (void)level;
