@@ -2,6 +2,7 @@
  * @file splinter_cli_cmd_label.c
  * @brief Implements the CLI 'label' command to tag keys via Bloom filter.
  */
+#ifdef HAVE_LUA
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -275,3 +276,4 @@ int cmd_lua(int argc, char *argv[]) {
     lua_close(L);
     return 0;
 }
+#endif // HAVE_LUA
