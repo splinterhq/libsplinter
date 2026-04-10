@@ -45,9 +45,9 @@ using atomic_uint_least8_t  = std::atomic_uint_least8_t;
 #include "splinter.h"
 #include "llama-cpp.h"
 
-// ---------------------------------------------------------------------------
-// Label constants - high quadrant, visible in bloom without epoch change
-// ---------------------------------------------------------------------------
+// We use the last 3 labels since the highest quadrant
+// is down by one because the last one is reserved. This
+// is perfect for a "trifecta" and uses the odd group.
 #define SPLAIN_LABEL_WAITING    0x1000000000000000ULL
 #define SPLAIN_LABEL_SERVICING  0x2000000000000000ULL
 #define SPLAIN_LABEL_READY      0x4000000000000000ULL
@@ -64,10 +64,6 @@ void handle_signal(int sig) {
     if (sig == SIGINT || sig == SIGTERM) keep_running = 0;
 }
 
-// ---------------------------------------------------------------------------
-// debug_post: write or append a debug message to __debug on the bus.
-// Uses append so multiple writers don't clobber each other's output.
-// ---------------------------------------------------------------------------
 static void debug_post(const std::string &msg) {
     const std::string line = msg + "\n";
     // Try append first; if key doesn't exist yet, set it.
@@ -76,11 +72,6 @@ static void debug_post(const std::string &msg) {
     }
 }
 
-// ---------------------------------------------------------------------------
-// is_word_boundary: returns true if this decoded piece should trigger a flush.
-// BPE tokenizers encode word boundaries as a leading space on the token.
-// We also flush on newlines to preserve formatting.
-// ---------------------------------------------------------------------------
 static bool is_word_boundary(const std::string &piece) {
     if (piece.empty()) return false;
     if (piece[0] == ' ' || piece[0] == '\n') return true;
@@ -90,11 +81,6 @@ static bool is_word_boundary(const std::string &piece) {
     return false;
 }
 
-// ---------------------------------------------------------------------------
-// build_prompt: applies the model's chat template to a raw user message.
-// Falls back to a simple "<user>\n{msg}\n<assistant>\n" if no template
-// is found, which is wrong for most models but at least won't crash.
-// ---------------------------------------------------------------------------
 static std::string build_prompt(llama_model *model, const std::string &user_msg) {
     const char *tmpl = llama_model_chat_template(model, nullptr);
 
@@ -120,7 +106,7 @@ static std::string build_prompt(llama_model *model, const std::string &user_msg)
     return std::string(buf.data());
 }
 
-// ---------------------------------------------------------------------------
+
 // process_completion: the core work unit.
 //
 // 1. Reads the key's current value as the user prompt.
@@ -130,7 +116,6 @@ static std::string build_prompt(llama_model *model, const std::string &user_msg)
 // 5. Writes timing to ctime via splinter_set_slot_time.
 //
 // Returns the epoch we processed at (non-zero = success), 0 = skip/fail.
-// ---------------------------------------------------------------------------
 static uint64_t process_completion(
     const char      *key,
     llama_model     *model,
@@ -199,12 +184,12 @@ static uint64_t process_completion(
 
     tokens.resize(n_tokens);
 
-    // --- Overwrite the slot with the formatted prompt so the client
-    //     can see the full exchange including the assistant prefix.
-    //     Completion tokens will then be appended after this. ---
+    //  Overwrite the slot with the formatted prompt so the client
+    //  can see the full exchange including the assistant prefix.
+    //  Completion tokens will then be appended after this.
     splinter_set(key, prompt.c_str(), prompt.size());
 
-    // --- Build sampler chain ---
+    // Build sampler chain
     llama_sampler *slotSampler = llama_sampler_chain_init(llama_sampler_chain_default_params());
 
     // Add individual samplers
@@ -214,7 +199,7 @@ static uint64_t process_completion(
     // To select a token based on the final distribution:
     llama_sampler_chain_add(slotSampler, llama_sampler_init_dist(LLAMA_DEFAULT_SEED));
 
-    // --- Decode loop ---
+    // Decode loop
     uint64_t tick_start = splinter_now();
 
     // Prefill the prompt
@@ -306,14 +291,14 @@ static uint64_t process_completion(
     llama_memory_t mem = llama_get_memory(ctx);
     llama_memory_clear(mem, true);
     
-    // --- Timing backfill ---
+    // Timing backfill
     uint64_t tick_end = splinter_now();
     size_t processing_delta = static_cast<size_t>(tick_end - tick_start);
     auto duration = std::chrono::system_clock::now().time_since_epoch();
     uint64_t unix_ts = std::chrono::duration_cast<std::chrono::seconds>(duration).count();
     splinter_set_slot_time(key, SPL_TIME_CTIME, unix_ts, processing_delta);
 
-    // --- Label transition: servicing -> ready ---
+    // Label transition: servicing -> ready
     splinter_unset_label(key, SPLAIN_LABEL_SERVICING);
     splinter_set_label(key,   SPLAIN_LABEL_READY);
     splinter_bump_slot(key);
@@ -323,9 +308,6 @@ static uint64_t process_completion(
     return start_epoch;
 }
 
-// ---------------------------------------------------------------------------
-// enumerate callback: collects keys that are labeled inference-waiting
-// ---------------------------------------------------------------------------
 struct WaitingCollector {
     std::vector<std::string> keys;
 };
@@ -335,9 +317,6 @@ static void collect_waiting(const char *key, uint64_t /*epoch*/, void *user_data
     wc->keys.emplace_back(key);
 }
 
-// ---------------------------------------------------------------------------
-// main
-// ---------------------------------------------------------------------------
 int main(int argc, char **argv) {
     if (argc < 4) {
         std::cerr << "Usage: " << argv[0]
