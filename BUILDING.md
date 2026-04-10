@@ -1,16 +1,34 @@
 # Building Splinter
 
-See the main Makefile, which contains the cmake options in the primary
-build target. 
+Splinter uses CMake, and comes with a `configure` script to manage the various
+build options:
 
-To install, use:
+```bash
+Use: ./configure [options], Where [optiona] are:
+--with-lua
+--with-wasm
+--with-rust
+--with-embeddings
+--with-numa
+--with-llama
+```
+If you just want KV and embeddings:
 
-sudo -E make install
+```bash
+./configure --with-embeddings
+```
 
-(note the -E, especially if you build rust bindings)
+If you want embeddings and llama:
 
-The best thing to do is view the Makefile first, and you'll see what 
-the build options are. The `Makefile` in the repo root takes away the
-extra CMake keystrokes, but it needs customized based on how you want
-to build.
- 
+```bash
+./configure --with-embeddings --with-llama
+```
+
+If you want to build the whole kitchen sink:
+
+```bash
+./configure --dev
+```
+
+Next, use `make` and `sudo -E make install` to install the compiled programs and
+other build artifacts.
