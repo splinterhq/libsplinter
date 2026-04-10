@@ -195,15 +195,6 @@ cli_module_t command_modules[] = {
     },
     {
         17,
-        "lua",
-        3,
-        "Run a lua script",
-        -1,
-        &cmd_lua,
-        &help_cmd_lua
-    },
-    {
-        18,
         "orders",
         6,
         "Manage standard vector orders of a key",
@@ -212,7 +203,7 @@ cli_module_t command_modules[] = {
         &help_cmd_orders
     },
     {
-        19,
+        18,
         "bind",
         4,
         "Bind bloom labels to signal arena groups",
@@ -221,7 +212,7 @@ cli_module_t command_modules[] = {
         &help_cmd_bind
     },
     {
-        20,
+        19,
         "bump",
         4,
         "Bump a slot's epoch without doing any other work",
@@ -230,15 +221,41 @@ cli_module_t command_modules[] = {
         &help_cmd_bump
     },
     {
-        21, 
+        20, 
         "append",
         6,
-        "Append a value to an existing key (do not truncate prior to writing).",
+        "Append a value to an existing key (do not truncate prior to writing)",
         -1,
         &cmd_append,
         &help_cmd_append
     },
-    // The last null-filled element 
+#ifdef HAVE_WASM
+    {
+        21,
+        "wasm",
+        4,
+        "Run WASM via WASMEdge",
+        -1,
+        &cmd_wasm,
+        &help_cmd_wasm
+    },
+#endif // HAVE_WASM
+#ifdef HAVE_LUA
+    {
+#ifdef HAVE_WASM
+        22,
+#else 
+        21
+#endif
+        "lua",
+        3,
+        "Run a lua script",
+        -1,
+        &cmd_lua,
+        &help_cmd_lua
+    },
+#endif // HAVE_LUA
+// The last null-filled element 
     { 0, NULL, 0, NULL, -1,  NULL , NULL }
 };
 
@@ -393,7 +410,9 @@ static void completion(const char *buf, linenoiseCompletions *lc) {
         case 'l':
             linenoiseAddCompletion(lc, "list");
             linenoiseAddCompletion(lc, "label");
+#ifdef HAVE_LUA
             linenoiseAddCompletion(lc, "lua");
+#endif // HAVE_LUA        
             break;
         case 'm':
             linenoiseAddCompletion(lc, "math");
@@ -413,6 +432,9 @@ static void completion(const char *buf, linenoiseCompletions *lc) {
             break;
         case 'w':
             linenoiseAddCompletion(lc, "watch");
+#ifdef HAVE_WASM
+            linenoiseAddCompletion(lc, "wasm");
+#endif // HAVE_WASM
             break;
         default:
             break;
@@ -513,11 +535,13 @@ static char *hints(const char *buf, int *color, int *bold) {
         return "bel ";
     }
 
+#ifdef HAVE_LUA
     if (!strncasecmp(buf, "lu", 3)) {
         *color = 36;
         *bold = 1;
         return "a ";
     }
+#endif // HAVE_LUA
 
     if (!strncasecmp(buf, "m", 4)) {
         *color = 36;
@@ -551,10 +575,18 @@ static char *hints(const char *buf, int *color, int *bold) {
         return "set ";
     }
 
-    if (!strncasecmp(buf, "w", 5)) {
+#ifdef HAVE_WASM
+    if (!strncasecmp(buf, "was", 4)) {
         *color = 36;
         *bold = 1;
-        return "atch ";
+        return "m ";
+    }
+#endif // HAVE_WASM
+
+    if (!strncasecmp(buf, "wat", 5)) {
+        *color = 36;
+        *bold = 1;
+        return "ch ";
     }
 
     return NULL;

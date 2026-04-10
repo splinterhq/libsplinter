@@ -133,8 +133,10 @@ void help_cmd_math(unsigned int level);
 int cmd_label(int argc, char *argv[]);
 void help_cmd_label(unsigned int level);
 
+#ifdef HAVE_LUA
 int cmd_lua(int argc, char *argv[]);
 void help_cmd_lua(unsigned int level);
+#endif // HAVE_LUA
 
 int cmd_orders(int argc, char *argv[]);
 void help_cmd_orders(unsigned int level);
@@ -147,6 +149,11 @@ void help_cmd_bump(unsigned int level);
 
 int cmd_append(int argc, char *argv[]);
 void help_cmd_append(unsigned int level);
+
+#ifdef HAVE_WASM
+int cmd_wasm(int argc, char *argv[]);
+void help_cmd_wasm(unsigned int level);
+#endif // HAVE_WASM
 
 // And finally an array of modules to hold them all
 extern cli_module_t command_modules[];
