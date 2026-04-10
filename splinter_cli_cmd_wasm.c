@@ -30,7 +30,6 @@ static WasmEdge_Result host_splinter_get(void *Data,
     // Cast away const for SetData if needed, or ensure MemCtx is compatible
     WasmEdge_MemoryInstanceGetData(MemCtx, (uint8_t *)key, key_ptr, 
                                    key_len < SPLINTER_KEY_MAX ? key_len : SPLINTER_KEY_MAX - 1);
-    .
     Out[0] = WasmEdge_ValueGenI32(0);
     return WasmEdge_Result_Success;
 }
