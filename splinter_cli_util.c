@@ -155,7 +155,7 @@ uint16_t cli_type_to_bitmask(const char *type) {
     return 0; // not found
 }
 
-#ifdef SPLINTER_EMBEDDINGS
+#ifdef HAVE_EMBEDDINGS
 // Helper to check if the vector is actually populated
 static double calculate_magnitude(const float *vec, size_t len) {
     double sum = 0.0;
@@ -174,7 +174,7 @@ static uint32_t calculate_vec_checksum(const float *vec, size_t len) {
     }
     return check;
 }
-#endif
+#endif // HAVE_EMBEDDINGS
 
 /**
  * Dump a key's config
@@ -198,7 +198,7 @@ void cli_show_key_config(const char *key, const char *caller) {
     printf("type:       %s\n", cli_show_key_type(snap.type_flag));
     printf("key:        %s\n", snap.key);
 
-#ifdef SPLINTER_EMBEDDINGS
+#ifdef HAVE_EMBEDDINGS
     double mag = calculate_magnitude(snap.embedding, SPLINTER_EMBED_DIM);
     uint32_t vcheck = calculate_vec_checksum(snap.embedding, SPLINTER_EMBED_DIM);
     
