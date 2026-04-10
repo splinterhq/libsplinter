@@ -46,15 +46,15 @@ int cmd_get(int argc, char *argv[]) {
     // 2. Get the type metadata
     if (splinter_get_slot_snapshot(key, &snap) != 0) {
         // Fallback to string if snapshot fails
-        printf("%lu:%s\n", received, buf);
+        printf("%s\n", buf);
     } else {
         // 3. Type-Aware Printing
         if (snap.type_flag & SPL_SLOT_TYPE_BIGUINT) {
             uint64_t val = *(uint64_t *)buf;
-            printf("%lu:%llu\n", received, (unsigned long long)val);
+            printf("%llu\n", (unsigned long long)val);
         } else {
             // Standard string output
-            printf("%lu:%s\n", received, buf);
+            printf("%s\n", buf);
         }
     }
 
