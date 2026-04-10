@@ -122,6 +122,9 @@ Here's a list of the main things that set it apart:
 - **Lua Integration**: `splinter_cli` and `splinterctl` both feature easy lua
   scripting for data transformation.
 
+- **WASM Integration**: Run WASM directly on the bus (get/set exposed so far)
+  via WASMEdge embedding client-side.
+
 - **Doesn't Corrupt**: Doesn't require checking, operates cleanly.
 
 - **Unopinionated**: Implement LRU or TTL eviction how you like in a loadable
@@ -130,6 +133,14 @@ Here's a list of the main things that set it apart:
 - **Scales Across RDMA**: Splinter uses UNIX permissions and scales "out" easily
   so that other systems on the same RDMA network can access it at near-local
   speeds too. The same seqlock protection covers it all.
+
+- **Comes With Inference**: Run any `.GGUF` model right on the store with inference
+  tuned to signal groups and directly-accessible keys instead of sockets. Includes
+  almost-production-ready example code (based on the llama.cpp libraries).
+
+- **Ships With Debugging Tools**: Splinter's `sidecar` monitors let you keep an eye
+  on critical system metrics while observing maintenance chatter in real-time on 
+  your bus.
 
 ### The "Good Process" Approach:
 
@@ -202,6 +213,8 @@ you enable them during the build:
   enable the nomic inference shard | `WITH_LLAMA=1` during build
 - Valgrind (`libvalgrind-dev`) for tighter Valgrind test integration |
   `WITH_VALGRIND=1` during build
+- WASM (Via WasmEdge). You'll need [their code](https://github.com/WasmEdge/WasmEdge) 
+  as well as the `wabt` system package (available via `apt-get`)
 
 Splinter can be configured to just be KV (no space partitioned for embeddings)
 by passing `WITH_EMBEDDINGS=0` to the build command (for very lean
@@ -227,6 +240,7 @@ configurations).
   `OR`, `XOR`, `AND`, and `NOT` operations directly in shared memory.
 - **Tandem Keys**: Multi-order support allows for atomic updates to related
   signals (e.g., `sensor.1` for velocity of `sensor`, `sensor.2` for acceleration).
+- **Lua** And **WASM**: Client-side exposure of Splinter to WASMEdge and Lua5x.
 
 #### 3. Mechanical Hygiene (Auto-Scrubbing)
 
