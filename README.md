@@ -18,6 +18,22 @@ something completely different. Given the sparse availability of options,
 different seemed most beneficial to both the current need as well as the current
 ecosystem.
 
+## Quick Start:
+
+Splinter uses CMake, so please make sure you have that installed. But, you don't have
+to manage configurations manually. There's an included `./configure` style script:
+
+```bash
+git clone git@github.com:splinterhq/libsplinter.git
+cd libsplinter
+./configure --with-embeddings
+make
+sudo -E make install
+```
+
+You can use `configure --help` for  more options. See below for packages Splinter
+can link against and use.
+
 ## The Swimming Pool Analogy: Understanding Splinter "Visually"
 
 There is nothing quite like Splinter, so it helps to be able to visualize the
