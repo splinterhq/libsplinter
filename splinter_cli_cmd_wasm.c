@@ -1,6 +1,8 @@
 /**
  * @file splinter_cli_cmd_wasm.c
  * @brief Implements the CLI 'wasm' command to execute WASM modules with Splinter host functions.
+ * This is half-generated and updated each time WASMEdge's API changes.
+ * TODO: Move this and lua blocks into a language hook provider of some kind. 
  */
 
 #ifdef HAVE_WASM
@@ -11,6 +13,9 @@
 #include <wasmedge/wasmedge.h>
 #include "splinter_cli.h"
 
+// NOTE: There's a strict order to how the VM here has to be dispatched 
+// as shown in comments. Be *acutely* aware of it when / if refactoring
+// (ask me how I know someday).
 
 static WasmEdge_Result host_splinter_get(void *Data, 
                                         const WasmEdge_CallingFrameContext *CallFrameCtx,
