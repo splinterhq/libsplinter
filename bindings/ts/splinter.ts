@@ -2,8 +2,19 @@
  * TS FFI For Splinter
  * Auto-generated from splinter.h with Gemini 3
  * Minor adjustments applied
- * License: MIT 
- */
+ * License: Apache 2 
+ *
+ * Still Needed:
+ * splinter_pulse_keygroup()
+ * splinter_enumerate_matches()
+ * splinter_list()
+ * splinter_set_named_type()
+ * splinter_open_or_create()
+ * splinter_create_or_open()
+ * 
+ * The rest don't make as much sense in TS as they do in C.
+*/
+
 import process from "node:process";
 
 const LIB_NAME = "libsplinter";
@@ -87,7 +98,7 @@ class BunSplinter implements SplinterStore {
 
     set(key: string, value: string | Uint8Array): boolean {
         const data = typeof value === "string" ? encoder.encode(value) : value;
-        // @ts-ignore: Deno
+        // @ts-ignore: Bun specific
         const { ptr } = require("bun:ffi");
         return this.ffi.symbols.splinter_set(encoder.encode(key + "\0"), ptr(data), data.length) === 0;
     }
@@ -334,7 +345,6 @@ export class SplinterWatcher {
      * Tells the C-engine: "Pulse Group X when a slot with Mask Y changes."
      */
     registerLabelInterest(mask: bigint, groupId: number): boolean {
-        // Calling the FFI splinter_watch_label_register
         return this.store.watchLabelRegister(mask, groupId) === 0;
     }
 
