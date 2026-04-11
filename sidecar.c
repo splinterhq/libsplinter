@@ -21,7 +21,7 @@
  *  
  * Copyright 2025 Tim Post <timthepost@protonmail.com>
  *
- * License: MIT
+ * License: Apache 2
  */
 
 #define _XOPEN_SOURCE 700
@@ -443,8 +443,7 @@ int main(int argc, char **argv) {
     parse_loadavg(&loads);
     parse_power_status(&power);
 
-    // tell splinter we want any changes to debug keys to pulse signal
-    // group 0x4 (group 3).
+    // tell splinter we want any changes to debug keys to pulse us
     if (splinter_watch_label_register(debug_bloom, debug_signal_group) != 0) {
         fprintf(stderr,"* spl:watch(!)\n");
     }
