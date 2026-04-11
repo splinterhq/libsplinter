@@ -134,16 +134,16 @@ int main(void) {
   TEST("correct number of keys", key_count == 3);
   TEST("unset key", splinter_unset("key2") >= 0);
 
-  int original_av = splinter_get_av();
-  TEST("set auto scrubbing mode", splinter_set_av(0) == 0);
-  TEST("get auto scrubbing mode", splinter_get_av() == 0);
-  splinter_set_av((uint32_t) original_av);
+  TEST("get mop mode before test (should be zero)", (splinter_get_mop() == 0));
+  TEST("set mop mode to hybrid", splinter_set_mop(1) == 0);
+  TEST("get mop mode is hybrid", splinter_get_mop() == 1);
+  TEST("turn off mop", splinter_set_mop(0) == 0);
 
   splinter_header_snapshot_t snap = { 0 };
   TEST("get header snapshot", splinter_get_header_snapshot(&snap) == 0);
   TEST("magic number greater than zero", snap.magic > 0);
   TEST("epoch greater than zero", snap.epoch > 0);
-  TEST("auto_scrubbing is really off", (snap.core_flags & SPL_SYS_AUTO_SCRUB) == 0 ? 1 : 0);
+  TEST("auto_mopping is really off", (snap.core_flags & SPL_SYS_AUTO_SCRUB) == 0 ? 1 : 0);
   TEST("slots are non-zero", snap.slots > 0);
   
   splinter_slot_snapshot_t snap1 = { 0 };
@@ -355,24 +355,6 @@ TEST("unset specific label mask", splinter_unset_label(label_key, LABEL_A) == 0)
 splinter_get_slot_snapshot(label_key, &label_snap);
 TEST("label A is cleared", (label_snap.bloom & LABEL_A) == 0);
 TEST("label B is preserved", (label_snap.bloom & LABEL_B) != 0);
-
-/* --- Hybrid Auto-Scrub & Hygiene Tests --- */
-
-// Test the "One Fell Swoop" transition
-TEST("set hybrid av mode (combined gate + mop)", splinter_set_hybrid_av() == 0);
-TEST("get hybrid av mode returns 1", splinter_get_hybrid_av() == 1);
-TEST("hybrid av automatically enabled regular av gate", splinter_get_av() == 1);
-
-splinter_header_snapshot_t hybrid_snap = { 0 };
-splinter_get_header_snapshot(&hybrid_snap);
-TEST("header snapshot confirms both bits (AUTO | HYBRID) are set",
-      (hybrid_snap.core_flags & SPL_SYS_AUTO_SCRUB) &&
-      (hybrid_snap.core_flags & SPL_SYS_HYBRID_SCRUB));
-
-// Verify the reset: one motion to clear the path
-TEST("set_av(0) clears both bits in one motion", splinter_set_av(0) == 0);
-TEST("get hybrid av returns 0 after full reset", splinter_get_hybrid_av() == 0);
-TEST("get regular av returns 0 after full reset", splinter_get_av() == 0);
 
 /* --- Purge / Centerline Sweep Tests --- */
 

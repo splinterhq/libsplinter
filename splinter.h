@@ -316,7 +316,7 @@ int splinter_create_or_open(const char *name_or_path, size_t slots, size_t max_v
  */
 void splinter_close(void);
 
-// About Splinter AV / Auto Scrub
+// About Splinter "Mop" Modes
 // Because splinter has static geometry, there's no 'row level' cleanup required.
 // We only have key -> value, where value can be up to max_val_sz.
 //
@@ -333,14 +333,14 @@ void splinter_close(void);
 // To prevent this while respecting the "Centerline" of performance, it offers
 // three modes of "Auto Scrubbing":
 //
-// 1. None (Default): Behavior similar to a file system. Fastest throughput 
+// 0. None (Default): Behavior similar to a file system. Fastest throughput 
 //    (3.3M+ ops/sec on old HW) with zero energetic waste.
 //
-// 2. Hybrid (Fast Mop): Zero out the incoming length plus a 64-byte aligned 
+// 1. Hybrid (Fast Mop): Zero out the incoming length plus a 64-byte aligned 
 //    "slop" region. This prevents SIMD/Vectorized loads from seeing stale 
 //    data without the cost of a full boil.
 //
-// 3. Full (Boil): Zero out the entire max_val_sz assigned to that slot. 
+// 2. Full (Boil): Zero out the entire max_val_sz assigned to that slot. 
 //    This ensures absolute hygiene for LLM memory and forensics, but 
 //    it "squats" on the seqlock longer.
 //
@@ -353,21 +353,19 @@ void splinter_close(void);
 // it only ensures the manifold is clean.
 
 /**
- * @brief Set the value of the auto_scrub flag on the current bus. 
+ * @brief Control Splinter's mop mode. 
+ * @param unsigned mode:  0 = off, 1 = hybrid, 2 = full boil.
+ * @return 0 on success, -1 on invalid mode, -2 if something is wrong with the store
+ * This will replace all _av() functions.
  */
- int splinter_set_av(unsigned int mode);
-
- /**
-  * @brief Engage hybrid auto scrub 
-  * @return int (sets errno) 
-  */
-int splinter_set_hybrid_av(void);
+int splinter_set_mop(unsigned int mode);
 
 /**
- * @brief Check hybrid status of auto scrub engagement
- * @return int
+ * @brief Get the current "mop mode"
+ * @return 0 = off, 1 = hybrid, 2 = full boil. -2 = no store.
  */
-int splinter_get_hybrid_av(void);
+int splinter_get_mop(void);
+
 
 /**
  * @brief Check each key, and zero out memory past the value length to the 
@@ -376,9 +374,31 @@ int splinter_get_hybrid_av(void);
  */
 void splinter_purge(void);
 
+
+/**
+ * @brief Set the value of the auto_scrub flag on the current bus. 
+ */
+__attribute__((deprecated("Use splinter_set_mop() instead.")))
+int splinter_set_av(unsigned int mode);
+
+ /**
+  * @brief Engage hybrid auto scrub 
+  * @return int (sets errno) 
+  */
+__attribute__((deprecated("Use splinter_set_mop() instead.")))
+int splinter_set_hybrid_av(void);
+
+/**
+ * @brief Check hybrid status of auto scrub engagement
+ * @return int
+ */
+__attribute__((deprecated("Use splinter_get_mop() instead.")))
+int splinter_get_hybrid_av(void);
+
  /**
   * @brief Get the value of the auto_scrub flag on the current bus as integer.
   */
+__attribute__((deprecated("Use splinter_get_mop() instead.")))
 int splinter_get_av(void);
 
 /**

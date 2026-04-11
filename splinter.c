@@ -249,6 +249,50 @@ int splinter_open_or_create(const char *name_or_path, size_t slots, size_t max_v
     return (ret == 0 ? ret : splinter_create(name_or_path, slots, max_value_sz));
 }
 
+
+/**
+ * @brief Control Splinter's mop mode. 
+ * @param unsigned mode:  0 = off, 1 = hybrid, 2 = full boil.
+ * @return 0 on success, -1 on invalid mode, -2 if something is wrong with the store
+ * This will replace all _av() functions.
+ */
+int splinter_set_mop(unsigned int mode) {
+    if (!H) return -2;
+
+    switch (mode) {
+        case 0:
+            // clear both at once
+            atomic_fetch_and(&H->core_flags, ~(SPL_SYS_AUTO_SCRUB | SPL_SYS_HYBRID_SCRUB));
+            break;
+        case 1:
+            // here we make auto scrub eligible, and then immediately divert to hybrid mode.
+            // this lands anything in-progress into hybrid if that's desired. Otherwise it
+            // slams on the full-boil breaks, probably unwittingly.
+            atomic_fetch_or(&H->core_flags, SPL_SYS_AUTO_SCRUB | SPL_SYS_HYBRID_SCRUB);
+            break;
+        case 2:
+            // I wish hotels could work like this. 
+            // Zero out the entire region pre-write. Full boil.
+            splinter_config_set(H, SPL_SYS_AUTO_SCRUB);
+            break;
+        default:
+            errno = EOPNOTSUPP;
+            return -1;
+    }
+    return 0;
+}
+
+/**
+ * @brief Get the current "mop mode"
+ * @return 0 = off, 1 = hybrid, 2 = full boil. -2 = no store.
+ */
+int splinter_get_mop(void) {
+    if (!H) return -2;
+    if (splinter_config_test(H, SPL_SYS_HYBRID_SCRUB)) return 1;
+    if (splinter_config_test(H, SPL_SYS_AUTO_SCRUB)) return 2;
+    return 0;
+}
+
 /**
  * @brief Sets the auto scrub atomic feature flag of the current bus (0 or 1)
  * @return -2 if the bus is unavailable, 0 otherwise.
