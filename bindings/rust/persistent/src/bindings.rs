@@ -598,6 +598,18 @@ unsafe extern "C" {
     pub fn splinter_close();
 }
 unsafe extern "C" {
+    #[doc = " @brief Control Splinter's mop mode.\n @param unsigned mode:  0 = off, 1 = hybrid, 2 = full boil.\n @return 0 on success, -1 on invalid mode, -2 if something is wrong with the store\n This will replace all _av() functions."]
+    pub fn splinter_set_mop(mode: ::std::os::raw::c_uint) -> ::std::os::raw::c_int;
+}
+unsafe extern "C" {
+    #[doc = " @brief Get the current \"mop mode\"\n @return 0 = off, 1 = hybrid, 2 = full boil. -2 = no store."]
+    pub fn splinter_get_mop() -> ::std::os::raw::c_int;
+}
+unsafe extern "C" {
+    #[doc = " @brief Check each key, and zero out memory past the value length to the\n allocated slot length (essentially sweep out any old data). Designed to be\n used as part of backfill runs when I/O slamming has stopped."]
+    pub fn splinter_purge();
+}
+unsafe extern "C" {
     #[doc = " @brief Set the value of the auto_scrub flag on the current bus."]
     pub fn splinter_set_av(mode: ::std::os::raw::c_uint) -> ::std::os::raw::c_int;
 }
@@ -608,10 +620,6 @@ unsafe extern "C" {
 unsafe extern "C" {
     #[doc = " @brief Check hybrid status of auto scrub engagement\n @return int"]
     pub fn splinter_get_hybrid_av() -> ::std::os::raw::c_int;
-}
-unsafe extern "C" {
-    #[doc = " @brief Check each key, and zero out memory past the value length to the\n allocated slot length (essentially sweep out any old data). Designed to be\n used as part of backfill runs when I/O slamming has stopped."]
-    pub fn splinter_purge();
 }
 unsafe extern "C" {
     #[doc = " @brief Get the value of the auto_scrub flag on the current bus as integer."]
