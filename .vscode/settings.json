@@ -2,6 +2,7 @@
     "deno.enable": true,
     "cSpell.words": [
         "bindgen",
+        "keygroup",
         "libc",
         "rlib",
         "Splainference",
