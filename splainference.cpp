@@ -81,6 +81,8 @@ static bool is_word_boundary(const std::string &piece) {
     return false;
 }
 
+// todo - look at storing a system prompt in a key.
+
 static std::string build_prompt(llama_model *model, const std::string &user_msg) {
     const char *tmpl = llama_model_chat_template(model, nullptr);
 
