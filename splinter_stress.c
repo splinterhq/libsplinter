@@ -317,7 +317,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    if (cfg.scrub) splinter_set_hybrid_av();
+    if (cfg.scrub) splinter_set_mop(1);
 
     char **keys = calloc((size_t)cfg.num_keys, sizeof(char*));
     if (!keys) { perror("calloc"); return 1; }

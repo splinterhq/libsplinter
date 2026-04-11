@@ -17,7 +17,7 @@ void help_cmd_config(unsigned int level) {
     (void) level;
     printf("Usage: %s\n       %s [feature_flag] [flag_value]\n", modname, modname);
     printf("If no other arguments are given, %s displays the current bus settings.\n", modname);
-    printf("Supported flags:\n\t\"av\" -> 1 or 0\n\n");
+    printf("Supported flags:\n\t\"mop\" -> 0, 1 or 2\n\n");
     return;
 }
 
@@ -52,11 +52,11 @@ int cmd_config(int argc, char *argv[]) {
         // later on ...
         int opt = cli_safer_atoi(argv[2]);
         if (!strncmp(argv[1], "av", 2)) {
-            if (opt > 1 || opt < 0) {
-                fprintf(stderr, "Invalid setting flag (0 = off, 1 = on)");
+            if (opt > 2 || opt < 0) {
+                fprintf(stderr, "Invalid setting flag (0 = off, 1 = hybrid, 2 = boil)");
                 return 1;
             }
-            return splinter_set_av(opt);
+            return splinter_set_mop(opt);
         } else {
             fprintf(stderr, "Invalid configuration token: %s\n", argv[1]);
             return 1;
