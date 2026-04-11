@@ -442,8 +442,7 @@ int splinter_unset(const char *key) {
             return ret;
         }
     }
-
-    return -1; // didn't find it
+    return -1;
 }
 
 /**
@@ -573,8 +572,7 @@ int splinter_get(const char *key, void *buf, size_t buf_sz, size_t *out_sz) {
             return -1;
         }
     }
-
-    return -1; // Not found
+    return -1;
 }
 
 /**
@@ -936,7 +934,6 @@ int splinter_set_named_type(const char *key, uint16_t mask) {
             return 0;
         }
     }
-    errno = ENOENT;
     return -1;
 }
 
@@ -977,7 +974,6 @@ int splinter_set_slot_time(const char *key, unsigned short mode, uint64_t epoch,
         }
     }
   }
-  errno = ENOENT;
   return -1;
 }
 
@@ -1045,7 +1041,6 @@ int splinter_integer_op(const char *key, splinter_integer_op_t op, const void *m
             return 0;
         }
     }
-    errno = ENOENT;
     return -1;
 }
 
@@ -1156,7 +1151,6 @@ int splinter_set_label(const char *key, uint64_t mask) {
             return 0;
         }
     }
-    errno = ENOENT;
     return -1;
 }
 
@@ -1182,7 +1176,6 @@ int splinter_unset_label(const char *key, uint64_t mask) {
             return 0;
         }
     }
-    errno = ENOENT;
     return -1;
 }
 
@@ -1229,24 +1222,6 @@ void splinter_client_unset_tandem(const char *base_key, uint8_t orders) {
     }
 }
 
-// This is the only place where Splinter deliberately talks to Linux, and it's 
-// only to ask for wake-up service, not arbitration or sockets :)
-//
-// To pull this off, we have to be able to pulse FD references based on bitmask
-// subscription (and unsubscription) within the time that we can 'stand' on
-// the seqlock with a syscall. 
-
-// If we stand on it *too* long, other writers will spin in EAGAIN loops unless 
-// they have exponential backoff logic, and readers are way more likely to see 
-// torn reads even with deliberate and defensive atomic fencing.
-//
-// It is 99.9% bitmask traversal and .1% write() (as a process). If you try
-// to cram any more into it than what's here, expect subtle problems.
-//
-// tl;dr - once you flip an epoch odd, do ONE thing REALLY fast and get
-// off of it (flip it over to even again, then deliberately fence for weaker
-// memory model support (ARM/Throttled/Mobile)) 
-
 /**
  * @brief Register the current process's interest in a key's group signal.
  * @param key The key to watch.
@@ -1272,8 +1247,7 @@ int splinter_watch_register(const char *key, uint8_t group_id) {
             return 0;
         }
     }
-
-    return -1; // not found
+    return -1;
 }
 
 /**
@@ -1292,7 +1266,6 @@ int splinter_watch_label_register(uint64_t bloom_mask, uint8_t group_id) {
             atomic_store_explicit(&H->bloom_watches[i], group_id, memory_order_release);
         }
     }
-
     return 0;
 }
 
@@ -1318,8 +1291,6 @@ int splinter_pulse_keygroup(const char *key) {
             return 0;
         }
     }
-
-    // not found 
     return -1;
 }
 
@@ -1371,8 +1342,7 @@ int splinter_watch_unregister(const char *key, uint8_t group_id) {
             return 0;
         }
     }
-
-    return -1; // not found
+    return -1;
 }
 
 /**
@@ -1431,7 +1401,6 @@ int splinter_set_as_system(const char *key) {
                 return 0;
         }
     }
-    // not found
     return -1;
 }
 
@@ -1463,7 +1432,6 @@ int splinter_append(const char *key, const void *data, size_t data_len, size_t *
         if (atomic_load_explicit(&slot->hash, memory_order_acquire) != h) continue;
         if (strncmp(slot->key, key, SPLINTER_KEY_MAX) != 0) continue;
 
-        /* Seqlock acquire: spin if a writer is already active */
         uint64_t e = atomic_load_explicit(&slot->epoch, memory_order_relaxed);
         if (e & 1ull) { errno = EAGAIN; return -1; }
 
@@ -1474,7 +1442,6 @@ int splinter_append(const char *key, const void *data, size_t data_len, size_t *
             return -1;
         }
 
-        /* We hold the lock (epoch is odd). Check capacity. */
         size_t cur_len = (size_t)atomic_load_explicit(&slot->val_len, memory_order_relaxed);
         if (cur_len + data_len > (size_t)H->max_val_sz) {
             /* Release the lock before bailing */
@@ -1483,7 +1450,6 @@ int splinter_append(const char *key, const void *data, size_t data_len, size_t *
             return -1;
         }
 
-        /* Write the new bytes immediately after existing data */
         uint8_t *dst = VALUES + slot->val_off + cur_len;
         memcpy(dst, data, data_len);
 
@@ -1498,6 +1464,5 @@ int splinter_append(const char *key, const void *data, size_t data_len, size_t *
 
         return 0;
     }
-
-    return -1; /* key not found */
+    return -1; 
 }

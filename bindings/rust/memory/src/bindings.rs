@@ -610,22 +610,6 @@ unsafe extern "C" {
     pub fn splinter_purge();
 }
 unsafe extern "C" {
-    #[doc = " @brief Set the value of the auto_scrub flag on the current bus."]
-    pub fn splinter_set_av(mode: ::std::os::raw::c_uint) -> ::std::os::raw::c_int;
-}
-unsafe extern "C" {
-    #[doc = " @brief Engage hybrid auto scrub\n @return int (sets errno)"]
-    pub fn splinter_set_hybrid_av() -> ::std::os::raw::c_int;
-}
-unsafe extern "C" {
-    #[doc = " @brief Check hybrid status of auto scrub engagement\n @return int"]
-    pub fn splinter_get_hybrid_av() -> ::std::os::raw::c_int;
-}
-unsafe extern "C" {
-    #[doc = " @brief Get the value of the auto_scrub flag on the current bus as integer."]
-    pub fn splinter_get_av() -> ::std::os::raw::c_int;
-}
-unsafe extern "C" {
     #[doc = " @brief Sets or updates a key-value pair in the store.\n @param key The null-terminated key string.\n @param val Pointer to the value data.\n @param len The length of the value data. Must not exceed `max_val_sz`.\n @return 0 on success, -1 on failure (e.g., store is full)."]
     pub fn splinter_set(
         key: *const ::std::os::raw::c_char,
@@ -816,4 +800,20 @@ unsafe extern "C" {
         data_len: usize,
         new_len: *mut usize,
     ) -> ::std::os::raw::c_int;
+}
+unsafe extern "C" {
+    #[doc = " @brief Set the value of the auto_scrub flag on the current bus."]
+    pub fn splinter_set_av(mode: ::std::os::raw::c_uint) -> ::std::os::raw::c_int;
+}
+unsafe extern "C" {
+    #[doc = " @brief Engage hybrid auto scrub\n @return int (sets errno)"]
+    pub fn splinter_set_hybrid_av() -> ::std::os::raw::c_int;
+}
+unsafe extern "C" {
+    #[doc = " @brief Check hybrid status of auto scrub engagement\n @return int"]
+    pub fn splinter_get_hybrid_av() -> ::std::os::raw::c_int;
+}
+unsafe extern "C" {
+    #[doc = " @brief Get the value of the auto_scrub flag on the current bus as integer."]
+    pub fn splinter_get_av() -> ::std::os::raw::c_int;
 }

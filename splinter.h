@@ -366,40 +366,12 @@ int splinter_set_mop(unsigned int mode);
  */
 int splinter_get_mop(void);
 
-
 /**
  * @brief Check each key, and zero out memory past the value length to the 
  * allocated slot length (essentially sweep out any old data). Designed to be
  * used as part of backfill runs when I/O slamming has stopped.
  */
 void splinter_purge(void);
-
-
-/**
- * @brief Set the value of the auto_scrub flag on the current bus. 
- */
-__attribute__((deprecated("Use splinter_set_mop() instead.")))
-int splinter_set_av(unsigned int mode);
-
- /**
-  * @brief Engage hybrid auto scrub 
-  * @return int (sets errno) 
-  */
-__attribute__((deprecated("Use splinter_set_mop() instead.")))
-int splinter_set_hybrid_av(void);
-
-/**
- * @brief Check hybrid status of auto scrub engagement
- * @return int
- */
-__attribute__((deprecated("Use splinter_get_mop() instead.")))
-int splinter_get_hybrid_av(void);
-
- /**
-  * @brief Get the value of the auto_scrub flag on the current bus as integer.
-  */
-__attribute__((deprecated("Use splinter_get_mop() instead.")))
-int splinter_get_av(void);
 
 /**
  * @brief Sets or updates a key-value pair in the store.
@@ -678,7 +650,6 @@ void splinter_enumerate_matches(uint64_t mask,
  */
 int splinter_set_as_system(const char *key);
 
-
 /**
  * @brief Appends data to an existing key's value in-place.
  * @param key      The null-terminated key string.
@@ -688,6 +659,37 @@ int splinter_set_as_system(const char *key);
  * @return 0 on success, -1 if key not found or overflow, -2 if args invalid.
  */
 int splinter_append(const char *key, const void *data, size_t data_len, size_t *new_len);
+
+// 
+// DEPRECATED - DO NOT USE _av() FUNCTIONS - THEY WILL BE REMOVED
+// BEFORE THE NEXT MAJOR RELEASE (2 minor releases from now)
+//
+
+/**
+ * @brief Set the value of the auto_scrub flag on the current bus. 
+ */
+__attribute__((deprecated("Use splinter_set_mop() instead.")))
+int splinter_set_av(unsigned int mode);
+
+ /**
+  * @brief Engage hybrid auto scrub 
+  * @return int (sets errno) 
+  */
+__attribute__((deprecated("Use splinter_set_mop() instead.")))
+int splinter_set_hybrid_av(void);
+
+/**
+ * @brief Check hybrid status of auto scrub engagement
+ * @return int
+ */
+__attribute__((deprecated("Use splinter_get_mop() instead.")))
+int splinter_get_hybrid_av(void);
+
+ /**
+  * @brief Get the value of the auto_scrub flag on the current bus as integer.
+  */
+__attribute__((deprecated("Use splinter_get_mop() instead.")))
+int splinter_get_av(void);
 
 #ifdef __cplusplus
 }
