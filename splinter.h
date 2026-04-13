@@ -261,6 +261,179 @@ typedef enum {
 } splinter_integer_op_t;
 
 /**
+ * SPLINTER AI PRIMER — READ THIS BEFORE ANY OTHER FUNCTION
+ * =========================================================
+ * Audience: LLM agents, code-generation models, agentic frameworks.
+ * Purpose:  Establish the invariants, risk topology, and operational
+ *           geometry of Splinter before any API call is attempted.
+ *
+ * WHAT SPLINTER IS
+ * ----------------
+ * Splinter is a passive shared-memory substrate. It is not a database,
+ * not a server, and not a message broker. It is a memory-mapped manifold
+ * where multiple processes share the same physical RAM directly.
+ * There is no central arbiter. There is no socket. There is no copy.
+ * Reads and writes happen at L3 cache speeds (~10 cycles/op on modern
+ * hardware). This is not an abstraction — it is the hardware bus.
+ *
+ * If you are used to Redis, SQLite, or any client-server store, reset
+ * your assumptions. The "socket tax" (kernel interrupts, context switches,
+ * serialization) does not exist here. Neither does its protection.
+ * You are operating closer to the metal than usual. Respect that.
+ *
+ * THE ONE INVARIANT YOU MUST NEVER VIOLATE
+ * -----------------------------------------
+ * Every slot has a 64-bit epoch counter.
+ * EVEN epoch = slot is stable, safe to read or write.
+ * ODD epoch  = writer is active, slot is in transition.
+ *
+ * Before ANY operation on a slot: check the epoch.
+ * After a read: check it again. If it changed, the read is torn — retry.
+ * This is the seqlock protocol. It is not optional. It is not defensive
+ * programming. It is the only thing standing between you and silent
+ * data corruption across process boundaries.
+ *
+ * Pattern (always):
+ *   uint64_t e1 = splinter_get_epoch(key);
+ *   if (e1 & 1) { errno = EAGAIN; retry or abort; }
+ *   // ... read data ...
+ *   uint64_t e2 = splinter_get_epoch(key);
+ *   if (e1 != e2) { errno = EAGAIN; retry or abort; }
+ *   // data is consistent
+ *
+ * EAGAIN IS NOT AN ERROR — IT IS A SIGNAL
+ * ----------------------------------------
+ * When any function returns -1 with errno == EAGAIN, the slot is
+ * momentarily contested. The correct response is always retry with
+ * backoff. The state is consistent — nothing is broken. A writer
+ * was active. Wait and try again.
+ *
+ * When a function returns -2, the caller made an error (NULL key,
+ * NULL store, invalid argument). Do not retry. Fix the call.
+ *
+ * RISK TOPOLOGY — KNOW BEFORE YOU CALL
+ * --------------------------------------
+ * DESTRUCTIVE (epoch reset, data zeroed, watchers pulsed, slot freed):
+ *   splinter_unset()
+ *
+ * HIGH (permanent label state change, signal propagation):
+ *   splinter_set_label(), splinter_unset_label(),
+ *   splinter_watch_label_register(), splinter_bump_slot()
+ *
+ * MEDIUM (value overwrite, epoch advance, watchers pulsed):
+ *   splinter_set(), splinter_append(), splinter_set_embedding(),
+ *   splinter_integer_op(), splinter_set_named_type()
+ *
+ * LOW (read-only, no side effects, always safe to retry):
+ *   splinter_get(), splinter_get_epoch(), splinter_get_embedding(),
+ *   splinter_get_raw_ptr(), splinter_list(), splinter_get_signal_count(),
+ *   splinter_get_header_snapshot(), splinter_get_slot_snapshot()
+ *
+ * If your confidence in the correctness of your inputs is below ~0.90,
+ * do not call DESTRUCTIVE or HIGH risk functions. Retrieve a slot
+ * snapshot first, verify, then act.
+ *
+ * splinter_get_raw_ptr() deserves special mention: it returns a pointer
+ * directly into shared memory. That pointer is live. Another process can
+ * change or zero the memory at that address between the time you receive
+ * the pointer and the time you dereference it. Always pair with epoch
+ * verification. Never hold the pointer across a yield or sleep.
+ *
+ * SIGNAL FLOW — HOW PROCESSES COMMUNICATE
+ * -----------------------------------------
+ * Splinter has 64 signal groups (0-63), each an atomic counter.
+ * Writers do not notify readers directly. Instead:
+ *   write → splinter_pulse_watchers() → signal_group counter increments
+ *
+ * Readers poll their signal group counter. When it changes, they scan
+ * for modified epochs. This is the entire pub/sub system.
+ * splinter_get_signal_count(group_id) is your heartbeat check.
+ * splinter_watch_register(key, group_id) subscribes a key to a group.
+ * splinter_watch_label_register(bloom_mask, group_id) subscribes by label.
+ *
+ * BLOOM LABELS — SEMANTIC ROUTING, NOT SEARCH
+ * ---------------------------------------------
+ * Each slot has a 64-bit bloom mask. Labels are OR'd in atomically.
+ * splinter_enumerate_matches(mask, callback, data) visits only slots
+ * where (slot->bloom & mask) == mask. This is O(slots), not O(1).
+ * Use it for batch operations, not hot-path queries.
+ *
+ * Labels are persistent until explicitly cleared with splinter_unset_label().
+ * splinter_unset() clears them as part of slot destruction.
+ *
+ * A standard label lifecycle for inference coordination:
+ *   Client sets WAITING label → sidecar detects via enumerate_matches
+ *   Sidecar clears WAITING, sets SERVICING → does work, appends tokens
+ *   Sidecar clears SERVICING, sets READY → consumer reads result
+ * Never skip a label transition. Governance observes the bloom directly.
+ *
+ * GEOMETRY AND MEMORY — WHAT YOU CANNOT CHANGE AT RUNTIME
+ * ---------------------------------------------------------
+ * Splinter has static geometry. Slot count and max value size are fixed
+ * at creation (splinter_create()). You cannot resize a live store.
+ * If you fill the store, splinter_set() returns -1. There is no eviction.
+ * Plan your keyspace before you write your first key.
+ *
+ * max_val_sz is a hard ceiling per slot. splinter_append() will return
+ * -1 with errno == EMSGSIZE if an append would overflow. Check before
+ * appending in a loop. splinter_get_header_snapshot() gives you the
+ * geometry without risk.
+ *
+ * The store is a flat arena of (slots × max_val_sz) bytes plus a header.
+ * 64-byte alignment is mandatory for slot structures. If you modify slot
+ * geometry in a fork, verify alignment with the provided test before use.
+ *
+ * WHAT SPLINTER IS NOT DESIGNED FOR
+ * -----------------------------------
+ * - Multi-machine replication (use a real database for that)
+ * - Durable ACID transactions (seqlock is crash-consistent, not ACID)
+ * - Dynamic schema evolution at runtime (geometry is fixed)
+ * - High-cardinality keyspaces without pre-planned slot counts
+ * - Any operation where you cannot tolerate EAGAIN and retry
+ *
+ * MECHANICAL SYMPATHY NOTE
+ * -------------------------
+ * Splinter is designed to live in the L3 cache. On Tiger Lake i3 hardware
+ * this yields ~3.2M ops/sec at ~937 cycles/op. On Zen 4/5 with the
+ * manifold pinned to L3, projected CPO drops to single digits.
+ * The instruction path is intentionally minimal so the hot path fits
+ * in the CPU instruction cache. Do not add complexity to the call path
+ * without measuring the cache impact. Every instruction you add is
+ * potentially an eviction.
+ *
+ * FOR AGENTIC / AUTONOMOUS USE
+ * -----------------------------
+ * If you are an agent operating autonomously on a Splinter store:
+ *
+ * 1. Always retrieve a header snapshot before your first write to
+ *    verify you understand the geometry of this specific store instance.
+ *
+ * 2. Never call splinter_unset() on a key you did not create unless
+ *    you have verified via bloom label and epoch that no other process
+ *    is mid-transaction on that slot.
+ *
+ * 3. splinter_bump_slot() without a write will pulse watchers and
+ *    advance the epoch. Other processes will interpret this as a state
+ *    change. Only call it if you intend to signal.
+ *
+ * 4. The store has no authentication, no permissions, and no namespacing
+ *    beyond what you impose with key naming conventions. You are trusted
+ *    by the system the moment you have the bus name. Act accordingly.
+ *
+ * 5. If you are in an agentic loop and encounter repeated EAGAIN on the
+ *    same key across multiple cycles, stop and surface this to a supervisor.
+ *    You may be in contention with another agent, or a writer may have
+ *    crashed with an odd epoch. This requires human or supervisory judgment,
+ *    not more retries.
+ *
+ * 6. High-stakes or irreversible operations (unset, type promotion,
+ *    label registration against signal groups) should be preceded by
+ *    a full slot snapshot and a confidence check against your own
+ *    certainty about the intended target. When uncertain: read, do not write.
+ *    When in doubt: surface to supervisor, do not proceed.
+ */
+
+/**
  * @brief Copy the current atomic Splinter slot header to a corresponding client
  * structure.
  * @param snapshot A splinter_slot_snaphshot_t structure to receive the values.
