@@ -253,7 +253,8 @@ computational thermodynamics:
 - **Hybrid (Fast Mop)**: Zeroes the incoming byte length plus a **64-byte
   aligned** tail to satisfy SIMD/Vectorized loads.
 - **Full (Boil)**: Zeroes the entire pre-allocated value region, ensuring
-  absolute isolation for verifiable research.
+  absolute isolation for verifiable research. If only hotels could do this
+  to their rooms between guests `:D`
 
 #### 4. The Signal Arena
 
