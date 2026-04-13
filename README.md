@@ -218,7 +218,8 @@ you enable them during the build:
 
 Splinter can be configured to just be KV (no space partitioned for embeddings)
 by passing `WITH_EMBEDDINGS=0` to the build command (for very lean
-configurations).
+configurations). To generate this configuration automatically, simply run `./configure`
+with no other arguments. Valgrind will still be auto-detected.
 
 ### Exhaustive Feature Overview:
 
