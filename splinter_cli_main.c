@@ -245,7 +245,7 @@ cli_module_t command_modules[] = {
 #ifdef HAVE_WASM
         22,
 #else 
-        21
+        21,
 #endif
         "lua",
         3,
