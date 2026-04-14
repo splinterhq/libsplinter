@@ -126,7 +126,7 @@ void on_key_match(const char *key, uint64_t epoch, void *data) {
     char msg[MAXW] = { 0 }, buff[4096] = { 0 };
     size_t buff_sz = 0;
     rc = splinter_get(key, &buff, sizeof(buff) - 1, &buff_sz);
-    snprintf(msg, MAXW, "(%lu) %s\n", epoch, rc == 0 ? buff : "(no value set)");
+    snprintf(msg, MAXW, "(%lu) %s", epoch, rc == 0 ? buff : "(no value set)");
     debug_log_append(msg);
 }
 
@@ -556,7 +556,7 @@ int main(int argc, char **argv) {
             // and now print the circular buffer
             for (int pulse = 0; pulse < debug_line_count; pulse ++) {
                 if (debug_lines[pulse] != NULL) {
-                    fprintf(stdout, "%s", debug_lines[pulse]);
+                    fprintf(stdout, "%s\n", debug_lines[pulse]);
                     fflush(stdout);
                 }
             }            
