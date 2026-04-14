@@ -66,16 +66,6 @@ typedef struct {
     unsigned int on_ac;
 } power_status_t;
 
-// for splinter watches
-typedef struct {
-    unsigned short seen;
-    char key[SPLINTER_KEY_MAX];
-    uint64_t epoch;
-} watched_key_t;
-
-static watched_key_t known_keys[64];
-static int known_keys_count = 0;
-
 static int term_cols = 80;
 static int term_rows = 24;
 static int graph_width = 50;
@@ -94,9 +84,11 @@ static unsigned int debug_signal_group = 63;
 static uint64_t debug_bloom = (0x800000000000000);
 static struct termios orig_termios;
 
+// circular buffer - add an item in
 static void debug_log_append(const char *line) {
     if (debug_line_count >= MAX_DEBUG_LINES) {
         free(debug_lines[0]);
+        debug_lines[0] = '\0';
         memmove(&debug_lines[0], &debug_lines[1],
                 (MAX_DEBUG_LINES-1)*sizeof(char*));
         debug_line_count--;
@@ -105,14 +97,19 @@ static void debug_log_append(const char *line) {
     debug_lines[head] = strdup(line);
 }
 
+// circular buffer - cleanup
 static void debug_log_destroy() {
     if (debug_line_count && debug_lines[0]) {
         for (int i = 0; i < debug_line_count; i++) {
-            if (debug_lines[i]) free(debug_lines[i]);
+            if (debug_lines[i]) {
+                free(debug_lines[i]);
+                debug_lines[i] = '\0';
+            }
         }
     }
 }
 
+// callback for bloom matches on cleanup
 void cause_key_unwatch(const char *key, uint64_t epoch, void *data) {
     (void) data;
     (void) epoch;
@@ -124,39 +121,13 @@ void cause_key_unwatch(const char *key, uint64_t epoch, void *data) {
 void on_key_match(const char *key, uint64_t epoch, void *data) {
     (void) data;
     if (!key) return;
+    int rc = -1;
 
-    int found = -1, rc = -1;
     char msg[MAXW] = { 0 }, buff[4096] = { 0 };
     size_t buff_sz = 0;
-
-    for (int i = 0; i < known_keys_count; i++) {
-        if (strcmp(known_keys[i].key, key) == 0) {
-            found = i;
-            rc = splinter_get(known_keys[i].key, &buff, sizeof(buff) - 1, &buff_sz);
-            break;
-        }
-    }
-
-    if (found == -1) {
-        if (known_keys_count < 64) {
-            int idx = known_keys_count++;
-            strncpy(known_keys[idx].key, key, SPLINTER_KEY_MAX - 1);
-            known_keys[idx].epoch = epoch;
-            known_keys[idx].seen = 1;
-            snprintf(msg, MAXW, "[NEW] %s (ep:%llu)", key, (unsigned long long)epoch);
-        }
-    } else {
-        known_keys[found].seen = 1;
-        if (known_keys[found].epoch != epoch) {
-            known_keys[found].epoch = epoch;
-            snprintf(msg, MAXW, "[UPD] %s -> ep:%llu", key, (unsigned long long)epoch);
-            debug_log_append(msg);
-        }
-    }
-    if (rc == 0) {
-        snprintf(msg, MAXW, "  -> %s\n", buff);
-        debug_log_append(msg);
-    }
+    rc = splinter_get(key, &buff, sizeof(buff) - 1, &buff_sz);
+    snprintf(msg, MAXW, "(%lu) %s\n", epoch, rc == 0 ? buff : "(no value set)");
+    debug_log_append(msg);
 }
 
 static void disable_raw_mode() {
@@ -201,6 +172,7 @@ static void install_winch_handler() {
     }
 }
 
+// the tail -f style watch
 static int init_debug_file(const char *path) {
     dbg_fp = fopen(path, "r");
     if (!dbg_fp) {
@@ -213,6 +185,7 @@ static int init_debug_file(const char *path) {
     return 0;
 }
 
+// read the 'tail' file 
 static int read_debug_file() {
     if (!dbg_fp) return 0;
     char line[1024];
@@ -448,7 +421,7 @@ int main(int argc, char **argv) {
         fprintf(stderr,"* spl:watch(!)\n");
     }
 
-    uint64_t old_signal_count = splinter_get_signal_count(debug_signal_group) + 1;
+    uint64_t old_signal_count = splinter_get_signal_count(debug_signal_group);
 
     printf("\033[2J");
 
@@ -556,12 +529,14 @@ int main(int argc, char **argv) {
             power.on_ac == 1 ? "on ac)  " : "on batt)");
         draw_bar("mem", mem);
 
+        // how much do we have to work with? 
+        int used_above_debug = 1 + HISTORY_HEIGHT + 1 + (2*2) + 1;
+        int used_below_debug = 2;
+        int available = term_rows - used_above_debug - used_below_debug;
+        int max_debug_rows = (available > 0 ? available : 0);
+        
+        // are we doing tail -f like behavior?
         if (dbg_fp) {
-            int used_above_debug = 1 + HISTORY_HEIGHT + 1 + (2*2) + 1;
-            int used_below_debug = 2;
-            int available = term_rows - used_above_debug - used_below_debug;
-            int max_debug_rows = (available > 0 ? available : 0);
-
             printf(" > tail: %s\n", argv[1]);
             int start = debug_line_count > max_debug_rows ?
                         debug_line_count - max_debug_rows : 0;
@@ -570,46 +545,29 @@ int main(int argc, char **argv) {
             }
         } 
         
+        // are we watching a bus ?
         if (store) {
+            printf(" > bus: %s\n", argv[1]);
             uint64_t new_signal_count = splinter_get_signal_count(debug_signal_group);
             if (new_signal_count != old_signal_count) {
-                // reset "seen" status to detect evaporation
-                for (int i = 0; i < known_keys_count; i++) known_keys[i].seen = 0;
-
-                // bloom debug keys
-                // (callback prints them)
                 splinter_enumerate_matches(debug_bloom, on_key_match, NULL);
-                
-                // check for evaporated keys the callback wasn't tracking
-                for (int i = 0; i < known_keys_count; i++) {
-                    if (!known_keys[i].seen) {
-                        char msg[MAXW];
-                        snprintf(msg, MAXW, "[EXP] %s evaporated", known_keys[i].key);
-                        debug_log_append(msg);
-                        // remove from known_keys (swap with last)
-                        known_keys[i] = known_keys[known_keys_count - 1];
-                        known_keys_count--;
-                        i--; 
-                    }
-                }
             }
-
-            // new becomes old
-            old_signal_count = new_signal_count;
             
-            // and now the circular buffer
+            // and now print the circular buffer
             for (int pulse = 0; pulse < debug_line_count; pulse ++) {
                 if (debug_lines[pulse] != NULL) {
-                    fprintf(stdout, "* %s\n", debug_lines[pulse]);
+                    fprintf(stdout, "%s", debug_lines[pulse]);
                     fflush(stdout);
                 }
-            }
+            }            
+            // new becomes old
+            old_signal_count = new_signal_count;
         }
 
-        // job results from key presses come last, after any debug output
+        // Do we have any job results from key presses? These come last.
         for (int i = 0; i < 10; i++) {
             if (job_results[i][0] != '\0') {
-                printf(" > %s\n", job_results[i]);
+                printf("Job result: %s\n", job_results[i]);
             }
         }
         
@@ -621,14 +579,7 @@ int main(int argc, char **argv) {
         nanosleep(&ts, NULL);
     } while (1);
 
-    // this callback unregisters keys tagged with the debug bloom from 
-    // the debug bloom (just an example of how to do it for persistent
-    // mode if ever necessary)
-    // splinter_enumerate_matches(debug_bloom, cause_key_unwatch, NULL);
-    
-    // now politely close the store
+    splinter_enumerate_matches(debug_bloom, cause_key_unwatch, NULL);
     splinter_close();
-
-    // now the debug log if any
     debug_log_destroy();
 }
