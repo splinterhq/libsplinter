@@ -141,7 +141,8 @@ Here's a list of the main things that set it apart:
 
 - **Ships With Debugging Tools**: Splinter's `sidecar` monitors let you keep an eye
   on critical system metrics while observing maintenance chatter in real-time on 
-  your bus.
+  your bus. `splinterctl` gives you all the power of the interactive REPL in an
+  easily scriptable way.
 
 ### The "Good Process" Approach:
 
