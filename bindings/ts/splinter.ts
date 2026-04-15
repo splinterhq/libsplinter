@@ -42,6 +42,11 @@ export const SPL_SLOT_TYPE = {
     VARTEXT: 1 << 7,
 } as const;
 
+export interface SplinterEntry {
+    key: string;
+    value: Uint8Array;
+}
+
 export interface SplinterStore {
     open(name: string): boolean;
     close(): void;
@@ -59,6 +64,7 @@ export interface SplinterStore {
     getEmbedding(key: string): Float32Array | null;
     setEmbedding(key: string, embedding: Float32Array): boolean;
     append(key: string, data: string | Uint8Array): bigint | null;
+    list(maxKeys?: number): IterableIterator<SplinterEntry>;
 }
 
 const encoder = new TextEncoder();
@@ -89,7 +95,8 @@ class BunSplinter implements SplinterStore {
             splinter_bump_slot: { args: [FFIType.cstring], returns: FFIType.i32 },
             splinter_get_embedding: { args: [FFIType.cstring, FFIType.ptr], returns: FFIType.i32 },
             splinter_set_embedding: { args: [FFIType.cstring, FFIType.ptr], returns: FFIType.i32 },
-            splinter_append: { args: [FFIType.cstring, FFIType.ptr, FFIType.usize, FFIType.ptr], returns: FFIType.i32 }
+            splinter_append: { args: [FFIType.cstring, FFIType.ptr, FFIType.usize, FFIType.ptr], returns: FFIType.i32 },
+            splinter_list: { args: [FFIType.ptr, FFIType.usize, FFIType.ptr], returns: FFIType.i32 }
         });
     }
 
@@ -161,6 +168,26 @@ class BunSplinter implements SplinterStore {
     watchRegister(key: string, gid: number): number { return this.ffi.symbols.splinter_watch_register(encoder.encode(key + "\0"), gid); }
     watchLabelRegister(mask: bigint, gid: number): number { return this.ffi.symbols.splinter_watch_label_register(mask, gid); }
     bumpSlot(key: string): number { return this.ffi.symbols.splinter_bump_slot(encoder.encode(key + "\0")); }
+
+    *list(maxKeys = 4096): Generator<SplinterEntry> {
+        // @ts-ignore: Bun-specific
+        const { ptr, read, CString } = require("bun:ffi");
+        // Pre-allocate a flat byte buffer sized for max_keys native pointers (8 bytes each).
+        // splinter_list writes char* pointers into this buffer.
+        const ptrBuf = new Uint8Array(maxKeys * 8);
+        const outCount = new BigUint64Array(1);
+        const rc = this.ffi.symbols.splinter_list(ptr(ptrBuf), maxKeys, ptr(outCount));
+        if (rc !== 0) return;
+        const count = Number(outCount[0]);
+        const base = ptr(ptrBuf); // base address of the pointer array as a number
+        for (let i = 0; i < count; i++) {
+            // read.ptr reads one pointer-sized value (8 bytes) at base + byteOffset
+            const keyAddr = read.ptr(base, i * 8);
+            const key = new CString(keyAddr).toString();
+            const value = this.get(key);
+            if (value !== null) yield { key, value };
+        }
+    }
 }
 
 // --- Deno Implementation ---
@@ -187,7 +214,8 @@ class DenoSplinter implements SplinterStore {
             splinter_bump_slot: { parameters: ["buffer"], result: "i32"},
             splinter_get_embedding: { parameters: ["buffer", "buffer"], result: "i32" },
             splinter_set_embedding: { parameters: ["buffer", "buffer"], result: "i32" },
-            splinter_append: { parameters: ["buffer", "buffer", "usize", "buffer"], result: "i32" }
+            splinter_append: { parameters: ["buffer", "buffer", "usize", "buffer"], result: "i32" },
+            splinter_list: { parameters: ["buffer", "usize", "buffer"], result: "i32" }
         });
         // deno-lint-ignore no-explicit-any
         this.symbols = this.dylib.symbols as Record<string, (...args: any[]) => any>;
@@ -301,6 +329,26 @@ class DenoSplinter implements SplinterStore {
         const result = this.symbols.splinter_set_embedding(keyBuf, embedding);
 
         return result === 0;
+    }
+
+    *list(maxKeys = 4096): Generator<SplinterEntry> {
+        // Pre-allocate an array of pointer slots (8 bytes each on 64-bit).
+        // splinter_list writes char* pointers into this buffer; read them back as BigUint64.
+        const ptrArray = new BigUint64Array(maxKeys);
+        const ptrBuf = new Uint8Array(ptrArray.buffer);
+        const outCount = new BigUint64Array(1);
+        const outCountBuf = new Uint8Array(outCount.buffer);
+        const rc = this.symbols.splinter_list(ptrBuf, maxKeys, outCountBuf);
+        if (rc !== 0) return;
+        const count = Number(outCount[0]);
+        for (let i = 0; i < count; i++) {
+            // @ts-ignore: Deno-specific unsafe pointer API
+            const keyPtr = Deno.UnsafePointer.create(ptrArray[i]);
+            // @ts-ignore: Deno-specific unsafe pointer API
+            const key = Deno.UnsafePointerView.getCString(keyPtr!);
+            const value = this.get(key);
+            if (value !== null) yield { key, value };
+        }
     }
 }
 

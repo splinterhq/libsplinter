@@ -219,3 +219,72 @@ Deno.test("Splinter: Append returns null for missing key", () => {
 
     store.close();
 });
+
+Deno.test("Splinter: list() yields all set keys with correct values", () => {
+    const store = Splinter.connect(BUS_NAME);
+
+    const fixtures: Record<string, string> = {
+        list_key_alpha: "value_alpha",
+        list_key_beta:  "value_beta",
+        list_key_gamma: "value_gamma",
+    };
+
+    for (const [k, v] of Object.entries(fixtures)) {
+        assertEquals(store.set(k, v), true, `Should set ${k}`);
+    }
+
+    const seen: Record<string, string> = {};
+    for (const entry of store.list()) {
+        if (entry.key in fixtures) {
+            seen[entry.key] = new TextDecoder().decode(entry.value);
+        }
+    }
+
+    for (const [k, v] of Object.entries(fixtures)) {
+        assertEquals(seen[k], v, `list() entry for ${k} should match stored value`);
+    }
+
+    store.close();
+});
+
+Deno.test("Splinter: list() is iterable like a standard DB cursor", () => {
+    const store = Splinter.connect(BUS_NAME);
+
+    store.set("cursor_key_01", "cursor_val_01");
+    store.set("cursor_key_02", "cursor_val_02");
+
+    // Collect via spread — the canonical TS iterator pattern
+    const entries = [...store.list()];
+
+    assertNotEquals(entries.length, 0, "list() should yield at least one entry");
+
+    for (const entry of entries) {
+        assertEquals(typeof entry.key, "string", "Each entry must have a string key");
+        assertEquals(entry.value instanceof Uint8Array, true, "Each entry must have a Uint8Array value");
+    }
+
+    // Verify the iterator is also re-entrant (fresh iterator each call)
+    const second = [...store.list()];
+    assertEquals(second.length, entries.length, "Repeated calls to list() should return the same count");
+
+    store.close();
+});
+
+Deno.test("Splinter: list() entry values match individual get()", () => {
+    const store = Splinter.connect(BUS_NAME);
+
+    store.set("list_verify_01", "check_value_01");
+    store.set("list_verify_02", "check_value_02");
+
+    for (const { key, value } of store.list()) {
+        const direct = store.get(key);
+        assertNotEquals(direct, null, `get(${key}) should not return null`);
+        assertEquals(
+            value.every((b, i) => b === direct![i]),
+            true,
+            `list() value for ${key} must match get()`
+        );
+    }
+
+    store.close();
+});

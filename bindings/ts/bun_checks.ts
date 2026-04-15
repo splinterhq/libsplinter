@@ -183,3 +183,68 @@ test("Splinter: getEmbedding returns null for missing key", () => {
 
     store.close();
 });
+
+test("Splinter: list() yields all set keys with correct values", () => {
+    const store = Splinter.connect(BUS_NAME);
+
+    const fixtures: Record<string, string> = {
+        list_key_alpha: "value_alpha",
+        list_key_beta:  "value_beta",
+        list_key_gamma: "value_gamma",
+    };
+
+    for (const [k, v] of Object.entries(fixtures)) {
+        expect(store.set(k, v)).toBe(true);
+    }
+
+    const seen: Record<string, string> = {};
+    for (const entry of store.list()) {
+        if (entry.key in fixtures) {
+            seen[entry.key] = new TextDecoder().decode(entry.value);
+        }
+    }
+
+    for (const [k, v] of Object.entries(fixtures)) {
+        expect(seen[k]).toBe(v);
+    }
+
+    store.close();
+});
+
+test("Splinter: list() is iterable like a standard DB cursor", () => {
+    const store = Splinter.connect(BUS_NAME);
+
+    store.set("cursor_key_01", "cursor_val_01");
+    store.set("cursor_key_02", "cursor_val_02");
+
+    // Collect via spread — the canonical TS iterator pattern
+    const entries = [...store.list()];
+
+    expect(entries.length).toBeGreaterThan(0);
+
+    for (const entry of entries) {
+        expect(typeof entry.key).toBe("string");
+        expect(entry.value).toBeInstanceOf(Uint8Array);
+    }
+
+    // Verify the iterator is re-entrant (fresh iterator each call)
+    const second = [...store.list()];
+    expect(second.length).toBe(entries.length);
+
+    store.close();
+});
+
+test("Splinter: list() entry values match individual get()", () => {
+    const store = Splinter.connect(BUS_NAME);
+
+    store.set("list_verify_01", "check_value_01");
+    store.set("list_verify_02", "check_value_02");
+
+    for (const { key, value } of store.list()) {
+        const direct = store.get(key);
+        expect(direct).not.toBeNull();
+        expect(value.every((b, i) => b === direct![i])).toBe(true);
+    }
+
+    store.close();
+});
