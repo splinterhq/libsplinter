@@ -2,7 +2,8 @@
 
 Splinter is a minimalist, persist-able lock-free and bloom-able key-value store 
 designed to handle high-frequency data and vector ingestion/retrieval across 
-disjointed runtimes. 
+disjointed runtimes, and to provide latency-free transparency into LLM inference
+on both a token and vector scale.
 
 It is built on the belief that for local inter-process communication (IPC), the
 kernel’s networking stack and arbitration services are expensive and unnecessary 
