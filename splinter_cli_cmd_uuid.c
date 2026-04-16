@@ -2,7 +2,7 @@
  * Copyright 2025 Tim Post
  * License: Apache 2 (MIT available upon request to timthepost@protonmail.com)
  *
- * @file splinter_cli_cmd_help.c
+ * @file splinter_cli_cmd_uuid.c
  * @brief Implements the CLI 'uuid' command.
  */
 
