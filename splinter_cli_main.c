@@ -234,13 +234,28 @@ cli_module_t command_modules[] = {
         "uuid",
         4,
         "Generate a UUID v4 unique identifier",
-        -1, 
+        -1,
         &cmd_uuid,
         &help_cmd_uuid
     },
-#ifdef HAVE_WASM
+#ifdef HAVE_EMBEDDINGS
     {
         22,
+        "search",
+        6,
+        "Search embedded keys by semantic similarity.",
+        -1,
+        &cmd_search,
+        &help_cmd_search
+    },
+#endif
+#ifdef HAVE_WASM
+    {
+#ifdef HAVE_EMBEDDINGS
+        23,
+#else
+        22,
+#endif
         "wasm",
         4,
         "Run WASM via WASMEdge",
@@ -251,9 +266,11 @@ cli_module_t command_modules[] = {
 #endif // HAVE_WASM
 #ifdef HAVE_LUA
     {
-#ifdef HAVE_WASM
+#if defined(HAVE_EMBEDDINGS) && defined(HAVE_WASM)
+        24,
+#elif defined(HAVE_EMBEDDINGS) || defined(HAVE_WASM)
         23,
-#else 
+#else
         22,
 #endif
         "lua",
@@ -431,6 +448,9 @@ static void completion(const char *buf, linenoiseCompletions *lc) {
             break;
         case 's':
             linenoiseAddCompletion(lc, "set");
+#ifdef HAVE_EMBEDDINGS
+            linenoiseAddCompletion(lc, "search");
+#endif // HAVE_EMBEDDINGS
             break;
         case 't':
             linenoiseAddCompletion(lc, "type");
@@ -564,7 +584,19 @@ static char *hints(const char *buf, int *color, int *bold) {
         *bold = 1;
         return "ders ";
     }
-    
+#ifdef HAVE_EMBEDDINGS
+    if (!strncasecmp(buf, "sea", 5)) {
+        *color = 36;
+        *bold = 1;
+        return "rch ";
+    }
+#endif // HAVE_EMBEDDINGS
+    if (!strncasecmp(buf, "se", 4)) {
+        *color = 36;
+        *bold = 1;
+        return "t ";
+    }
+
     if (!strncasecmp(buf, "s", 3)) {
         *color = 36;
         *bold = 1;
