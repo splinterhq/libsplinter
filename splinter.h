@@ -29,7 +29,7 @@ extern "C" {
 #define SPLINTER_MAGIC 0x534C4E54
 
 /** @brief Version of the splinter data format (not the library version). */
-#define SPLINTER_VER   2
+#define SPLINTER_VER   3
 /** @brief Maximum length of a key string, including null terminator. */
 #define SPLINTER_KEY_MAX        64
 /** @brief Nanoseconds per millisecond for time calculations. */
@@ -41,6 +41,11 @@ extern "C" {
 
 /** @brief The maximum number of watch signal groups for a slot */
 #define SPLINTER_MAX_GROUPS 64
+
+/** @brief Compile-time slot cap for the event bus dirty mask (covers up to 1024 slots per word) */
+#define SPLINTER_MAX_SLOTS 1024
+/** @brief Number of 64-bit words in the event bus dirty mask */
+#define SPLINTER_EVENT_BUS_MASK_WORDS (SPLINTER_MAX_SLOTS / 64)
 
 /** @brief Reserved store system flags */
 #define SPL_SYS_AUTO_SCRUB     (1u << 0)
@@ -104,6 +109,26 @@ struct splinter_signal_node {
 };
 
 /**
+ * @brief Event bus for kernel-assisted epoch-change notifications via eventfd.
+ *
+ * The owner process calls splinter_event_bus_init() to create an eventfd and
+ * record its pid + fd here.  Any process (including the owner) can then call
+ * splinter_event_bus_open() to obtain a process-local fd to the same kernel
+ * object via /proc/<owner_pid>/fd/<owner_fd>.
+ *
+ * dirty_mask tracks which slot indices changed since the last read, allowing
+ * watchers to enumerate only modified slots instead of scanning the full store.
+ * Bits are OR'd in by writers; they are never cleared by the library.
+ * For stores with more than SPLINTER_MAX_SLOTS slots, indices are mapped
+ * modularly: physical_idx % (SPLINTER_EVENT_BUS_MASK_WORDS * 64).
+ */
+struct splinter_event_bus {
+    atomic_uint_least64_t dirty_mask[SPLINTER_EVENT_BUS_MASK_WORDS];
+    atomic_int_least32_t  owner_fd;
+    atomic_int_least32_t  owner_pid;
+};
+
+/**
  * @struct splinter_header
  * @brief Defines the header structure for the shared memory region.
  *
@@ -144,6 +169,9 @@ struct splinter_header {
 
     // The Signal Arena for epoll-backed notifications
     alignas(64) struct splinter_signal_node signal_groups[SPLINTER_MAX_GROUPS];
+
+    // Event bus for kernel-assisted wake-up on epoch change
+    alignas(64) struct splinter_event_bus event_bus;
 };
 
 
@@ -814,8 +842,65 @@ uint64_t splinter_get_signal_count(uint8_t group_id);
  * @param callback Function to call for each match.
  * @param user_data Opaque pointer for the callback.
  */
-void splinter_enumerate_matches(uint64_t mask, 
+void splinter_enumerate_matches(uint64_t mask,
     void (*callback)(const char *key, uint64_t version, void *data), void *user_data);
+
+/**
+ * @brief Initialize the event bus (owner process only).
+ *
+ * Creates an eventfd, stores the owner PID and fd number in the shared header,
+ * and arms the process-local write fd used by all subsequent write operations.
+ * Call once per store lifetime, from the process that creates or governs the bus.
+ *
+ * @return 0 on success, -1 on failure (errno set).
+ */
+int splinter_event_bus_init(void);
+
+/**
+ * @brief Open a process-local read fd to the owner's eventfd.
+ *
+ * Reads owner_pid and owner_fd from the shared header and opens
+ * /proc/<owner_pid>/fd/<owner_fd> to obtain a local file descriptor
+ * pointing to the same kernel eventfd object.  Works both in the owner
+ * process and in any other process that has the store mapped.
+ *
+ * @return A valid fd on success (caller must pass it to splinter_event_bus_close),
+ *         or -1 on failure (errno set).
+ */
+int splinter_event_bus_open(void);
+
+/**
+ * @brief Block until the global epoch changes or the timeout expires.
+ *
+ * Uses poll(2) + read(2) on the fd returned by splinter_event_bus_open().
+ * On return, the eventfd counter has been drained; the caller should call
+ * splinter_event_bus_get_dirty() to find which slots changed.
+ *
+ * @param fd       The fd returned by splinter_event_bus_open().
+ * @param timeout_ms Maximum wait time in milliseconds; 0 = non-blocking,
+ *                   UINT64_MAX = wait forever.
+ * @return 0 if a change was detected, -1 on timeout or error.
+ */
+int splinter_event_bus_wait(int fd, uint64_t timeout_ms);
+
+/**
+ * @brief Close a fd obtained from splinter_event_bus_open().
+ * @param fd The fd to close.
+ */
+void splinter_event_bus_close(int fd);
+
+/**
+ * @brief Copy a snapshot of the dirty-slot bitmask into caller-supplied storage.
+ *
+ * Each bit i in word w represents physical slot index (w*64 + i).  A set bit
+ * means that slot was written since the bus was initialized.  Bits are never
+ * cleared by the library; use the snapshot delta against your own saved copy
+ * to find newly-dirtied slots.
+ *
+ * @param out   Destination array; must hold at least `words` uint64_t values.
+ * @param words Number of words to copy (cap: SPLINTER_EVENT_BUS_MASK_WORDS).
+ */
+void splinter_event_bus_get_dirty(uint64_t *out, size_t words);
 
 /**
  * @brief Promotes a key to "system" usage

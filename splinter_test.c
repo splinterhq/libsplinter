@@ -411,6 +411,27 @@ TEST("Set append test key as 'dog'", splinter_set(append_key, "dog", 3) == 0);
 size_t append_new_len = 0;
 TEST("Append test key with 'leash'", splinter_append(append_key, to_append, 5, &append_new_len) == 0);
 TEST("New appended key length is 8 (dog + leash)", (append_new_len == 8));
+
+/* --- event bus --- */
+TEST("event bus init", splinter_event_bus_init() == 0);
+
+splinter_set("eb_key1", "hello", 5);
+splinter_set("eb_key2", "world", 5);
+
+uint64_t dmask[SPLINTER_EVENT_BUS_MASK_WORDS];
+splinter_event_bus_get_dirty(dmask, SPLINTER_EVENT_BUS_MASK_WORDS);
+int dirty_bits_set = 0;
+for (size_t m = 0; m < SPLINTER_EVENT_BUS_MASK_WORDS; m++) {
+    if (dmask[m]) { dirty_bits_set = 1; break; }
+}
+TEST("dirty mask has bits set after write", dirty_bits_set);
+
+int efd = splinter_event_bus_open();
+TEST("event bus open returns valid fd", efd >= 0);
+/* Two writes already happened, so eventfd counter >= 2; wait should return immediately */
+TEST("event bus wait returns immediately (data ready)", splinter_event_bus_wait(efd, 500) == 0);
+splinter_event_bus_close(efd);
+
 splinter_close();
 splinter_header_snapshot_t closed = { 0 };
 TEST("store actually closed", splinter_get_header_snapshot(&closed) != 0);
