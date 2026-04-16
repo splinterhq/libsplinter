@@ -150,6 +150,9 @@ void help_cmd_bump(unsigned int level);
 int cmd_append(int argc, char *argv[]);
 void help_cmd_append(unsigned int level);
 
+int cmd_uuid(int argc, char *argv[]);
+void help_cmd_uuid(unsigned int level);
+
 #ifdef HAVE_WASM
 int cmd_wasm(int argc, char *argv[]);
 void help_cmd_wasm(unsigned int level);

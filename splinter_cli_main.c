@@ -229,9 +229,18 @@ cli_module_t command_modules[] = {
         &cmd_append,
         &help_cmd_append
     },
-#ifdef HAVE_WASM
     {
         21,
+        "uuid",
+        4,
+        "Generate a UUID v4 unique identifier",
+        -1, 
+        &cmd_uuid,
+        &help_cmd_uuid
+    },
+#ifdef HAVE_WASM
+    {
+        22,
         "wasm",
         4,
         "Run WASM via WASMEdge",
@@ -243,9 +252,9 @@ cli_module_t command_modules[] = {
 #ifdef HAVE_LUA
     {
 #ifdef HAVE_WASM
-        22,
+        23,
 #else 
-        21,
+        22,
 #endif
         "lua",
         3,
@@ -429,6 +438,7 @@ static void completion(const char *buf, linenoiseCompletions *lc) {
         case 'u':
             linenoiseAddCompletion(lc, "use");
             linenoiseAddCompletion(lc, "unset");
+            linenoiseAddCompletion(lc, "uuid");
             break;
         case 'w':
             linenoiseAddCompletion(lc, "watch");
@@ -573,6 +583,12 @@ static char *hints(const char *buf, int *color, int *bold) {
         *color = 36;
         *bold = 1;
         return "set ";
+    }
+
+    if (!strncasecmp(buf, "uu", 4)) {
+        *color = 36;
+        *bold = 1;
+        return "id ";
     }
 
 #ifdef HAVE_WASM

@@ -107,4 +107,8 @@ test "Append the bump key"
 ./splinterctl  --use $TEST_STORE append bump_key "\nDo the bumpty-bump." || fail "Could not append the bump key"
 pass
 
+test "Generate a UUID"
+./splinterctl uuid || fail "Did not generate a UUID"
+pass
+
 report
