@@ -98,10 +98,12 @@ pub const WINT_MAX: u32 = 4294967295;
 pub const __alignas_is_defined: u32 = 1;
 pub const __alignof_is_defined: u32 = 1;
 pub const SPLINTER_MAGIC: u32 = 1397509716;
-pub const SPLINTER_VER: u32 = 2;
+pub const SPLINTER_VER: u32 = 3;
 pub const SPLINTER_KEY_MAX: u32 = 64;
 pub const NS_PER_MS: u32 = 1000000;
 pub const SPLINTER_MAX_GROUPS: u32 = 64;
+pub const SPLINTER_MAX_SLOTS: u32 = 1024;
+pub const SPLINTER_EVENT_BUS_MASK_WORDS: u32 = 16;
 pub const SPL_SYS_AUTO_SCRUB: u32 = 1;
 pub const SPL_SYS_HYBRID_SCRUB: u32 = 2;
 pub const SPL_SYS_RESERVED_2: u32 = 4;
@@ -326,6 +328,25 @@ const _: () = {
     ["Offset of field: splinter_signal_node::counter"]
         [::std::mem::offset_of!(splinter_signal_node, counter) - 0usize];
 };
+#[doc = " @brief Event bus for kernel-assisted epoch-change notifications via eventfd.\n\n The owner process calls splinter_event_bus_init() to create an eventfd and\n record its pid + fd here.  Any process (including the owner) can then call\n splinter_event_bus_open() to obtain a process-local fd to the same kernel\n object via /proc/<owner_pid>/fd/<owner_fd>.\n\n dirty_mask tracks which slot indices changed since the last read, allowing\n watchers to enumerate only modified slots instead of scanning the full store.\n Bits are OR'd in by writers; they are never cleared by the library.\n For stores with more than SPLINTER_MAX_SLOTS slots, indices are mapped\n modularly: physical_idx % (SPLINTER_EVENT_BUS_MASK_WORDS * 64)."]
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct splinter_event_bus {
+    pub dirty_mask: [atomic_uint_least64_t; 16usize],
+    pub owner_fd: atomic_int_least32_t,
+    pub owner_pid: atomic_int_least32_t,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of splinter_event_bus"][::std::mem::size_of::<splinter_event_bus>() - 136usize];
+    ["Alignment of splinter_event_bus"][::std::mem::align_of::<splinter_event_bus>() - 8usize];
+    ["Offset of field: splinter_event_bus::dirty_mask"]
+        [::std::mem::offset_of!(splinter_event_bus, dirty_mask) - 0usize];
+    ["Offset of field: splinter_event_bus::owner_fd"]
+        [::std::mem::offset_of!(splinter_event_bus, owner_fd) - 128usize];
+    ["Offset of field: splinter_event_bus::owner_pid"]
+        [::std::mem::offset_of!(splinter_event_bus, owner_pid) - 132usize];
+};
 #[doc = " @struct splinter_header\n @brief Defines the header structure for the shared memory region.\n\n This header contains metadata for the entire splinter store, including\n magic number for validation, version, and overall store configuration.\n\n NOTE: We add parse_failures/last_failure_epoch for diagnostics."]
 #[repr(C)]
 #[repr(align(64))]
@@ -356,10 +377,11 @@ pub struct splinter_header {
     pub bloom_watches: [atomic_uint_least8_t; 64usize],
     pub __bindgen_padding_0: u64,
     pub signal_groups: [splinter_signal_node; 64usize],
+    pub event_bus: splinter_event_bus,
 }
 #[allow(clippy::unnecessary_operation, clippy::identity_op)]
 const _: () = {
-    ["Size of splinter_header"][::std::mem::size_of::<splinter_header>() - 4224usize];
+    ["Size of splinter_header"][::std::mem::size_of::<splinter_header>() - 4416usize];
     ["Alignment of splinter_header"][::std::mem::align_of::<splinter_header>() - 64usize];
     ["Offset of field: splinter_header::magic"]
         [::std::mem::offset_of!(splinter_header, magic) - 0usize];
@@ -389,6 +411,8 @@ const _: () = {
         [::std::mem::offset_of!(splinter_header, bloom_watches) - 56usize];
     ["Offset of field: splinter_header::signal_groups"]
         [::std::mem::offset_of!(splinter_header, signal_groups) - 128usize];
+    ["Offset of field: splinter_header::event_bus"]
+        [::std::mem::offset_of!(splinter_header, event_bus) - 4224usize];
 };
 #[doc = " @struct splinter_slot\n @brief Defines a single key-value slot in the hash table.\n\n Each slot holds a key, its value's location and length, and metadata\n for concurrent access and change tracking.\n\n We changed val_len to atomic to avoid tearing on platforms where a plain\n 32-bit write could be observed partially by a reader."]
 #[repr(C)]
@@ -787,6 +811,29 @@ unsafe extern "C" {
         >,
         user_data: *mut ::std::os::raw::c_void,
     );
+}
+unsafe extern "C" {
+    #[doc = " @brief Initialize the event bus (owner process only).\n\n Creates an eventfd, stores the owner PID and fd number in the shared header,\n and arms the process-local write fd used by all subsequent write operations.\n Call once per store lifetime, from the process that creates or governs the bus.\n\n @return 0 on success, -1 on failure (errno set)."]
+    pub fn splinter_event_bus_init() -> ::std::os::raw::c_int;
+}
+unsafe extern "C" {
+    #[doc = " @brief Open a process-local read fd to the owner's eventfd.\n\n Reads owner_pid and owner_fd from the shared header and opens\n /proc/<owner_pid>/fd/<owner_fd> to obtain a local file descriptor\n pointing to the same kernel eventfd object.  Works both in the owner\n process and in any other process that has the store mapped.\n\n @return A valid fd on success (caller must pass it to splinter_event_bus_close),\n         or -1 on failure (errno set)."]
+    pub fn splinter_event_bus_open() -> ::std::os::raw::c_int;
+}
+unsafe extern "C" {
+    #[doc = " @brief Block until the global epoch changes or the timeout expires.\n\n Uses poll(2) + read(2) on the fd returned by splinter_event_bus_open().\n On return, the eventfd counter has been drained; the caller should call\n splinter_event_bus_get_dirty() to find which slots changed.\n\n @param fd       The fd returned by splinter_event_bus_open().\n @param timeout_ms Maximum wait time in milliseconds; 0 = non-blocking,\n                   UINT64_MAX = wait forever.\n @return 0 if a change was detected, -1 on timeout or error."]
+    pub fn splinter_event_bus_wait(
+        fd: ::std::os::raw::c_int,
+        timeout_ms: u64,
+    ) -> ::std::os::raw::c_int;
+}
+unsafe extern "C" {
+    #[doc = " @brief Close a fd obtained from splinter_event_bus_open().\n @param fd The fd to close."]
+    pub fn splinter_event_bus_close(fd: ::std::os::raw::c_int);
+}
+unsafe extern "C" {
+    #[doc = " @brief Copy a snapshot of the dirty-slot bitmask into caller-supplied storage.\n\n Each bit i in word w represents physical slot index (w*64 + i).  A set bit\n means that slot was written since the bus was initialized.  Bits are never\n cleared by the library; use the snapshot delta against your own saved copy\n to find newly-dirtied slots.\n\n @param out   Destination array; must hold at least `words` uint64_t values.\n @param words Number of words to copy (cap: SPLINTER_EVENT_BUS_MASK_WORDS)."]
+    pub fn splinter_event_bus_get_dirty(out: *mut u64, words: usize);
 }
 unsafe extern "C" {
     #[doc = " @brief Promotes a key to \"system\" usage\n @param key the key to scope"]
