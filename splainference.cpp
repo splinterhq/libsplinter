@@ -37,6 +37,7 @@
 using atomic_uint_least64_t = std::atomic_uint_least64_t;
 using atomic_uint_least32_t = std::atomic_uint_least32_t;
 using atomic_uint_least8_t  = std::atomic_uint_least8_t;
+using atomic_int_least32_t  = std::atomic_int_least32_t;
 
 #ifndef SPLINTER_EMBEDDINGS
 #define SPLINTER_EMBEDDINGS
