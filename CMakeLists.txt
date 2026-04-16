@@ -8,9 +8,9 @@ set(SPLINTER_VERSION_STRING "1.1.8")
 add_definitions(-DSPLINTER_VERSION="${SPLINTER_VERSION_STRING}")
 
 # --- Build Options ---
-option(WITH_EMBEDDINGS "Enable Nomic/LLM embedding support" ON)
+option(WITH_EMBEDDINGS "Enable Nomic/LLM embedding support" OFF)
 option(WITH_NUMA       "Enable NUMA memory affinity support" OFF)
-option(WITH_LUA        "Enable Lua CLI integration" ON)
+option(WITH_LUA        "Enable Lua CLI integration" OFF)
 option(WITH_LLAMA      "Enable llama.cpp inference sidecar" OFF)
 option(WITH_RUST       "Enable Rust bindings via Cargo" OFF)
 option(WITH_WASM       "Enable WasmEdge CLI integration" OFF)
