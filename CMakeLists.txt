@@ -112,7 +112,7 @@ endif()
 # --- CLI Targets ---
 file(GLOB CLI_SOURCES "splinter_cli_*.c")
 
-add_executable(splinter_cli ${CLI_SOURCES} 3rdparty/linenoise.c 3rdparty/libgrawk.c 3rdparty/argparse.c)
+add_executable(splinter_cli ${CLI_SOURCES} 3rdparty/linenoise.c 3rdparty/libgrawk.c 3rdparty/argparse.c 3rdparty/uuid4.c)
 target_link_libraries(splinter_cli PRIVATE splinter_shared ${LUA_LDFLAGS} ${MATH_LIBRARY})
 target_include_directories(splinter_cli PRIVATE 
     ${CMAKE_CURRENT_SOURCE_DIR}
@@ -120,7 +120,7 @@ target_include_directories(splinter_cli PRIVATE
     ${LUA_INCLUDE_DIRS}
 )
 
-add_executable(splinterp_cli ${CLI_SOURCES} 3rdparty/linenoise.c 3rdparty/libgrawk.c 3rdparty/argparse.c)
+add_executable(splinterp_cli ${CLI_SOURCES} 3rdparty/linenoise.c 3rdparty/libgrawk.c 3rdparty/argparse.c 3rdparty/uuid4.c)
 target_compile_definitions(splinterp_cli PRIVATE SPLINTER_PERSISTENT)
 target_include_directories(splinterp_cli PRIVATE 
     ${CMAKE_CURRENT_SOURCE_DIR}
