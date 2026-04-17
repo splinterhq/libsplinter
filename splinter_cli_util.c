@@ -238,27 +238,33 @@ int cli_safer_atoi(const char *string) {
  */
 void cli_load_config(const char *rcpath) {
     char path[PATH_MAX];
-    char *home = getenv("HOME");
-    if (!home) return;
 
-    if (rcpath[0] == '\0') {
+    if (!rcpath || rcpath[0] == '\0') {
+        char *home = getenv("HOME");
+        if (!home) return;
         snprintf(path, sizeof(path), "%s/.splinterrc", home);
     } else {
         snprintf(path, sizeof(path), "%s", rcpath);
     }
-    
+
     FILE *fp = fopen(path, "r");
-    if (!fp) return;
+    if (!fp) {
+        if (rcpath && rcpath[0] != '\0')
+            fprintf(stderr, "splinterctl: cannot open rc file '%s': %s\n", path, strerror(errno));
+        return;
+    }
 
     char line[128];
     while (fgets(line, sizeof(line), fp) && thisuser.label_count < 63) {
-        // Skip comments and empty lines
         if (line[0] == '#' || line[0] == '\n' || line[0] == '\r') continue;
 
-        char name[32];
-        uint64_t mask;
-        if (sscanf(line, "%31s %li", name, &mask) == 2) {
-            strncpy(thisuser.labels[thisuser.label_count].name, name, 31 + 1);
+        char name[32], mask_str[22];
+        if (sscanf(line, "%31s %21s", name, mask_str) == 2) {
+            char *end;
+            errno = 0;
+            uint64_t mask = strtoull(mask_str, &end, 0);
+            if (errno != 0 || end == mask_str) continue;
+            memcpy(thisuser.labels[thisuser.label_count].name, name, 32);
             thisuser.labels[thisuser.label_count].mask = mask;
             thisuser.label_count++;
         }
