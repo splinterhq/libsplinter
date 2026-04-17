@@ -274,6 +274,13 @@ add_executable(splinterp_stress splinter_stress.c)
 target_compile_definitions(splinterp_stress PRIVATE SPLINTER_PERSISTENT)
 target_link_libraries(splinterp_stress PRIVATE splinter_p_shared)
 
+add_executable(splinter_chi_sao splinter_chi_sao.c)
+target_link_libraries(splinter_chi_sao PRIVATE splinter_shared)
+
+add_executable(splinterp_chi_sao splinter_chi_sao.c)
+target_compile_definitions(splinterp_chi_sao PRIVATE SPLINTER_PERSISTENT)
+target_link_libraries(splinterp_chi_sao PRIVATE splinter_p_shared)
+
 add_executable(sidecar sidecar.c)
 target_link_libraries(sidecar PRIVATE splinter_shared)
 
@@ -282,10 +289,12 @@ target_compile_definitions(sidecarp PRIVATE SPLINTER_PERSISTENT)
 target_link_libraries(sidecarp PRIVATE splinter_p_shared)
 
 set_target_properties(
-    splinter_test 
-    splinter_stress 
-    splinterp_test 
-    splinterp_stress 
+    splinter_test
+    splinter_stress
+    splinter_chi_sao
+    splinterp_test
+    splinterp_stress
+    splinterp_chi_sao
     PROPERTIES
     SKIP_BUILD_RPATH FALSE
     BUILD_WITH_INSTALL_RPATH FALSE
@@ -295,6 +304,7 @@ set_target_properties(
 add_test(NAME standard_unit_test COMMAND splinter_test)
 add_test(NAME persistent_unit_test COMMAND splinterp_test)
 add_test(NAME standard_stress_test COMMAND splinter_stress --duration-ms 7500)
+add_test(NAME standard_chi_sao_test COMMAND splinter_chi_sao --duration-ms 7500 --writers 4)
 
 # Valgrind Tests (only added if valgrind is found)
 if(VALGRIND_EXEC)
@@ -313,7 +323,7 @@ if(VALGRIND_EXEC)
 endif()
 
 # 4. Install Targets
-install(TARGETS splinter_test splinter_stress splinterp_test splinterp_stress sidecar sidecarp
+install(TARGETS splinter_test splinter_stress splinter_chi_sao splinterp_test splinterp_stress splinterp_chi_sao sidecar sidecarp
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 install(FILES splinterrc_example DESTINATION ${CMAKE_INSTALL_DATADIR}/splinter RENAME splinterrc.example)
