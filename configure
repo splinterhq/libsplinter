@@ -28,7 +28,7 @@ for arg in "$@"; do
     }
 
     [ "${arg}" == "--dev" ] && {
-        CONFIG="-DWITH_LUA=ON -DWITH_WASM=ON -DWITH_RUST=ON -DWITH_EMBEDDINGS=ON -DWITH_LLAMA=ON "
+        CONFIG="-DWITH_LUA=ON -DWITH_WASM=ON -DWITH_RUST=ON -DWITH_EMBEDDINGS=ON -DWITH_LLAMA=ON -DWITH_NUMA=ON "
         break
     }
 
