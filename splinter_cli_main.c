@@ -653,7 +653,7 @@ static const struct option long_options[] = {
     {NULL, 0, NULL, 0}
 };
 
-static const char *optstring = "+h::H:l:Lnr:v";
+static const char *optstring = "+h::H:l:Lnp:r:u:v";
 
 static void cli_at_exit(void) {
     if (thisuser.store_conn)
