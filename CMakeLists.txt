@@ -139,6 +139,7 @@ if(WITH_LLAMA)
     find_path(LLAMA_INCLUDE_DIR NAMES llama.h HINTS /usr/local/include /usr/include /opt/llama.cpp)
 
     if(LLAMA_LIB AND LLAMA_INCLUDE_DIR)
+        add_definitions(-DHAVE_LLAMA)
         add_executable(splinference splinference.cpp)
         target_include_directories(splinference PRIVATE ${LLAMA_INCLUDE_DIR})
         target_link_libraries(splinference PRIVATE splinter_shared ${LLAMA_LIB})

@@ -238,9 +238,18 @@ cli_module_t command_modules[] = {
         &cmd_uuid,
         &help_cmd_uuid
     },
-#ifdef HAVE_EMBEDDINGS
     {
         22,
+        "caps",
+        4,
+        "Print version, build, and compiled-in feature flags.",
+        -1,
+        &cmd_caps,
+        &help_cmd_caps
+    },
+#ifdef HAVE_EMBEDDINGS
+    {
+        23,
         "search",
         6,
         "Search embedded keys by semantic similarity.",
@@ -252,9 +261,9 @@ cli_module_t command_modules[] = {
 #ifdef HAVE_WASM
     {
 #ifdef HAVE_EMBEDDINGS
-        23,
+        24,
 #else
-        22,
+        23,
 #endif
         "wasm",
         4,
@@ -267,11 +276,11 @@ cli_module_t command_modules[] = {
 #ifdef HAVE_LUA
     {
 #if defined(HAVE_EMBEDDINGS) && defined(HAVE_WASM)
-        24,
+        25,
 #elif defined(HAVE_EMBEDDINGS) || defined(HAVE_WASM)
-        23,
+        24,
 #else
-        22,
+        23,
 #endif
         "lua",
         3,
@@ -416,6 +425,7 @@ static void completion(const char *buf, linenoiseCompletions *lc) {
             linenoiseAddCompletion(lc, "bump");
             break;
         case 'c':
+            linenoiseAddCompletion(lc, "caps");
             linenoiseAddCompletion(lc, "clear");
             linenoiseAddCompletion(lc, "config");
             break;
@@ -487,153 +497,120 @@ static char *hints(const char *buf, int *color, int *bold) {
      * white = 37;
      */
     
+    // the most frequent combo, outliers can be different
+    // if they need to
+    *color = 36;
+    *bold = 1;
+
     if(!strncasecmp(buf, "a", 6)) {
-        *color = 36;
-        *bold = 1;
         return "ppend ";
     }
     
     if(!strncasecmp(buf, "b", 4)) {
-        *color = 36;
-        *bold = 1;
         return "ind ";
     }
 
     if(!strncasecmp(buf, "bu", 4)) {
-        *color = 36;
-        *bold = 1;
         return "mp ";
     }
 
-    if (!strncasecmp(buf, "cle", 5)) {
-        *color = 36;
+    if (!strncasecmp(buf, "ca", 4)) {
+        return "ps";
+    }
+
+    if (!strncasecmp(buf, "cl", 3)) {
+        *color = 35;
         *bold = 1;
-        return "ar ";
+        return "s";
+    }
+
+    if (!strncasecmp(buf, "cle", 5)) {
+        return "ar";
     }
 
     if (!strncasecmp(buf, "con", 6)) {
-        *color = 36;
-        *bold = 1;
         return "fig ";
     }
 
     if (!strncasecmp(buf, "ex", 6)) {
-        *color = 36;
-        *bold = 1;
-        return "port ";
+        return "port";
     }
     
     if (!strncasecmp(buf, "g", 3)) {
-        *color = 36;
-        *bold = 1;
         return "et ";
     }
 
     if (!strncasecmp(buf, "hi", 4)) {
-        *color = 36;
-        *bold = 1;
         return "st ";
     }
 
     if (!strncasecmp(buf, "hea", 4)) {
-        *color = 36;
-        *bold = 1;
         return "d ";
     }
 
     if (!strncasecmp(buf, "hel", 4)) {
-        *color = 36;
-        *bold = 1;
         return "p ";
     }
 
     if (!strncasecmp(buf, "i", 4)) {
-        *color = 36;
-        *bold = 1;
         return "nit ";
     }
 
     if (!strncasecmp(buf, "li", 4)) {
-        *color = 36;
-        *bold = 1;
         return "st ";
     }
 
     if (!strncasecmp(buf, "la", 5)) {
-        *color = 36;
-        *bold = 1;
         return "bel ";
     }
 
 #ifdef HAVE_LUA
     if (!strncasecmp(buf, "lu", 3)) {
-        *color = 36;
-        *bold = 1;
         return "a ";
     }
 #endif // HAVE_LUA
 
     if (!strncasecmp(buf, "m", 4)) {
-        *color = 36;
-        *bold = 1;
         return "ath ";
     }
 
     if (!strncmp(buf, "or", 6)) {
-        *color = 36;
-        *bold = 1;
         return "ders ";
     }
 #ifdef HAVE_EMBEDDINGS
-    if (!strncasecmp(buf, "sea", 5)) {
-        *color = 36;
-        *bold = 1;
+    if (!strncasecmp(buf, "sea", 6)) {
         return "rch ";
     }
 #endif // HAVE_EMBEDDINGS
     if (!strncasecmp(buf, "se", 4)) {
-        *color = 36;
-        *bold = 1;
         return "t ";
     }
 
     if (!strncasecmp(buf, "s", 3)) {
-        *color = 36;
-        *bold = 1;
         return "et ";
     }
 
     // 'time' may be a command soon, leaving room for it.
     
     if (!strncmp(buf, "ty", 4)) {
-        *color = 36;
-        *bold = 1;
         return "pe ";
     }
 
     if (!strncasecmp(buf, "un", 5)) {
-        *color = 36;
-        *bold = 1;
         return "set ";
     }
 
     if (!strncasecmp(buf, "uu", 4)) {
-        *color = 36;
-        *bold = 1;
         return "id ";
     }
 
 #ifdef HAVE_WASM
     if (!strncasecmp(buf, "was", 4)) {
-        *color = 36;
-        *bold = 1;
         return "m ";
     }
 #endif // HAVE_WASM
 
     if (!strncasecmp(buf, "wat", 5)) {
-        *color = 36;
-        *bold = 1;
         return "ch ";
     }
 
