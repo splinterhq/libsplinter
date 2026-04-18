@@ -37,9 +37,9 @@ same physical network.
 
 There are commands `splinter_cli` understands how to run, which are:
 
-```sh
- Module     | Description                                                 
------------------------------------------------------------------
+```bash
+Module     | Description                                                 
+--------------------------------------------------------------------------------
  clear      | Clears the screen.                                          
  cls        | Alias of 'clear'                                            
  config     | Access Splinter bus and slot metadata.                      
@@ -57,8 +57,14 @@ There are commands `splinter_cli` understands how to run, which are:
  type       | Display or set the named slot type for a key.               
  math       | Perform incr/decr and bitwise ops on named biguint keys.    
  label      | Label a key with bits for its bloom filter                  
+ orders     | Manage standard vector orders of a key                      
+ bind       | Bind bloom labels to signal arena groups                    
+ bump       | Bump a slot's epoch without doing any other work            
+ append     | Append a value to an existing key (do not truncate prior to writing)
+ uuid       | Generate a UUID v4 unique identifier                        
+ search     | Search embedded keys by semantic similarity.                
+ wasm       | Run WASM via WASMEdge                                       
  lua        | Run a lua script                                            
- orders     | Manage standard vector orders of a key
 ```
 
 There's also a way in which `splinterctl` / `splinter_cli` should _be_ run,

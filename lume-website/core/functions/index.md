@@ -37,14 +37,8 @@ staying 64 (this should be automatic thanks to macros, but a unit test will fail
 if not). Just note that changing structures means needing to update everything
 else.
 
-## Method Documentation Coming Soon
-
-I'm working on automating web docs from the Doxygen code docs (which are the 
-only docs for the core library and CLI code right now). These will include
-rationale, where its used in the included tools, future directions and 
-example usage. 
-
-Until then, please just refer to the inline Doxygen comments.
+The [public header is heavily commented](https://github.com/splinterhq/libsplinter/blob/main/splinter.h)
+with Doxygen comments, **as well as LLM instructions and confidence thresholds**.
 
 ## Build Configuration Matters
 
