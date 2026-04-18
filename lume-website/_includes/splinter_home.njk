@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ title }}</title>
+  {% include "head.njk" %}
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --fg:    #b8f2b8;
+      --fg2:   #7acc7a;
+      --fg3:   #3d8c3d;
+      --bg:    #0a0f0a;
+      --bg2:   #0e150e;
+      --bg3:   #121a12;
+      --border:#1e2e1e;
+      --accent:#33ff33;
+      --dim:   #2a4a2a;
+      --mono:  'IBM Plex Mono', monospace;
+      --sans:  'IBM Plex Sans', sans-serif;
+    }
+
+    html, body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* hide the lumocs chrome on this page only */
+    .sidebar, .toc, nav.lumocs-nav, footer.lumocs-footer { display: none !important; }
+    main.lumocs-main, .lumocs-content, .content-wrapper { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
+
+    .scanline {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,20,0,0.03) 2px, rgba(0,20,0,0.03) 4px);
+    }
+
+    section, nav.spl-nav, footer.spl-footer { position: relative; z-index: 1; }
+
+    /* ── NAV ── */
+    nav.spl-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 2.5rem; border-bottom: 1px solid var(--border);
+      background: rgba(10,15,10,0.97); position: sticky; top: 0; z-index: 100;
+    }
+    .spl-logo { font-family: var(--mono); font-size: 18px; font-weight: 600; color: var(--accent); letter-spacing: 2px; text-decoration: none; }
+    .spl-logo span { color: var(--fg3); }
+    .spl-nav-links { display: flex; gap: 0.5rem; align-items: center; }
+    .spl-nav-links a {
+      font-family: var(--mono); font-size: 12px; color: var(--fg2); text-decoration: none;
+      letter-spacing: 1px; padding: 0.25rem 0.75rem; border: 1px solid transparent; transition: border-color 0.2s, color 0.2s;
+    }
+    .spl-nav-links a:hover { border-color: var(--border); color: var(--fg); }
+    .spl-nav-links a.gh { border-color: var(--dim); color: var(--fg); background: rgba(255,255,255,0.03); }
+    .spl-nav-links a.gh:hover { border-color: var(--fg2); }
+
+    /* ── HERO ── */
+    .spl-hero { padding: 5rem 2.5rem 4rem; max-width: 1100px; margin: 0 auto; }
+    .spl-hero-tag { font-family: var(--mono); font-size: 11px; color: var(--fg3); letter-spacing: 3px; margin-bottom: 1.5rem; }
+    .spl-hero h1 {
+      font-family: var(--mono); font-size: clamp(2.2rem, 5vw, 4rem); font-weight: 600;
+      line-height: 1.15; color: var(--fg); margin-bottom: 1.5rem;
+    }
+    .spl-hero h1 em { color: var(--accent); font-style: normal; }
+    .spl-hero-sub { font-size: 17px; color: var(--fg2); max-width: 580px; line-height: 1.7; margin-bottom: 2.5rem; font-weight: 300; }
+    .spl-cta-row { display: flex; gap: 1rem; flex-wrap: wrap; }
+    .spl-cta-primary {
+      font-family: var(--mono); font-size: 13px; padding: 0.75rem 1.75rem;
+      background: var(--accent); color: #000; font-weight: 600; border: none;
+      cursor: pointer; letter-spacing: 1px; text-decoration: none; display: inline-block;
+    }
+    .spl-cta-secondary {
+      font-family: var(--mono); font-size: 13px; padding: 0.75rem 1.75rem;
+      background: transparent; color: var(--fg); border: 1px solid var(--dim);
+      cursor: pointer; letter-spacing: 1px; text-decoration: none; display: inline-block; transition: border-color 0.2s;
+    }
+    .spl-cta-secondary:hover { border-color: var(--fg2); }
+
+    /* ── PROOF ── */
+    .spl-proof { background: var(--bg2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 3rem 2.5rem; }
+    .spl-proof-inner { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: start; }
+    .spl-proof-text h2 { font-family: var(--mono); font-size: 22px; font-weight: 600; color: var(--fg); margin-bottom: 1rem; }
+    .spl-proof-text p { color: var(--fg2); font-size: 15px; line-height: 1.7; margin-bottom: 0.75rem; font-weight: 300; }
+    .spl-proof-text code { font-family: var(--mono); color: var(--accent); font-size: 13px; }
+    .spl-proof-text .hl { color: var(--accent); font-family: var(--mono); font-size: 13px; }
+
+    .spl-terminal { background: #050a05; border: 1px solid var(--border); font-family: var(--mono); font-size: 12px; line-height: 1.6; overflow: hidden; }
+    .spl-term-bar { background: var(--bg3); padding: 0.5rem 1rem; display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid var(--border); }
+    .spl-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .spl-dot.r { background: #3d1a1a; } .spl-dot.y { background: #3d3a1a; } .spl-dot.g { background: #1a3d1a; }
+    .spl-term-title { font-size: 11px; color: var(--fg3); margin: 0 auto; }
+    .spl-term-body { padding: 1.25rem; }
+    .t-prompt { color: var(--fg3); }
+    .t-cmd { color: var(--fg); }
+    .t-out { color: var(--fg2); white-space: pre; display: block; }
+    .t-hi { color: var(--accent); }
+    .t-sep { color: var(--dim); }
+    .t-sp { display: block; height: 0.75rem; }
+
+    /* ── WHAT ── */
+    .spl-what { padding: 4rem 2.5rem; max-width: 1100px; margin: 0 auto; }
+    .spl-what h2 { font-family: var(--mono); font-size: 22px; font-weight: 600; color: var(--fg); margin-bottom: 0.5rem; }
+    .spl-section-sub { font-family: var(--mono); font-size: 11px; color: var(--fg3); letter-spacing: 2px; margin-bottom: 2.5rem; display: block; }
+    .spl-what-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+    .spl-what-card { border: 1px solid var(--border); padding: 1.5rem; background: var(--bg2); }
+    .spl-what-card-num { font-family: var(--mono); font-size: 11px; color: var(--fg3); margin-bottom: 0.75rem; letter-spacing: 2px; }
+    .spl-what-card h3 { font-family: var(--mono); font-size: 14px; color: var(--accent); margin-bottom: 0.75rem; font-weight: 500; }
+    .spl-what-card p { font-size: 13px; color: var(--fg2); line-height: 1.65; font-weight: 300; }
+    .spl-what-card code { font-family: var(--mono); font-size: 11px; color: var(--fg3); }
+
+    /* ── POOL ── */
+    .spl-pool { background: var(--bg2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 4rem 2.5rem; }
+    .spl-pool-inner { max-width: 1100px; margin: 0 auto; }
+    .spl-pool-inner h2 { font-family: var(--mono); font-size: 22px; color: var(--fg); margin-bottom: 0.5rem; font-weight: 600; }
+    .spl-pool-diagram { margin-top: 2.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: center; }
+    .spl-lane-vis { border: 1px solid var(--border); background: #050a05; padding: 1.5rem; }
+    .spl-lane-label { font-family: var(--mono); font-size: 10px; color: var(--fg3); letter-spacing: 2px; margin-bottom: 1.25rem; display: block; }
+    .spl-lanes { display: flex; flex-direction: column; gap: 6px; }
+    .spl-lane {
+      height: 28px; border: 1px solid var(--dim); display: flex; align-items: center;
+      padding: 0 10px; font-family: var(--mono); font-size: 11px; overflow: hidden;
+    }
+    .spl-lane.active { border-color: var(--fg3); background: rgba(51,255,51,0.04); }
+    .spl-lane.writing { border-color: var(--accent); background: rgba(51,255,51,0.08); }
+    .spl-lane-key { color: var(--fg2); flex: 1; }
+    .spl-lane-epoch { color: var(--fg3); }
+    .spl-lane.writing .spl-lane-key { color: var(--accent); }
+    .spl-lane.writing .spl-lane-epoch { color: var(--accent); }
+    .spl-write-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); margin-right: 8px; animation: spl-pulse 1s infinite; flex-shrink: 0; }
+    @keyframes spl-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+    .spl-pool-desc { color: var(--fg2); font-size: 14px; line-height: 1.7; font-weight: 300; }
+    .spl-pool-desc p { margin-top: 1rem; }
+    .spl-pool-desc p:first-child { margin-top: 0; }
+    .spl-pool-desc strong { color: var(--fg); font-weight: 500; }
+    .spl-pool-stats { font-family: var(--mono); font-size: 11px; color: var(--fg3); margin-top: 1.5rem; display: flex; gap: 2rem; }
+    .spl-pool-stats span { color: var(--accent); display: block; }
+
+    /* ── FFI ── */
+    .spl-ffi { padding: 4rem 2.5rem; max-width: 1100px; margin: 0 auto; }
+    .spl-ffi h2 { font-family: var(--mono); font-size: 22px; color: var(--fg); margin-bottom: 0.5rem; font-weight: 600; }
+    .spl-lang-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; margin-top: 2.5rem; }
+    .spl-lang-card {
+      border: 1px solid var(--border); padding: 1.25rem; background: var(--bg2);
+      text-align: center; cursor: pointer; transition: border-color 0.15s, background 0.15s;
+    }
+    .spl-lang-card:hover { border-color: var(--fg3); background: rgba(51,255,51,0.04); }
+    .spl-lang-card.active { border-color: var(--accent); background: rgba(51,255,51,0.04); }
+    .spl-lang-name { font-family: var(--mono); font-size: 13px; color: var(--fg); font-weight: 500; }
+    .spl-lang-note { font-size: 11px; color: var(--fg3); margin-top: 4px; }
+    .spl-code-pane {
+      margin-top: 1.5rem; background: #050a05; border: 1px solid var(--border);
+      font-family: var(--mono); font-size: 12px; line-height: 1.7; padding: 1.5rem;
+      color: var(--fg2); min-height: 120px;
+    }
+    .spl-code-pane .kw  { color: #7acc7a; }
+    .spl-code-pane .str { color: #5da05d; }
+    .spl-code-pane .cmt { color: #2a4a2a; }
+    .spl-code-pane .fn  { color: var(--accent); }
+    .spl-code-pane .ty  { color: #99cc99; }
+
+    /* ── PERF ── */
+    .spl-perf { background: var(--bg2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 4rem 2.5rem; }
+    .spl-perf-inner { max-width: 1100px; margin: 0 auto; }
+    .spl-perf-inner h2 { font-family: var(--mono); font-size: 22px; color: var(--fg); margin-bottom: 0.5rem; font-weight: 600; }
+    .spl-bench { width: 100%; border-collapse: collapse; margin-top: 2rem; font-family: var(--mono); font-size: 12px; }
+    .spl-bench th { text-align: left; color: var(--fg3); font-weight: 400; letter-spacing: 1px; padding: 0.5rem 1rem; border-bottom: 1px solid var(--border); }
+    .spl-bench td { padding: 0.75rem 1rem; border-bottom: 1px solid rgba(30,46,30,0.5); color: var(--fg2); }
+    .spl-bench tr:hover td { background: rgba(51,255,51,0.02); }
+    .spl-bench .hi { color: var(--accent); font-weight: 500; }
+    .spl-bench-bar { display: inline-block; height: 8px; background: var(--accent); opacity: 0.5; margin-left: 8px; vertical-align: middle; }
+    .spl-bench-bar.dim { background: var(--fg3); }
+    .spl-perf-note { font-family: var(--mono); font-size: 11px; color: var(--fg3); margin-top: 1.5rem; }
+
+    /* ── FOOTER ── */
+    footer.spl-footer {
+      padding: 2rem 2.5rem; border-top: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    footer.spl-footer p { font-family: var(--mono); font-size: 11px; color: var(--fg3); }
+    footer.spl-footer a { color: var(--fg2); text-decoration: none; }
+    footer.spl-footer a:hover { color: var(--fg); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 700px) {
+      .spl-proof-inner, .spl-what-grid, .spl-pool-diagram { grid-template-columns: 1fr; }
+      .spl-lang-grid { grid-template-columns: repeat(3, 1fr); }
+      .spl-hero h1 { font-size: 2rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="scanline"></div>
+
+<nav class="spl-nav">
+  <a href="/" class="spl-logo">SPLINTER<span>⚡</span></a>
+  <div class="spl-nav-links">
+    <a href="/core/">core api</a>
+    <a href="/bindings/">ffi</a>
+    <a href="/cli/">cli</a>
+    <a href="/use_cases/">use cases</a>
+    <a href="https://github.com/splinterhq/libsplinter" class="gh">github</a>
+  </div>
+</nav>
+
+<section class="spl-hero">
+  <div class="spl-hero-tag">// lock-free · zero-copy · l3-speed · ipc substrate</div>
+  <h1>The bus that<br><em>never speaks</em><br>unless spoken to.</h1>
+  <p class="spl-hero-sub">Splinter is a passive, lock-free shared memory substrate for high-frequency vector and KV ingestion across disjointed runtimes. No daemon. No socket tax. No memcpy.</p>
+  <div class="spl-cta-row">
+    <a href="/installing/" class="spl-cta-primary">get started</a>
+    <a href="https://github.com/splinterhq/libsplinter" class="spl-cta-secondary">view on github →</a>
+  </div>
+</section>
+
+<section class="spl-proof">
+  <div class="spl-proof-inner">
+    <div class="spl-proof-text">
+      <h2>The code is the docs.<br>We mean it literally.</h2>
+      <p>The entire core — every seqlock, every atomic op, every alignment guarantee — lives in two files. <code>splinter.c</code> and <code>splinter.h</code>. Under 1,100 lines combined. Every public function has inline Doxygen. No separate reference manual needed.</p>
+      <p>The full repo, including CLI tooling, stress tests, all language bindings, and the llama.cpp inference shard? Just over 6,000 lines.</p>
+      <p class="hl">// if it fits in your head, it fits in your L1 cache</p>
+    </div>
+    <div class="spl-terminal">
+      <div class="spl-term-bar">
+        <div class="spl-dot r"></div>
+        <div class="spl-dot y"></div>
+        <div class="spl-dot g"></div>
+        <span class="spl-term-title">~/libsplinter — cloc</span>
+      </div>
+      <div class="spl-term-body">
+        <div><span class="t-prompt">❯ </span><span class="t-cmd">cloc --md splinter.c splinter.h</span></div>
+        <span class="t-sp"></span>
+        <span class="t-out t-sep">Language        files   blank  comment   code</span>
+        <span class="t-out">C                   1      96       51    <span class="t-hi">876</span></span>
+        <span class="t-out">C/C++ Header        1      87      673    <span class="t-hi">196</span></span>
+        <span class="t-out t-sep">──────────────────────────────────────────</span>
+        <span class="t-out">SUM:                2     183      724   <span class="t-hi">1072</span></span>
+        <span class="t-sp"></span>
+        <div><span class="t-prompt">❯ </span><span class="t-cmd">cloc --md *.c *.h *.cpp *.sh</span></div>
+        <span class="t-sp"></span>
+        <span class="t-out t-sep">Language        files   blank  comment   code</span>
+        <span class="t-out">C                  34     911      664   <span class="t-hi">5280</span></span>
+        <span class="t-out">C++                 2     137      109    <span class="t-hi">512</span></span>
+        <span class="t-out">C/C++ Header        4     129      708    <span class="t-hi">315</span></span>
+        <span class="t-out">Bourne Shell        1      25        8     <span class="t-hi">81</span></span>
+        <span class="t-out t-sep">──────────────────────────────────────────</span>
+        <span class="t-out">SUM:               41    1202     1489   <span class="t-hi">6188</span></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="spl-what">
+  <h2>what it actually is</h2>
+  <span class="spl-section-sub">// three properties, no asterisks</span>
+  <div class="spl-what-grid">
+    <div class="spl-what-card">
+      <div class="spl-what-card-num">01 // passive</div>
+      <h3>not a daemon</h3>
+      <p>Splinter is a memory-mapped region, not a process. It has no event loop, no background threads, no arbiter to wake up. Readers and writers share the same physical RAM directly through the OS page cache.</p>
+    </div>
+    <div class="spl-what-card">
+      <div class="spl-what-card-num">02 // lock-free</div>
+      <h3>seqlocks, not mutexes</h3>
+      <p>Concurrent access is coordinated with atomic sequence epochs per slot. If two writers race on the same key, the slower one gets <code>EAGAIN</code> and retries. No thread ever sleeps waiting for a lock to release.</p>
+    </div>
+    <div class="spl-what-card">
+      <div class="spl-what-card-num">03 // zero-copy</div>
+      <h3>pointers, not packets</h3>
+      <p>Data is never serialized across a socket boundary. Readers cast a raw pointer directly to the L3 cache slot. TypeScript, Python, Rust, and C can all reference the same embedding without a single <code>memcpy()</code>.</p>
+    </div>
+  </div>
+</section>
+
+<section class="spl-pool">
+  <div class="spl-pool-inner">
+    <h2>a pool with 1024 lanes nobody has to referee</h2>
+    <span class="spl-section-sub">// olympic-grade IPC, no lifeguard required</span>
+    <div class="spl-pool-diagram">
+      <div class="spl-lane-vis">
+        <span class="spl-lane-label">// splinter store — live slots</span>
+        <div class="spl-lanes">
+          <div class="spl-lane active"><span class="spl-lane-key">nomic::sentence_vec</span><span class="spl-lane-epoch">epoch 1,847</span></div>
+          <div class="spl-lane writing"><div class="spl-write-dot"></div><span class="spl-lane-key">physics::tension_ch</span><span class="spl-lane-epoch">epoch 23</span></div>
+          <div class="spl-lane active"><span class="spl-lane-key">gdelt::impulse_us</span><span class="spl-lane-epoch">epoch 9,112</span></div>
+          <div class="spl-lane active"><span class="spl-lane-key">global_event_count</span><span class="spl-lane-epoch">epoch 4,200,001</span></div>
+          <div class="spl-lane writing"><div class="spl-write-dot"></div><span class="spl-lane-key">sensor.alpha.47</span><span class="spl-lane-epoch">epoch 88</span></div>
+          <div class="spl-lane active"><span class="spl-lane-key">npc_dialogue_vector</span><span class="spl-lane-epoch">epoch 312</span></div>
+          <div class="spl-lane" style="opacity:0.3"><span class="spl-lane-key">—</span><span class="spl-lane-epoch">empty</span></div>
+          <div class="spl-lane" style="opacity:0.3"><span class="spl-lane-key">—</span><span class="spl-lane-epoch">empty</span></div>
+        </div>
+      </div>
+      <div class="spl-pool-desc">
+        <p>Slots are pre-allocated at store creation. No heap fragmentation. No GC pauses. No garbage. The kernel maps the entire region into every process address space at once — getting a value costs one pointer dereference.</p>
+        <p>Writers increment a per-slot epoch before and after writing. Readers detect torn reads by checking the epoch changed mid-read and simply retry. No mutex contention, no priority inversion, no convoy problem.</p>
+        <p><strong>64-byte alignment</strong> means each slot maps to exactly one cache line. Two writers never cause false sharing on adjacent slots, even at 3M+ ops/sec on throttled consumer hardware.</p>
+        <div class="spl-pool-stats">
+          <div>ops/sec<br><span>3,200,000+</span></div>
+          <div>corruption<br><span>0</span></div>
+          <div>threads tested<br><span>63+1</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="spl-ffi">
+  <h2>one store, every runtime</h2>
+  <span class="spl-section-sub">// zero-copy across language boundaries</span>
+  <div class="spl-lang-grid">
+    <div class="spl-lang-card active" onclick="splShowLang(this,'c')"><div class="spl-lang-name">C / C++</div><div class="spl-lang-note">native</div></div>
+    <div class="spl-lang-card" onclick="splShowLang(this,'python')"><div class="spl-lang-name">Python</div><div class="spl-lang-note">ctypes</div></div>
+    <div class="spl-lang-card" onclick="splShowLang(this,'rust')"><div class="spl-lang-name">Rust</div><div class="spl-lang-note">unsafe ffi</div></div>
+    <div class="spl-lang-card" onclick="splShowLang(this,'ts')"><div class="spl-lang-name">TypeScript</div><div class="spl-lang-note">deno / bun</div></div>
+    <div class="spl-lang-card" onclick="splShowLang(this,'java')"><div class="spl-lang-name">Java</div><div class="spl-lang-note">panama</div></div>
+  </div>
+  <div class="spl-code-pane" id="spl-code-pane">
+<span class="cmt">// C — read 768-dim embedding directly from L3 cache</span>
+<span class="cmt">// no memcpy(). the pointer IS the data.</span>
+
+<span class="kw">size_t</span> out_sz; <span class="kw">uint64_t</span> epoch;
+<span class="kw">void</span> *ptr = <span class="fn">splinter_get_raw_ptr</span>(<span class="str">"npc_vec"</span>, &amp;out_sz, &amp;epoch);
+<span class="ty">float</span> *vec = (<span class="ty">float</span> *)ptr; <span class="cmt">// that's it</span>
+  </div>
+</section>
+
+<section class="spl-perf">
+  <div class="spl-perf-inner">
+    <h2>physics, not marketing</h2>
+    <span class="spl-section-sub">// tiger lake i3, 6gb ram, worst-case workday conditions</span>
+    <table class="spl-bench">
+      <thead>
+        <tr>
+          <th>substrate</th>
+          <th>ops/sec</th>
+          <th>cycles/op</th>
+          <th>daemon</th>
+          <th>memcpy</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>SQLite / Redis</td>
+          <td>~130,000</td>
+          <td>~23,076</td>
+          <td>yes</td>
+          <td>yes</td>
+          <td><span class="spl-bench-bar dim" style="width:20px"></span></td>
+        </tr>
+        <tr>
+          <td class="hi">Splinter (standard)</td>
+          <td class="hi">3,200,000+</td>
+          <td class="hi">~937</td>
+          <td class="hi">no</td>
+          <td class="hi">no</td>
+          <td><span class="spl-bench-bar" style="width:140px"></span></td>
+        </tr>
+        <tr>
+          <td>Splinter (NUMA-pinned, projected)</td>
+          <td>10,000,000+</td>
+          <td>&lt;300</td>
+          <td>no</td>
+          <td>no</td>
+          <td><span class="spl-bench-bar" style="width:280px;opacity:0.25"></span></td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="spl-perf-note">// 25x faster than Redis on the same throttled hardware. not a fair competition — Splinter is local IPC only. but sometimes you just need a piccolo, not an orchestra.</p>
+  </div>
+</section>
+
+<footer class="spl-footer">
+  <p>Splinter is independent research software. <a href="https://buymeacoffee.com/timthepost">buy Tim a coffee</a> if it's saving you time.</p>
+  <p><a href="https://github.com/splinterhq/libsplinter">github.com/splinterhq/libsplinter</a></p>
+</footer>
+
+<script>
+const splLangs = {
+  c: `<span class="cmt">// C — read 768-dim embedding directly from L3 cache</span>\n<span class="cmt">// no memcpy(). the pointer IS the data.</span>\n\n<span class="kw">size_t</span> out_sz; <span class="kw">uint64_t</span> epoch;\n<span class="kw">void</span> *ptr = <span class="fn">splinter_get_raw_ptr</span>(<span class="str">"npc_vec"</span>, &amp;out_sz, &amp;epoch);\n<span class="ty">float</span> *vec = (<span class="ty">float</span> *)ptr; <span class="cmt">// that's it</span>`,
+
+  python: `<span class="cmt"># Python — zero-copy read via ctypes. the GIL never touches this data.</span>\n\nbus = <span class="fn">SplinterBus</span>(<span class="str">"nomic_text"</span>)\nvec = bus.<span class="fn">get_embeddings_zero_copy</span>(<span class="str">"npc_dialogue_vector"</span>)\n<span class="cmt"># vec points directly into /dev/shm</span>\n<span class="cmt"># if the C daemon updates the slot, vec updates instantly</span>`,
+
+  rust: `<span class="cmt">// Rust — raw pointer cast into a &amp;[u8] slice. no memcpy().</span>\n<span class="kw">unsafe</span> {\n    <span class="kw">let</span> raw = <span class="fn">splinter_get_raw_ptr</span>(key.<span class="fn">as_ptr</span>(), &amp;<span class="kw">mut</span> sz, &amp;<span class="kw">mut</span> epoch);\n    <span class="kw">let</span> slice = std::slice::<span class="fn">from_raw_parts</span>(raw <span class="kw">as</span> *<span class="kw">const</span> <span class="ty">u8</span>, sz);\n    <span class="cmt">// Rust tracks the lifetime. still no memcpy().</span>\n}`,
+
+  ts: `<span class="cmt">// TypeScript (Deno or Bun FFI)</span>\n<span class="kw">const</span> store = Splinter.<span class="fn">connect</span>(<span class="str">"nomic_text"</span>);\n\nstore.<span class="fn">set</span>(<span class="str">"ts_key"</span>, <span class="str">"hello from typescript"</span>);\n<span class="kw">const</span> val   = store.<span class="fn">getString</span>(<span class="str">"ts_key"</span>);\n<span class="kw">const</span> epoch = store.<span class="fn">getEpoch</span>(<span class="str">"ts_key"</span>); <span class="cmt">// seqlock version</span>`,
+
+  java: `<span class="cmt">// Java Panama — MemorySegment. GC never sees this data.</span>\nMemorySegment ptr = (<span class="ty">MemorySegment</span>) <span class="fn">splinterGetRawPtr</span>\n    .<span class="fn">invokeExact</span>(key, outSz, outEpoch);\n\n<span class="kw">long</span> size = outSz.<span class="fn">get</span>(ValueLayout.JAVA_LONG, 0);\nMemorySegment data = ptr.<span class="fn">reinterpret</span>(size);\n<span class="ty">String</span> val = data.<span class="fn">getString</span>(0); <span class="cmt">// lives in /dev/shm, not heap</span>`
+};
+
+function splShowLang(el, lang) {
+  document.querySelectorAll('.spl-lang-card').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('spl-code-pane').innerHTML = splLangs[lang];
+}
+</script>
+
+</body>
+</html>
