@@ -1,6 +1,11 @@
 # Splinter ⚡ Lock-Free Shared Memory That Puts Your Governor In The Same Room As Your Model.
 
-To do this, Splinter wears a number of hats, like:
+Splinter is built on the belief that for local inter-process communication (IPC), the
+kernel’s networking stack and arbitration services are expensive and unnecessary 
+couplings. Splinter provides "just enough" safety for processes to swim in the 
+same address space without conflict, and most importantly, without latency.
+
+To achieve this, Splinter wears a number of hats, like:
 
  - A bloomable KV store with atomic integer operations
  - An ultra-light and efficient socket-less inference layer (embedding and completion)
@@ -19,11 +24,6 @@ performance is:
 That's worth getting excited about, and those tests are from a force-throttled i3 Tiger Lake.
 
 And core is under 1000 lines of code.
-
-Splinter is built on the belief that for local inter-process communication (IPC), the
-kernel’s networking stack and arbitration services are expensive and unnecessary 
-couplings. Splinter provides "just enough" safety for processes to swim in the 
-same address space without conflict, and most importantly, without latency.
 
 Splinter emerged out of frustration resulting from attempting to stretch tools
 over gaps as they broke. It wasn't a question of more tuning; it was a need to 
