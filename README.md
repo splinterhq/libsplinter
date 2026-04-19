@@ -1,6 +1,6 @@
-# Splinter ⚡ Couples Inference & Governance In The Same NUMA Lane, Non-Blocking.
+# Splinter ⚡ Couples Inference & Governance In The Same Non-Blocking NUMA Lane.
 
-To do this, it has to wear a number of hats, like:
+To do this, Splinter wears a number of hats, like:
 
  - A bloomable KV store with atomic integer operations
  - An ultra-light and efficient socket-less inference layer (embedding and completion)
@@ -17,6 +17,8 @@ performance is:
  - MRMW: (4:4) 15.3 Million ops/second
 
 That's worth getting excited about, and those tests are from a force-throttled i3 Tiger Lake.
+
+And core is under 1000 lines of code.
 
 Splinter is built on the belief that for local inter-process communication (IPC), the
 kernel’s networking stack and arbitration services are expensive and unnecessary 
