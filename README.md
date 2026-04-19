@@ -1,4 +1,4 @@
-# Splinter ⚡ Couples Inference & Governance In The Same Non-Blocking NUMA Lane.
+# Splinter ⚡ Lock-Free Shared Memory That Puts Your Governor In The Same Room As Your Model.
 
 To do this, Splinter wears a number of hats, like:
 
