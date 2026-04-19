@@ -19,11 +19,11 @@ This is all protected by an iron-clad atomic sequence lock. Because of this, Spl
 performance is:
 
  - MRSW: 3.2 Million ops/second
- - MRMW: (4:4) 15.3 Million ops/second
+ - MRMW: (4:4 disjointed-lane) 15.3 Million ops/second
 
 That's worth getting excited about, and those tests are from a force-throttled i3 Tiger Lake.
 
-And core is under 1000 lines of code.
+And core is under 1000 lines of ***100% "Valgrind-Clean" code***.
 
 Splinter emerged out of frustration resulting from attempting to stretch tools
 over gaps as they broke. It wasn't a question of more tuning; it was a need to 
