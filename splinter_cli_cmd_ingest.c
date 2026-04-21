@@ -52,10 +52,6 @@
 
 static const char *modname = "ingest";
 
-/* -------------------------------------------------------------------------
- * Help
- * -------------------------------------------------------------------------*/
-
 void help_cmd_ingest(unsigned int level) {
     printf("Usage: %s [file] [--key <key>] [--label <hex>]\n", modname);
     printf("       %s --key <key>              (reads from stdin)\n", modname);
