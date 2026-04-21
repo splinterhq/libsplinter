@@ -213,7 +213,7 @@
 <section class="spl-hero">
   <div class="spl-hero-tag">// lock-free · zero-copy · l3-speed · ipc substrate</div>
   <h1>The bus that<br><em>never speaks</em><br>unless spoken to.</h1>
-  <p class="spl-hero-sub">Splinter is a passive, lock-free shared memory substrate for high-frequency vector and KV ingestion across disjointed runtimes. No daemon. No socket tax. No memcpy.</p>
+  <p class="spl-hero-sub">Splinter is a passive, lock-free shared memory substrate for high-frequency vector and KV ingestion across disjointed runtimes. It puts inference and governance in the same memory lane as the model. No daemon. No socket tax. No memcpy.</p>
   <div class="spl-cta-row">
     <a href="/installing/" class="spl-cta-primary">get started</a>
     <a href="https://github.com/splinterhq/libsplinter" class="spl-cta-secondary">view on github →</a>
@@ -305,7 +305,12 @@
         <div class="spl-pool-stats">
           <div>ops/sec<br><span>3,200,000+</span></div>
           <div>corruption<br><span>0</span></div>
-          <div>threads tested<br><span>63+1</span></div>
+          <div>threads tested<br><span>63+1 (MRSW)</span></div>
+        </div>
+        <div class="spl-pool-stats">
+          <div>ops/sec<br><span>15,400,000+</span></div>
+          <div>corruption<br><span>0</span></div>
+          <div>threads tested<br><span>4+4 (MRMW)</span></div>
         </div>
       </div>
     </div>
