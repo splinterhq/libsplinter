@@ -38,7 +38,7 @@ same physical network.
 There are commands `splinter_cli` understands how to run, which are:
 
 ```bash
-Module     | Description                                                 
+ Module     | Description                                                 
 --------------------------------------------------------------------------------
  clear      | Clears the screen.                                          
  cls        | Alias of 'clear'                                            
@@ -62,9 +62,11 @@ Module     | Description
  bump       | Bump a slot's epoch without doing any other work            
  append     | Append a value to an existing key (do not truncate prior to writing)
  uuid       | Generate a UUID v4 unique identifier                        
- search     | Search embedded keys by semantic similarity.                
+ caps       | Print version, build, and compiled-in feature flags       
+ search     | Search embedded keys by semantic similarity                
+ ingest     | Ingest a file or stdin as chunked tandem slots for splinference
  wasm       | Run WASM via WASMEdge                                       
- lua        | Run a lua script                                            
+ lua        | Run a lua script                                   
 ```
 
 There's also a way in which `splinterctl` / `splinter_cli` should _be_ run,

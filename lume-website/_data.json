@@ -5,7 +5,8 @@
     "title": "=title",
     "site": "Splinter Documentation",
     "lang": "en",
-    "description": "=description"
+    "description": "=description",
+    "image": "/uploads/splinter.jpeg"
   },
   "top_links": [
     {

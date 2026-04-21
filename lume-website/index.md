@@ -1,5 +1,5 @@
 ---
-title: "Splinter — L3-Speed Shared Memory IPC"
+title: "Splinter — L3-Speed Shared Memory IPC, KV, Vector Store, Inference Provider And Semantic Breadboard For Linux/GNU"
 layout: splinter_home.njk
 metas:
   lang: en
@@ -14,4 +14,5 @@ metas:
     - libsplinter
   robots: true
   generator: true
+  image: /uploads/splinter.jpeg
 ---
