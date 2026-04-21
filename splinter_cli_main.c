@@ -242,7 +242,7 @@ cli_module_t command_modules[] = {
         22,
         "caps",
         4,
-        "Print version, build, and compiled-in feature flags.",
+        "Print version, build, and compiled-in feature flags",
         -1,
         &cmd_caps,
         &help_cmd_caps
@@ -252,7 +252,7 @@ cli_module_t command_modules[] = {
         23,
         "search",
         6,
-        "Search embedded keys by semantic similarity.",
+        "Search embedded keys by semantic similarity and distance",
         -1,
         &cmd_search,
         &help_cmd_search
@@ -261,7 +261,7 @@ cli_module_t command_modules[] = {
         24,
         "ingest",
         6,
-        "Ingest a file or stdin as chunked tandem slots for splinference.",
+        "Ingest a file or stdin as chunked tandem slots for splinference",
         -1,
         &cmd_ingest,
         &help_cmd_ingest
