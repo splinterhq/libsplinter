@@ -1,14 +1,29 @@
-# Splinter ⚡ L3-Speed Shared Memory Vector & KV Store For Tight Inference Deployments
+# Splinter ⚡ Lock-Free Shared Memory That Puts Your Governor In The Same Room As Your Model.
 
-Splinter is a minimalist, persist-able lock-free and bloom-able key-value store 
-designed to handle high-frequency data and vector ingestion/retrieval across 
-disjointed runtimes, and to provide latency-free transparency into LLM inference
-on both a token and vector scale.
-
-It is built on the belief that for local inter-process communication (IPC), the
+Splinter is built on the belief that for local inter-process communication (IPC), the
 kernel’s networking stack and arbitration services are expensive and unnecessary 
 couplings. Splinter provides "just enough" safety for processes to swim in the 
 same address space without conflict, and most importantly, without latency.
+
+To achieve this, Splinter wears a number of hats, like:
+
+ - A bloomable KV store with atomic integer operations
+ - An ultra-light and efficient socket-less inference layer (embedding and completion)
+ - A semantically-searchable vector database
+ - Embedded LUA and WASM for processing and SIMD workloads
+
+And it does it via shared memory,either in-memory or on disk, and it's easy to move 
+stores from one to the other.
+
+This is all protected by an iron-clad atomic sequence lock. Because of this, Splinter's 
+performance is:
+
+ - MRSW: 3.2 Million ops/second
+ - MRMW: (4:4 disjointed-lane) 15.3 Million ops/second
+
+That's worth getting excited about, and those tests are from a force-throttled i3 Tiger Lake.
+
+And core is under 1000 lines of ***100% "Valgrind-Clean" code***.
 
 Splinter emerged out of frustration resulting from attempting to stretch tools
 over gaps as they broke. It wasn't a question of more tuning; it was a need to 
