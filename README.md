@@ -276,7 +276,8 @@ computational thermodynamics:
 #### 4. The Signal Arena
 
 - **Pulse Groups**: Up to 64 independent signal groups for `epoll()`-backed
-  notifications.
+  notifications. Currently one global per store, but can be extended for
+  1:1 or 1:many mapping with individual group busses without major change.
 - **Bloom Labeling**: High-performance key tagging allows watchers to filter for
   specific signal "vibrations" without scanning the entire store.
 
