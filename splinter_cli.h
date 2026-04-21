@@ -159,6 +159,9 @@ void help_cmd_caps(unsigned int level);
 #ifdef HAVE_EMBEDDINGS
 int cmd_search(int argc, char *argv[]);
 void help_cmd_search(unsigned int level);
+
+int cmd_ingest(int argc, char *argv[]);
+void help_cmd_ingest(unsigned int level);
 #endif // HAVE_EMBEDDINGS
 
 #ifdef HAVE_WASM

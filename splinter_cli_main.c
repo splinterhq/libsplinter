@@ -257,11 +257,20 @@ cli_module_t command_modules[] = {
         &cmd_search,
         &help_cmd_search
     },
+    {
+        24,
+        "ingest",
+        6,
+        "Ingest a file or stdin as chunked tandem slots for splinference.",
+        -1,
+        &cmd_ingest,
+        &help_cmd_ingest
+    },
 #endif
 #ifdef HAVE_WASM
     {
 #ifdef HAVE_EMBEDDINGS
-        24,
+        25,
 #else
         23,
 #endif
@@ -276,9 +285,9 @@ cli_module_t command_modules[] = {
 #ifdef HAVE_LUA
     {
 #if defined(HAVE_EMBEDDINGS) && defined(HAVE_WASM)
-        25,
+        26,
 #elif defined(HAVE_EMBEDDINGS) || defined(HAVE_WASM)
-        24,
+        25,
 #else
         23,
 #endif
@@ -442,6 +451,9 @@ static void completion(const char *buf, linenoiseCompletions *lc) {
             break;
         case 'i':
             linenoiseAddCompletion(lc, "init");
+#ifdef HAVE_EMBEDDINGS
+            linenoiseAddCompletion(lc, "ingest");
+#endif
             break;
         case 'l':
             linenoiseAddCompletion(lc, "list");
@@ -551,6 +563,12 @@ static char *hints(const char *buf, int *color, int *bold) {
     if (!strncasecmp(buf, "hel", 4)) {
         return "p ";
     }
+
+#ifdef HAVE_EMBEDDINGS
+    if (!strncasecmp(buf, "ing", 6)) {
+        return "est ";
+    }
+#endif
 
     if (!strncasecmp(buf, "i", 4)) {
         return "nit ";
