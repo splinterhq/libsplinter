@@ -918,37 +918,6 @@ int splinter_set_as_system(const char *key);
  */
 int splinter_append(const char *key, const void *data, size_t data_len, size_t *new_len);
 
-// 
-// DEPRECATED - DO NOT USE _av() FUNCTIONS - THEY WILL BE REMOVED
-// BEFORE THE NEXT MAJOR RELEASE (2 minor releases from now)
-//
-
-/**
- * @brief Set the value of the auto_scrub flag on the current bus. 
- */
-__attribute__((deprecated("THIS WILL BE REMOVED WITHIN A WEEK: Use splinter_set_mop() instead.")))
-int splinter_set_av(unsigned int mode);
-
- /**
-  * @brief Engage hybrid auto scrub 
-  * @return int (sets errno) 
-  */
-__attribute__((deprecated("THIS WILL BE REMOVED WITHIN A WEEK: Use splinter_set_mop() instead.")))
-int splinter_set_hybrid_av(void);
-
-/**
- * @brief Check hybrid status of auto scrub engagement
- * @return int
- */
-__attribute__((deprecated("THIS WILL BE REMOVED WITHIN A WEEK: Use splinter_get_mop() instead.")))
-int splinter_get_hybrid_av(void);
-
- /**
-  * @brief Get the value of the auto_scrub flag on the current bus as integer.
-  */
-__attribute__((deprecated("THIS WILL BE REMOVED WITHIN A WEEK: Use splinter_get_mop() instead.")))
-int splinter_get_av(void);
-
 #ifdef __cplusplus
 }
 #endif

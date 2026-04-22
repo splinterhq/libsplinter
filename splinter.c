@@ -228,35 +228,6 @@ int splinter_get_mop(void) {
     return 0;
 }
 
-int splinter_set_av(unsigned int mode) {
-    if (!H) return -2;
-    if (mode == 1) {
-        splinter_config_set(H, SPL_SYS_AUTO_SCRUB);
-        return 0;
-    } else if (mode == 0) {
-        atomic_fetch_and(&H->core_flags, ~(SPL_SYS_AUTO_SCRUB | SPL_SYS_HYBRID_SCRUB));
-        return 0;
-    }
-    errno = ENOTSUP;
-    return -1;
-}
-
-int splinter_get_av(void) {
-    if (!H) return -2;
-    return (int) splinter_config_test(H, SPL_SYS_AUTO_SCRUB);
-}
-
-int splinter_set_hybrid_av(void) {
-    if (!H) return -2;
-    atomic_fetch_or(&H->core_flags, SPL_SYS_AUTO_SCRUB | SPL_SYS_HYBRID_SCRUB);
-    return 0;
-}
-
-int splinter_get_hybrid_av(void) {
-    if (!H) return -2;
-    return (int) splinter_config_test(H, SPL_SYS_HYBRID_SCRUB);
-}
-
 void splinter_purge(void) {
     if (!H || !S || !VALUES) return;
     for (uint32_t i = 0; i < H->slots; ++i) {
@@ -374,6 +345,7 @@ int splinter_set(const char *key, const void *val, size_t len) {
     }
     return -1;
 }
+
 int splinter_get(const char *key, void *buf, size_t buf_sz, size_t *out_sz) {
     if (!H || !key) return -2;
     uint64_t h = fnv1a(key);
