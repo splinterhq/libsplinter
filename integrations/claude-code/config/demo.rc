@@ -1,0 +1,81 @@
+# Boilerplate ctags-style to hex bitmask resolver table
+# Think: /etc/hosts for bloom labels; essentially.
+# Format: LABEL_NAME MASK
+# Masks are 64-bit unsigned integers (hex or decimal).
+# Note: Bit 64 is reserved for system use.
+#
+# As long as the label is a continuous string with normal
+# printing characters (UTF-8), any label name should be fine.
+#
+# They're essentially free-form tags for slots as long as you
+# use them strategically, and keep them in-sync between clients.
+#
+# (Very important to keep clients in sync with this mapping or 
+# you bloom the wrong keys without much failure detection)
+#
+# This can also be hard-coded (even as an enum) in the client.
+#
+
+user-label-1  0x1
+user-label-2  0x2
+user-label-3  0x4
+user-label-4  0x8
+user-label-5  0x10
+user-label-6  0x20
+user-label-7  0x40
+user-label-8  0x80
+user-label-9  0x100
+user-label-10 0x200
+user-label-11 0x400
+user-label-12 0x800
+user-label-13 0x1000
+user-label-14 0x2000
+user-label-15 0x4000
+user-label-16 0x8000
+user-label-17 0x10000
+user-label-18 0x20000
+user-label-19 0x40000
+user-label-20 0x80000
+user-label-21 0x100000
+user-label-22 0x200000
+user-label-23 0x400000
+user-label-24 0x800000
+user-label-25 0x1000000
+user-label-26 0x2000000
+user-label-27 0x4000000
+user-label-28 0x8000000
+user-label-29 0x10000000
+user-label-30 0x20000000
+user-label-31 0x40000000
+user-label-32 0x80000000
+user-label-33 0x100000000
+user-label-34 0x200000000
+user-label-35 0x400000000
+user-label-36 0x800000000
+user-label-37 0x1000000000
+user-label-38 0x2000000000
+user-label-39 0x4000000000
+user-label-40 0x8000000000
+user-label-41 0x10000000000
+user-label-42 0x20000000000
+user-label-43 0x40000000000
+user-label-44 0x80000000000
+user-label-45 0x100000000000
+user-label-46 0x200000000000
+user-label-47 0x400000000000
+user-label-48 0x800000000000
+user-label-49 0x1000000000000
+user-label-50 0x2000000000000
+user-label-51 0x4000000000000
+user-label-52 0x8000000000000
+user-label-53 0x10000000000000
+user-label-54 0x20000000000000
+user-label-55 0x40000000000000
+user-label-56 0x80000000000000
+user-label-57 0x100000000000000
+user-label-58 0x200000000000000
+user-label-59 0x400000000000000
+user-label-60 0x800000000000000
+user-label-61 0x1000000000000000
+user-label-62 0x2000000000000000
+user-label-63 0x4000000000000000

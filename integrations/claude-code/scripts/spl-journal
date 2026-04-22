@@ -1,0 +1,44 @@
+#!/bin/bash
+# scripts/spl-journal
+# Usage: 
+#   spl-journal <key> "<what I'm about to try>"
+#   spl-journal <key>.1 "<what happened>" [bloom_mask]
+#
+# The base key journals intent. The .1 key journals outcome.
+# Splinter's sidecar embeds both automatically.
+# Optional bloom_mask (hex) categorizes the entry for later search.
+
+STORE="${SPLINTER_AGENT_BUS:-demo_bus.spl}"
+
+KEY="${1}"
+VALUE="${2}"
+BLOOM="${3:-}"
+
+die() {
+    echo "$1" >&2
+    exit 1
+}
+
+if [ -z "$KEY" ] || [ -z "$VALUE" ]; then
+    echo "spl-journal: key and value are required" >&2
+    exit 1
+fi
+
+SPL_ARGS=(--use "$STORE" --rc-file config/agent.rc)
+[ -n "$SPLINTER_PREFIX" ] && SPL_ARGS+=(--prefix "$SPLINTER_PREFIX")
+
+# If this is a base key (no .N suffix), initialize the tandem order structure
+if [[ "$KEY" != *.* ]]; then
+    splinterpctl "${SPL_ARGS[@]}" set "$KEY" "$VALUE" || die "failed to set key"
+    splinterpctl "${SPL_ARGS[@]}" orders set "$KEY" 2 || die "failed to set key orders"
+    splinterpctl "${SPL_ARGS[@]}" type "$KEY" vartext || die "failed to set key slot type"
+    splinterpctl "${SPL_ARGS[@]}" type "${KEY}.1" vartext || die "failed to set tandem slot type"
+else
+    # This is an order key (e.g. key.1) — append to it
+    splinterpctl "${SPL_ARGS[@]}" append "$KEY" "$VALUE" || die "failed to append to key"
+fi
+
+# Apply bloom label if provided
+if [ -n "$BLOOM" ]; then
+    splinterpctl "${SPL_ARGS[@]}" label "$KEY" "$BLOOM" || die "label action failed"
+fi

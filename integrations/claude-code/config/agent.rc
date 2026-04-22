@@ -1,0 +1,8 @@
+build-related      0x1
+runtime-related    0x2
+test-related       0x4
+dependency-related 0x8
+logic-related      0x10
+security-related   0x20
+conflict-related   0x40
+exception-related  0x80
