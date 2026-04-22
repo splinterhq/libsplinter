@@ -848,19 +848,3 @@ unsafe extern "C" {
         new_len: *mut usize,
     ) -> ::std::os::raw::c_int;
 }
-unsafe extern "C" {
-    #[doc = " @brief Set the value of the auto_scrub flag on the current bus."]
-    pub fn splinter_set_av(mode: ::std::os::raw::c_uint) -> ::std::os::raw::c_int;
-}
-unsafe extern "C" {
-    #[doc = " @brief Engage hybrid auto scrub\n @return int (sets errno)"]
-    pub fn splinter_set_hybrid_av() -> ::std::os::raw::c_int;
-}
-unsafe extern "C" {
-    #[doc = " @brief Check hybrid status of auto scrub engagement\n @return int"]
-    pub fn splinter_get_hybrid_av() -> ::std::os::raw::c_int;
-}
-unsafe extern "C" {
-    #[doc = " @brief Get the value of the auto_scrub flag on the current bus as integer."]
-    pub fn splinter_get_av() -> ::std::os::raw::c_int;
-}
