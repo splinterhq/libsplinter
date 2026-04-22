@@ -1,5 +1,8 @@
 # Splinter ⚡ Lock-Free Shared Memory That Puts Your Governor In The Same Room As Your Model.
 
+_Please consider giving Splinter a Star if you find it useful or even provocative; it helps bring
+more daylight, scrutiny and active experimentation with Splinter to the project!_ ✨
+
 Splinter is built on the belief that for local inter-process communication (IPC), the
 kernel’s networking stack and arbitration services are expensive and unnecessary 
 couplings. Splinter provides "just enough" safety for processes to swim in the 
