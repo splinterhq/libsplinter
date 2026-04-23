@@ -869,10 +869,6 @@ void splinter_enumerate_matches(uint64_t mask,
     }
 }
 
-/* -------------------------------------------------------------------------
- * Event bus API
- * -------------------------------------------------------------------------*/
-
 int splinter_event_bus_init(void) {
     if (!H) return -1;
     int fd = eventfd(0, EFD_CLOEXEC);
@@ -926,8 +922,6 @@ void splinter_event_bus_get_dirty(uint64_t *out, size_t words) {
     for (size_t i = 0; i < n; i++)
         out[i] = atomic_load_explicit(&H->event_bus.dirty_mask[i], memory_order_acquire);
 }
-
-/* -------------------------------------------------------------------------*/
 
 int splinter_set_as_system(const char *key) {
     if (!H || !S) return -2;
