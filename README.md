@@ -1,4 +1,4 @@
-# Splinter ⚡ Lock-Free Shared Memory That Puts Your Governor In The Same Room As Your Model.
+# Splinter ⚡ Lock-Free Shared Memory Manifold That Puts Your Governor In The Same Room As Your Model.
 
 _Please consider giving Splinter a Star if you find it useful or even provocative; it helps bring
 more daylight, scrutiny and active experimentation to the project!_ ✨
