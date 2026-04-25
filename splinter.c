@@ -12,6 +12,11 @@
  * 
  * You can use it like semantic "breadboard" - Have a good time!
  * https://splinterhq.github.io for docs
+ * 
+ * A note on variable naming choice: 
+ * Single letter / globals are specific (H for header, S for the slot array, etc)
+ * It's not being clever or prematurely optimal, it's saving room in the hot path
+ * instruction cache for everything to fit.
  */
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
