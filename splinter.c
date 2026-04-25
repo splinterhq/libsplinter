@@ -410,7 +410,7 @@ int splinter_poll(const char *key, uint64_t timeout_ms) {
     if (!slot) return -1;
 
     uint64_t start_epoch = atomic_load_explicit(&slot->epoch, memory_order_acquire);
-    if (start_epoch & 1) { errno = EAGAIN; return -2; }
+    if (start_epoch & 1) { errno = EAGAIN; return -1; }
 
     struct timespec deadline;
     clock_gettime(CLOCK_REALTIME, &deadline);
@@ -419,14 +419,14 @@ int splinter_poll(const char *key, uint64_t timeout_ms) {
     struct timespec sleep_ts = {0, 10 * NS_PER_MS};
     while (1) {
         uint64_t cur_epoch = atomic_load_explicit(&slot->epoch, memory_order_acquire);
-        if (cur_epoch & 1) { errno = EAGAIN; return -2; }
+        if (cur_epoch & 1) { nanosleep(&sleep_ts, NULL); continue; }
         if (cur_epoch != start_epoch) return 0;
         struct timespec now;
         clock_gettime(CLOCK_REALTIME, &now);
         if ((now.tv_sec > deadline.tv_sec) ||
             (now.tv_sec == deadline.tv_sec && now.tv_nsec >= deadline.tv_nsec)) {
             errno = ETIMEDOUT;
-            return -2;
+            return -1;
         }
         nanosleep(&sleep_ts, NULL);
     }
