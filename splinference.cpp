@@ -180,6 +180,10 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    // Map the "embed this" convention label (bit 0 / 0x1) to our signal group
+    // so that splinter_bump_slot() on a key with this label wakes us up.
+    splinter_watch_label_register(1ULL, signal_group);
+
     std::cout << "[Startup]: Loading GGUF model `" << model_path << "` (this may take a moment) ...\n";
     llama_backend_init();
 

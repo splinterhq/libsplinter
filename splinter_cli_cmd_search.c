@@ -208,6 +208,7 @@ int cmd_search(int argc, char *argv[]) {
 
     /* Write query to scratch key and trigger splinference */
     splinter_set(scratch_key, query_text, strlen(query_text));
+    splinter_set_named_type(scratch_key, SPL_SLOT_TYPE_VARTEXT);
     splinter_set_label(scratch_key, 1ULL);
     splinter_bump_slot(scratch_key);
     scratch_written = 1;
