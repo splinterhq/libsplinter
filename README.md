@@ -105,6 +105,21 @@ tension                                      0.4302     19.9338    6      259   
 sadness                                      0.4132     20.2039    6      198    SPL_SLOT_TYPE_VARTEXT
 ```
 
+## Semantic Log Saw
+
+```bash
+splinterctl init logsaw --keys 50000 --length 1024
+sudo tail -n 5000 /var/log/messages | splinterctl --use logsaw ingest --name messages
+splinference logsaw /gguf/embedder.gguf 1 &
+export SPLINFERENCE_PID=$!
+splinterctl --use logsaw search "Authentication or DNS issues"
+
+ ... results show here sorted by similarity and magnitude ...
+
+# when done
+kill SPLINFERENCE_PID 
+```
+
 ## Low Complexity + Mechanical Sympathy = Speed!
 
 Modern software has become complacent with IAAS marketing, assuming that CPU
