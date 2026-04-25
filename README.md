@@ -13,13 +13,12 @@ To achieve this, Splinter wears a number of hats, like:
  - A bloomable KV store with atomic integer operations
  - An ultra-light and efficient socket-less inference layer (embedding and completion)
  - A semantically-searchable vector database
- - Embedded LUA and WASM for processing and SIMD workloads
+ - Embedded LUA and WASM for processing and SIMD workloads and data transoformation on
+   I/O trigegrs (similar to Lua Meta-Tables). 
 
 And it does it via shared memory,either in-memory or on disk, and it's easy to move 
-stores from one to the other.
-
-This is all protected by an iron-clad atomic sequence lock. Because of this, Splinter's 
-performance is:
+stores from one to the other. This is all protected by an iron-clad atomic sequence 
+lock. Because of this, Splinter's performance is:
 
  - MRSW: 3.2 Million ops/second
  - MRMW: (4:4 disjointed-lane) 15.3 Million ops/second
@@ -27,15 +26,6 @@ performance is:
 That's worth getting excited about, and those tests are from a force-throttled i3 Tiger Lake.
 
 And core is under 1000 lines of ***100% "Valgrind-Clean" code***.
-
-Splinter emerged out of frustration resulting from attempting to stretch tools
-over gaps as they broke. It wasn't a question of more tuning; it was a need to 
-cut out the socket layer and kernel arbitration completely.
-
-It was a choice between dismantling and re-imagining SQLite, or creating
-something completely different. Given the sparse availability of options,
-different seemed most beneficial to both the current need as well as the current
-ecosystem.
 
 ## Quick Start:
 
@@ -53,48 +43,67 @@ sudo -E make install
 You can use `configure --help` for  more options. See below for packages Splinter
 can link against and use.
 
-## The Swimming Pool Analogy: Understanding Splinter "Visually"
+Once done, you can play with `splinterctl` `splinterpctl` (persistent version), as well
+as the fully interactive `splinter_cli` and `splinterp_cli`. But remember, while Splinter
+has a great CLI, it's just "shell integration" in  the grand scheme of things. ***Splinter's
+real-use is in code, through FFI or embedded use***; Splinter's tools are as much for
+use as they are for showing how the code can be applied.
 
-There is nothing quite like Splinter, so it helps to be able to visualize the
-architecture so you see how the features work together.
+If you want a script that creates a semantic breadboard bus for you, see 
+[this one](https://github.com/splinterhq/prior-art-disclosures/tree/main/octopus-3):
 
-Imagine you aren't just storing data; you are designing a high-performance 
-Olympic-sized swimming pool. In fact imagine `splinter_create()` returned 
-a multi-lane pool that rivals any YMCA.
+ - Install Splinter
+ - Download `evProcessor` (an executable shell script that runs splinter commands)
+ - Download `evProcessor.rc` (a file that maps hex bitmasks to text labels)
 
-But ... with some twists.
+Edit `evProcessor` and change the bottom line to point to a valid location for a GGUF
+embedding model, as well as the command to use the shared memory (not file based) version
+of the store:
 
-### Pre-Allocated Lanes (Zero Overhead)
+```bash
+# Comment this one out
+# splinferencep --backfill-text-keys "${1}" /gguf/nomic.gguf 0 --oneshot
+# Add this one
+splinference --backfill-text-keys "${1}" /path/to/embedding.gguf 0 --oneshot
+```
 
-Instead of building a new pool every time you have a guest (dynamic allocation), 
-we build one massive pool at the start. We divide it into perfectly equal lanes. 
-If you need a key, you don't "request" it from a lifeguard (the OS/Kernel); 
-you simply look at Lane 4. You have a direct line of sight to the water 
-because the memory is already mapped to your process.
+Run `./evProcessor test.spl` to create a store and populate the keys (in this case, phrases
+suggestive of different layers of emotional valence.
 
-### The Diving Boards (Lock-Free Access)
+Now, in another terminal, run inference to monitor incoming signals for embedding requests:
 
-Each lane has a diving board. Because of Splinter's atomic sequence epochs, 
-32 divers  can jump into their own lanes at the exact same time. They never collide. 
-If two divers try to hit the same lane simultaneously, the second one doesn't 
-crash; they simply "bounce" back to the board (`EAGAIN`) and try again a 
-nanosecond later. No one ever stops the flow of the meet to wait for a key.
+```bash
+splinference test.spl /path/to/embedding.gguf 1
+```
 
-### The Signal Pulse (IPC answerbox-style signaling / Agentic Coordination)
+Those text keys are now semantically searchable via `splinterctl search` or just `search` in
+the cli, found by cosine similarity and sorted neatly by Euclidean distance with an easy 
+cutofff:
 
-Now, imagine the water is connected. When a diver hits the water in Lane 1, 
-a ripple (signal) travels instantly across the surface. A coach 
-(inference) sitting at the far end doesn't have to keep staring at the lane; 
-they just wait to feel the ripple. The moment they feel it, they know exactly 
-which lane to look at. 
+```
+sempods/evtest # help search
+search searches embedded keys by semantic similarity.
+Usage: search "<query>" [--json] [--limit N] [--distance F] [--similarity F] [--bloom MASK] [--regex PATTERN]
+  --json          Output results as JSON
+  --limit N       Maximum number of results (default: unlimited)
+  --distance F    Maximum euclidean distance to include (default: no filter)
+  --similarity F  Minimum cosine similarity to include (default: no filter)
+  --bloom MASK    Hex bloom mask; uses enumerate_matches() for pre-filtering
+  --regex PATTERN Regex filter applied to key names before scoring
 
-### No Jumping Out (Zero Copy)
-
-In a traditional system (like Redis or SQLite), if you want to inspect a 
-diver, you have to pull them out of the water, dry them off, and carry 
-them to a different building (Serialization/Network/Memcpy). In Splinter, 
-the inspectors are already in the water with the divers. You just use 
-a pointer. No carrying, no constant re-serializing, no delays.
+sempods/evtest # search "Don't worry, be happy!" --limit 10 
+Name                                         Similarity Distance   Epoch  Len    Type
+joy                                          0.5754     17.8511    6      154    SPL_SLOT_TYPE_VARTEXT
++joy                                         0.5749     17.3623    6      259    SPL_SLOT_TYPE_VARTEXT
++polarity                                    0.5296     18.4134    6      164    SPL_SLOT_TYPE_VARTEXT
+++polarity                                   0.5252     18.5060    6      204    SPL_SLOT_TYPE_VARTEXT
+++joy                                        0.4839     18.9606    6      341    SPL_SLOT_TYPE_VARTEXT
+hedonism                                     0.4677     19.1903    6      317    SPL_SLOT_TYPE_VARTEXT
++fear                                        0.4561     19.6380    6      312    SPL_SLOT_TYPE_VARTEXT
+fear                                         0.4368     19.6631    6      223    SPL_SLOT_TYPE_VARTEXT
+tension                                      0.4302     19.9338    6      259    SPL_SLOT_TYPE_VARTEXT
+sadness                                      0.4132     20.2039    6      198    SPL_SLOT_TYPE_VARTEXT
+```
 
 ## Low Complexity + Mechanical Sympathy = Speed!
 
@@ -104,9 +113,10 @@ socket layer to transfer a value that we already have in memory to another
 region in the same physical memory as standard practice.
 
 And lately, we're repeating this practice by adding vector embeddings - let's think
-more about what we actually need in this process. Splinter is a gesture back in the direction of efficiency for systems development. 
+more about what we actually need in this process. Splinter is a gesture back in the 
+direction of efficiency for systems development. 
 
-Here's a list of the main things that set it apart:
+Here's a list of the main things that set Splinter apart:
 
 - **Splinter Is a Passive Substrate**: Splinter is not a daemon. It is a
   memory-mapped region that acts as a mutual option for every process on the
@@ -259,6 +269,8 @@ with no other arguments. Valgrind will still be auto-detected.
   (optimized for Nomic v2/LLM embeddings).
 - **In-Place Atomic Ops**: Keys tagged as `BIGUINT` support atomic `INC`, `DEC`,
   `OR`, `XOR`, `AND`, and `NOT` operations directly in shared memory.
+- Ability to chunk and ingest any text document instantly (while embedding the cunks)
+- Built-in semantic search with geometric (Euclidean) sorting 
 - **Tandem Keys**: Multi-order support allows for atomic updates to related
   signals (e.g., `sensor.1` for velocity of `sensor`, `sensor.2` for acceleration).
 - **Lua** And **WASM**: Client-side exposure of Splinter to WASMEdge and Lua5x.
