@@ -29,7 +29,7 @@ And core is under 1000 lines of ***100% "Valgrind-Clean" code***.
 
 ## Installer (Debian/Ubuntu):
 
-**If you only need embeddings and llama.cpp support, and are using a Debian-based distro, you
+**If you only need embeddings and llama.cpp support, and are using a Debian-based distro**, you
 can use [Splinter's new beta full-stack installer](https://github.com/splinterhq/libsplinter/blob/main/scripts/bigbang.sh) 
 by using one of the commands below:
 
