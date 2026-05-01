@@ -82,30 +82,63 @@ static bool is_word_boundary(const std::string &piece) {
     return false;
 }
 
-// todo - look at storing a system prompt in a key.
+// Fetch a key's current text value into a std::string. Returns "" on any
+// failure (missing key, empty slot, store error) so callers can treat
+// "no system prompt" and "system prompt fetch failed" identically.
+static std::string fetch_key_text(const char *key) {
+    if (!key || !*key) return "";
 
-static std::string build_prompt(llama_model *model, const std::string &user_msg) {
+    splinter_header_snapshot_t hdr = {};
+    if (splinter_get_header_snapshot(&hdr) != 0 || hdr.max_val_sz == 0) {
+        return "";
+    }
+
+    std::vector<char> buf(hdr.max_val_sz);
+    size_t got = 0;
+    if (splinter_get(key, buf.data(), buf.size(), &got) != 0 || got == 0) {
+        return "";
+    }
+    return std::string(buf.data(), got);
+}
+
+// Build the templated prompt. system_msg is optional — when empty, this is a
+// single-turn user message; otherwise the chat template renders both roles.
+static std::string build_prompt(llama_model *model,
+                                const std::string &system_msg,
+                                const std::string &user_msg) {
     const char *tmpl = llama_model_chat_template(model, nullptr);
+
+    auto bare_fallback = [&]() {
+        std::string out;
+        if (!system_msg.empty()) {
+            out += "<system>\n" + system_msg + "\n";
+        }
+        out += "<user>\n" + user_msg + "\n<assistant>\n";
+        return out;
+    };
 
     if (!tmpl) {
         debug_post("[splainference][WARN]: No chat template found, using bare fallback.");
-        return "<user>\n" + user_msg + "\n<assistant>\n";
+        return bare_fallback();
     }
 
-    // Build a single-turn conversation
-    llama_chat_message messages[1];
-    messages[0].role    = "user";
-    messages[0].content = user_msg.c_str();
+    std::vector<llama_chat_message> messages;
+    if (!system_msg.empty()) {
+        messages.push_back({"system", system_msg.c_str()});
+    }
+    messages.push_back({"user", user_msg.c_str()});
 
     // First call: measure required buffer size
-    int required = llama_chat_apply_template(tmpl, messages, 1, true, nullptr, 0);
+    int required = llama_chat_apply_template(tmpl, messages.data(), messages.size(),
+                                             true, nullptr, 0);
     if (required < 0) {
         debug_post("[splainference][WARN]: llama_chat_apply_template sizing failed, using bare fallback.");
-        return "<user>\n" + user_msg + "\n<assistant>\n";
+        return bare_fallback();
     }
 
     std::vector<char> buf(required + 1, 0);
-    llama_chat_apply_template(tmpl, messages, 1, true, buf.data(), buf.size());
+    llama_chat_apply_template(tmpl, messages.data(), messages.size(),
+                              true, buf.data(), buf.size());
     return std::string(buf.data());
 }
 
@@ -124,7 +157,8 @@ static uint64_t process_completion(
     llama_model     *model,
     llama_context   *ctx,
     const llama_vocab *vocab,
-    int              n_threads)
+    int              n_threads,
+    const char      *system_prompt_key)
 {
     (void) n_threads;
     // --- Epoch consistency check before we touch anything ---
@@ -148,7 +182,11 @@ static uint64_t process_completion(
     }
 
     std::string user_msg(static_cast<const char*>(raw), val_len);
-    std::string prompt = build_prompt(model, user_msg);
+    // Re-read the system prompt each completion so updates to the key take
+    // effect on the next request without restarting the daemon. Cheap
+    // (mmap'd memcpy) and keeps the workflow ad-hoc.
+    std::string system_msg = fetch_key_text(system_prompt_key);
+    std::string prompt = build_prompt(model, system_msg, user_msg);
 
     debug_post(std::string("[splainference][START]: Processing key: ") + key);
 
@@ -323,17 +361,46 @@ static void collect_waiting(const char *key, uint64_t /*epoch*/, void *user_data
 int main(int argc, char **argv) {
     if (argc < 4) {
         std::cerr << "Usage: " << argv[0]
-                  << " [--oneshot] <bus_name> <path_to_gguf> <signal_group_id>\n";
+                  << " [--oneshot] [--n-ctx N] [--system-prompt-key KEY]"
+                  << " <bus_name> <path_to_gguf> <signal_group_id>\n"
+                  << "\n"
+                  << "  --n-ctx N             Override context window size. When unset,\n"
+                  << "                        the model's training context is used.\n"
+                  << "  --system-prompt-key K Bus key whose value is prepended as a\n"
+                  << "                        system message on every completion.\n";
         return 1;
     }
 
     bool oneshot = false;
+    int  n_ctx_override = 0;            // 0 = use model's training context
+    const char *system_prompt_key = nullptr;
     std::vector<char*> positionals;
 
     for (int i = 1; i < argc; ++i) {
         std::string arg(argv[i]);
         if (arg == "--oneshot") {
             oneshot = true;
+        } else if (arg == "--n-ctx") {
+            if (i + 1 >= argc) {
+                std::cerr << "Error: --n-ctx requires a numeric argument.\n";
+                return 1;
+            }
+            try {
+                n_ctx_override = std::stoi(argv[++i]);
+            } catch (...) {
+                std::cerr << "Error: --n-ctx argument must be a positive integer.\n";
+                return 1;
+            }
+            if (n_ctx_override <= 0) {
+                std::cerr << "Error: --n-ctx must be > 0.\n";
+                return 1;
+            }
+        } else if (arg == "--system-prompt-key") {
+            if (i + 1 >= argc) {
+                std::cerr << "Error: --system-prompt-key requires a key name.\n";
+                return 1;
+            }
+            system_prompt_key = argv[++i];
         } else {
             positionals.push_back(argv[i]);
         }
@@ -391,6 +458,23 @@ int main(int argc, char **argv) {
     ctx_params.n_threads             = 4;     // sensible default for i3 Tiger Lake
     ctx_params.n_threads_batch       = 4;
 
+    // Default to the model's trained context so we don't silently truncate
+    // long inputs at the llama default of 512. Caller can clamp down with
+    // --n-ctx (useful when an 8k+ model would otherwise blow host memory).
+    const int n_ctx_train = llama_model_n_ctx_train(model);
+    ctx_params.n_ctx = (n_ctx_override > 0) ? n_ctx_override : n_ctx_train;
+    std::cout << "[Startup]: context window = " << ctx_params.n_ctx
+              << " tokens (model trained on " << n_ctx_train << ")";
+    if (n_ctx_override > 0 && n_ctx_override > n_ctx_train) {
+        std::cout << " — WARN: override exceeds trained size; quality may degrade";
+    }
+    std::cout << ".\n";
+
+    if (system_prompt_key) {
+        std::cout << "[Startup]: system prompt key = '" << system_prompt_key
+                  << "' (re-read per completion)\n";
+    }
+
     llama_context    *ctx   = llama_init_from_model(model, ctx_params);
     const llama_vocab *vocab = llama_model_get_vocab(model);
 
@@ -407,7 +491,7 @@ int main(int argc, char **argv) {
         if (!wc.keys.empty()) {
             std::cout << "[Startup]: " << wc.keys.size() << " waiting key(s) found at cold start.\n";
             for (const auto &k : wc.keys) {
-                process_completion(k.c_str(), model, ctx, vocab, ctx_params.n_threads);
+                process_completion(k.c_str(), model, ctx, vocab, ctx_params.n_threads, system_prompt_key);
             }
         }
     }
@@ -446,7 +530,7 @@ int main(int argc, char **argv) {
 
         for (const auto &key : wc.keys) {
             if (!keep_running) break;
-            process_completion(key.c_str(), model, ctx, vocab, ctx_params.n_threads);
+            process_completion(key.c_str(), model, ctx, vocab, ctx_params.n_threads, system_prompt_key);
         }
 
         last_signal_count = current_signal_count;
