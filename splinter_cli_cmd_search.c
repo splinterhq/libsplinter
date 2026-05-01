@@ -82,7 +82,9 @@ static void enum_callback(const char *key, uint64_t version, void *data) {
 void help_cmd_search(unsigned int level) {
     (void) level;
     printf("%s searches embedded keys by semantic similarity.\n", modname);
-    printf("Usage: %s \"<query>\" [--json] [--limit N] [--distance F] [--similarity F] [--bloom MASK] [--regex PATTERN]\n", modname);
+    printf("Usage: %s <query>|- [--file PATH] [--json] [--limit N] [--distance F] [--similarity F] [--bloom MASK] [--regex PATTERN]\n", modname);
+    printf("  <query>         Quoted query string. Use '-' to read the query from stdin.\n");
+    printf("  --file PATH     Read query text from PATH (use '-' for stdin). Mutually exclusive with positional query.\n");
     printf("  --json          Output results as JSON\n");
     printf("  --limit N       Maximum number of results (default: unlimited)\n");
     printf("  --distance F    Maximum euclidean distance to include (default: no filter)\n");
@@ -99,8 +101,37 @@ static const struct option search_long_options[] = {
     { "similarity", required_argument, NULL, 's' },
     { "bloom",      required_argument, NULL, 'B' },
     { "regex",      required_argument, NULL, 'r' },
+    { "file",       required_argument, NULL, 'f' },
     { NULL, 0, NULL, 0 }
 };
+
+/* Slurp a stream into a heap buffer, capping at `cap` bytes (excluding NUL).
+ * Returns a malloc'd, NUL-terminated buffer; *out_len is bytes read.
+ * Sets *truncated if the source had more data than `cap` allowed. */
+static char *slurp_stream(FILE *fp, size_t cap, size_t *out_len, int *truncated) {
+    if (cap == 0) return NULL;
+    char *buf = (char *)malloc(cap + 1);
+    if (buf == NULL) return NULL;
+
+    size_t total = 0;
+    while (total < cap) {
+        size_t got = fread(buf + total, 1, cap - total, fp);
+        if (got == 0) break;
+        total += got;
+    }
+    /* Probe for additional bytes to detect truncation */
+    if (total == cap) {
+        char probe;
+        if (fread(&probe, 1, 1, fp) == 1) {
+            *truncated = 1;
+            /* Drain so the caller's stdin doesn't carry leftovers, no-op for files. */
+            while (fread(&probe, 1, 1, fp) == 1) {}
+        }
+    }
+    buf[total] = '\0';
+    *out_len = total;
+    return buf;
+}
 
 int cmd_search(int argc, char *argv[]) {
     grawk_t *g = NULL;
@@ -120,6 +151,10 @@ int cmd_search(int argc, char *argv[]) {
     int scratch_written = 0;
 
     char *query_text = NULL;
+    char *query_buffer = NULL;   /* heap-owned when reading from file/stdin */
+    size_t query_len = 0;
+    const char *file_path = NULL;
+    int read_stdin_positional = 0;
     int use_json = 0;
     int limit = 0;
     float max_distance = 0.0f;
@@ -131,17 +166,25 @@ int cmd_search(int argc, char *argv[]) {
     char scratch_key[SPLINTER_KEY_MAX];
     snprintf(scratch_key, sizeof(scratch_key), "__sqtmp_%d", (int)getpid());
 
-    /* Query text must be argv[1] and must not look like a flag */
-    if (argc < 2 || argv[1][0] == '-') {
+    if (argc < 2) {
         help_cmd_search(1);
         return -1;
     }
-    query_text = argv[1];
 
-    /* Parse flags starting after the positional query argument */
-    optind = 2;
+    /* Decide whether argv[1] is a positional query (literal text or "-" for
+     * stdin) or whether the caller is going straight to flags (e.g. --file). */
+    if (strcmp(argv[1], "-") == 0) {
+        read_stdin_positional = 1;
+        optind = 2;
+    } else if (argv[1][0] != '-') {
+        query_text = argv[1];
+        optind = 2;
+    } else {
+        optind = 1;
+    }
+
     int opt;
-    while ((opt = getopt_long(argc, argv, "jL:d:s:B:r:", search_long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "jL:d:s:B:r:f:", search_long_options, NULL)) != -1) {
         switch (opt) {
             case 'j':
                 use_json = 1;
@@ -163,9 +206,23 @@ int cmd_search(int argc, char *argv[]) {
             case 'r':
                 regex_pattern = optarg;
                 break;
+            case 'f':
+                file_path = optarg;
+                break;
             default:
                 break;
         }
+    }
+
+    /* Mutual exclusion: --file and a positional query (text or "-") may not
+     * both be specified. Conversely, at least one source must be present. */
+    if (file_path != NULL && (query_text != NULL || read_stdin_positional)) {
+        fprintf(stderr, "%s: --file is mutually exclusive with a positional query.\n", modname);
+        return -1;
+    }
+    if (file_path == NULL && query_text == NULL && !read_stdin_positional) {
+        help_cmd_search(1);
+        return -1;
     }
 
     if (!thisuser.store_conn) {
@@ -180,6 +237,41 @@ int cmd_search(int argc, char *argv[]) {
     if (max_keys == 0) {
         fprintf(stderr, "%s: no slots available in current store.\n", modname);
         return -1;
+    }
+
+    /* If the query is coming from a file or stdin, slurp it now. Cap at the
+     * store's max_val_sz so the eventual splinter_set() can never reject us
+     * for size; warn if the source had more text than that. */
+    if (query_text == NULL) {
+        FILE *fp = NULL;
+        const char *source_label = NULL;
+        if (read_stdin_positional || (file_path != NULL && strcmp(file_path, "-") == 0)) {
+            fp = stdin;
+            source_label = "stdin";
+        } else {
+            fp = fopen(file_path, "rb");
+            if (fp == NULL) {
+                fprintf(stderr, "%s: cannot open '%s': %s\n", modname, file_path, strerror(errno));
+                return -1;
+            }
+            source_label = file_path;
+        }
+
+        size_t cap = (snap.max_val_sz > 0) ? (size_t)snap.max_val_sz - 1 : 0;
+        int truncated = 0;
+        query_buffer = slurp_stream(fp, cap, &query_len, &truncated);
+        if (fp != stdin) fclose(fp);
+
+        if (query_buffer == NULL || query_len == 0) {
+            fprintf(stderr, "%s: no query text read from %s.\n", modname, source_label);
+            free(query_buffer);
+            return -1;
+        }
+        if (truncated) {
+            fprintf(stderr, "%s: warning: %s exceeded store max_val_sz (%u); truncated to %zu bytes.\n",
+                    modname, source_label, snap.max_val_sz, query_len);
+        }
+        query_text = query_buffer;
     }
 
     keynames = (char **)calloc(max_keys, sizeof(char *));
@@ -207,7 +299,10 @@ int cmd_search(int argc, char *argv[]) {
     }
 
     /* Write query to scratch key and trigger splinference */
-    splinter_set(scratch_key, query_text, strlen(query_text));
+    {
+        size_t write_len = (query_buffer != NULL) ? query_len : strlen(query_text);
+        splinter_set(scratch_key, query_text, write_len);
+    }
     splinter_set_named_type(scratch_key, SPL_SLOT_TYPE_VARTEXT);
     splinter_set_label(scratch_key, 1ULL);
     splinter_bump_slot(scratch_key);
@@ -385,6 +480,7 @@ cleanup:
     if (results != NULL) free(results);
     if (slots != NULL) free(slots);
     if (keynames != NULL) free(keynames);
+    if (query_buffer != NULL) free(query_buffer);
 
     return rc;
 }
