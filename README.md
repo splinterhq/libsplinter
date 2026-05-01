@@ -27,7 +27,25 @@ That's worth getting excited about, and those tests are from a force-throttled i
 
 And core is under 1000 lines of ***100% "Valgrind-Clean" code***.
 
-## Quick Start:
+## Installer (Debian/Ubuntu):
+
+**If you only need embeddings and llama.cpp support, and are using a Debian-based distro**, you
+can test [Splinter's new beta full-stack installer](https://github.com/splinterhq/libsplinter/blob/main/scripts/bigbang.sh) 
+by using one of the commands below:
+
+```bash
+wget -qO- https://raw.githubusercontent.com/splinterhq/libsplinter/main/scripts/bigbang.sh | bash
+```
+
+Or
+
+```
+curl -fsSL https://raw.githubusercontent.com/splinterhq/libsplinter/main/scripts/bigbang.sh | bash
+```
+
+This will save you time.
+
+## Clone / Build Manually 
 
 Splinter uses CMake, so please make sure you have that installed. But, you don't have
 to manage configurations manually. There's an included `./configure` style script:
