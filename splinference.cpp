@@ -204,7 +204,16 @@ int main(int argc, char **argv) {
     }
 
     llama_context_params ctx_params = llama_context_default_params();
-    ctx_params.embeddings = true; 
+    ctx_params.embeddings = true;
+    // Match the context window the model was trained with so long VARTEXT
+    // values aren't silently truncated at the llama default of 512 tokens.
+    // Embeddings need the full sequence in one batch, so n_batch/n_ubatch
+    // track n_ctx as well.
+    const int n_ctx_train = llama_model_n_ctx_train(model);
+    ctx_params.n_ctx    = n_ctx_train;
+    ctx_params.n_batch  = n_ctx_train;
+    ctx_params.n_ubatch = n_ctx_train;
+    std::cout << "[Startup]: Model trained context = " << n_ctx_train << " tokens.\n";
     llama_context *ctx = llama_init_from_model(model, ctx_params);
     const llama_vocab *vocab = llama_model_get_vocab(model);
 
