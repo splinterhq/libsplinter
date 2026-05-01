@@ -35,6 +35,7 @@ export default function (userOptions?: Options) {
         ],
       }))
       .use(favicon(options.favicon))
+      .add("splinter.css")
       .add("uploads");
   };
 }

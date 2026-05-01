@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ title }} — Splinter</title>
+  {% include "head.njk" %}
+  <link rel="stylesheet" href="/splinter.css">
+</head>
+<body>
+
+<div class="scanline"></div>
+
+<nav class="spl-nav">
+  <a href="/" class="spl-logo">SPLINTER<span>⚡</span></a>
+  <div class="spl-nav-links">
+    <a href="/core/" {% if nav_order == 1 and not parent %}class="active"{% endif %}>core api</a>
+    <a href="/bindings/" {% if title == "Language Bindings (FFI)" or parent == "Language Bindings (FFI)" %}class="active"{% endif %}>ffi</a>
+    <a href="/cli/" {% if title == "Command Line Interfaces" or parent == "Command Line Interfaces" %}class="active"{% endif %}>cli</a>
+    <a href="/use-cases/">use cases</a>
+    <a href="https://github.com/splinterhq/libsplinter" class="gh">github</a>
+  </div>
+</nav>
+
+<div class="spl-content-wrap">
+  <div class="spl-page">
+
+    <div class="spl-breadcrumb">
+      <a href="/">~</a>
+      <span class="sep">/</span>
+      {% if parent %}
+        <a href="../">{{ parent }}</a>
+        <span class="sep">/</span>
+        <span>{{ title }}</span>
+      {% else %}
+        <span>{{ title }}</span>
+      {% endif %}
+    </div>
+
+    {{ content | safe }}
+
+    <div class="spl-page-nav">
+      {% if parent %}
+        <a href="../">← {{ parent }}</a>
+      {% else %}
+        <a href="/">← home</a>
+      {% endif %}
+      <span>// splinter docs</span>
+    </div>
+
+  </div>
+</div>
+
+<footer class="spl-footer">
+  <p>Splinter is independent research software. <a href="https://buymeacoffee.com/timthepost">buy Tim a coffee</a> if it's saving you time.</p>
+  <p><a href="https://github.com/splinterhq/libsplinter">github.com/splinterhq/libsplinter</a></p>
+</footer>
+
+</body>
+</html>
