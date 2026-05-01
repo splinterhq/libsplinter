@@ -33,12 +33,13 @@
 #include <signal.h>
 #include <sys/ioctl.h>
 #include <time.h>
-#include <splinter.h>
 #include <errno.h>
 #include <termios.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+
+#include "splinter.h"
 
 #define HISTORY_HEIGHT 10
 #define REFRESH 500000
