@@ -3,7 +3,7 @@
 # Usage: spl-signal <event_name> [optional_context]
 # Events: task_start task_advance task_finish file_read file_write tool_use error checkpoint
 
-STORE="${SPLINTER_AGENT_BUS:-demo_bus.spl}"
+STORE="${SPLINTER_AGENT_BUS:-.claude/memory.spl}"
 SPLINTER_PREFIX=${SPLINTER_PREFIX}
 
 # If you want the lights to blink in a more distributed, 

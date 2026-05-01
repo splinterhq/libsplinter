@@ -1,3 +1,11 @@
+# Bloom label resolution for Claude Code agent integration.
+# Format: LABEL_NAME MASK    (hex or decimal; bit 64 reserved)
+#
+# Bits 0x1..0x80    : task category (rotational; agent-chosen per journal entry)
+# Bits 0x100..0x800 : entry kind     (set automatically by spl-journal/spl-ingest)
+# Bits 0x1000+      : entry role     (intent vs outcome, etc.)
+
+# Categories (set by the agent per entry)
 build-related      0x1
 runtime-related    0x2
 test-related       0x4
@@ -6,3 +14,13 @@ logic-related      0x10
 security-related   0x20
 conflict-related   0x40
 exception-related  0x80
+
+# Kinds (set automatically by the wrapper scripts)
+journal            0x100
+ingest-chunk       0x200
+ingest-meta        0x400
+ipc-message        0x800
+
+# Roles (set automatically by spl-journal based on key suffix)
+intent             0x1000
+outcome            0x2000

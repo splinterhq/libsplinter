@@ -1,18 +1,27 @@
 #!/bin/bash
 # scripts/spl-journal
-# Usage: 
-#   spl-journal <key> "<what I'm about to try>"
-#   spl-journal <key>.1 "<what happened>" [bloom_mask]
+# Usage:
+#   spl-journal <key> "<what I'm about to try>"           [category-bloom]
+#   spl-journal <key>.1 "<what happened>"                 [category-bloom]
 #
-# The base key journals intent. The .1 key journals outcome.
-# Splinter's sidecar embeds both automatically.
-# Optional bloom_mask (hex) categorizes the entry for later search.
+# The base key journals intent; .N orders journal outcomes.
+# Splinference embeds both automatically (claudevisor must be active).
+# An optional category bloom (hex) is OR'd on top of the journal/intent
+# /outcome bits so spl-recall and spl-search can filter by topic.
+#
+# Default labels applied:
+#   0x100   journal   (always — every journal entry gets this so spl-recall can find it)
+#   0x1000  intent    (added to the base key)
+#   0x2000  outcome   (added to .N keys)
+#
+# Override the bus by exporting SPLINTER_AGENT_BUS. Default is the project-
+# local .claude/memory.spl.
 
-STORE="${SPLINTER_AGENT_BUS:-demo_bus.spl}"
+STORE="${SPLINTER_AGENT_BUS:-.claude/memory.spl}"
 
 KEY="${1}"
 VALUE="${2}"
-BLOOM="${3:-}"
+CATEGORY="${3:-0}"
 
 die() {
     echo "$1" >&2
@@ -20,25 +29,38 @@ die() {
 }
 
 if [ -z "$KEY" ] || [ -z "$VALUE" ]; then
-    echo "spl-journal: key and value are required" >&2
+    cat >&2 <<EOF
+Usage:
+  $(basename "$0") <key> "<intent>"            [category-bloom]
+  $(basename "$0") <key>.N "<outcome>"         [category-bloom]
+EOF
     exit 1
 fi
 
-SPL_ARGS=(--use "$STORE" --rc-file config/agent.rc)
+SPL_ARGS=(--use "$STORE")
 [ -n "$SPLINTER_PREFIX" ] && SPL_ARGS+=(--prefix "$SPLINTER_PREFIX")
 
-# If this is a base key (no .N suffix), initialize the tandem order structure
+# Compute the composite bloom mask in shell so we make a single label call.
+JOURNAL_BIT=$((0x100))
+case "$KEY" in
+    *.[0-9]*) ROLE_BIT=$((0x2000)) ;;   # outcome
+    *)        ROLE_BIT=$((0x1000)) ;;   # intent
+esac
+
+# Strip an optional 0x prefix from the user-supplied category before $((...))
+CATEGORY_NUM=$((CATEGORY))
+COMPOSITE=$(( JOURNAL_BIT | ROLE_BIT | CATEGORY_NUM ))
+COMPOSITE_HEX=$(printf "0x%x" "$COMPOSITE")
+
 if [[ "$KEY" != *.* ]]; then
-    splinterpctl "${SPL_ARGS[@]}" set "$KEY" "$VALUE" || die "failed to set key"
-    splinterpctl "${SPL_ARGS[@]}" orders set "$KEY" 2 || die "failed to set key orders"
-    splinterpctl "${SPL_ARGS[@]}" type "$KEY" vartext || die "failed to set key slot type"
-    splinterpctl "${SPL_ARGS[@]}" type "${KEY}.1" vartext || die "failed to set tandem slot type"
+    # Base / intent key
+    splinterpctl "${SPL_ARGS[@]}" set "$KEY" "$VALUE"      || die "failed to set key"
+    splinterpctl "${SPL_ARGS[@]}" orders set "$KEY" 2      || die "failed to set key orders"
+    splinterpctl "${SPL_ARGS[@]}" type "$KEY" vartext      || die "failed to set key slot type"
+    splinterpctl "${SPL_ARGS[@]}" type "${KEY}.1" vartext  || die "failed to set tandem slot type"
 else
-    # This is an order key (e.g. key.1) — append to it
-    splinterpctl "${SPL_ARGS[@]}" append "$KEY" "$VALUE" || die "failed to append to key"
+    # Order key — append outcome
+    splinterpctl "${SPL_ARGS[@]}" append "$KEY" "$VALUE"   || die "failed to append to key"
 fi
 
-# Apply bloom label if provided
-if [ -n "$BLOOM" ]; then
-    splinterpctl "${SPL_ARGS[@]}" label "$KEY" "$BLOOM" || die "label action failed"
-fi
+splinterpctl "${SPL_ARGS[@]}" label "$KEY" "$COMPOSITE_HEX" || die "label action failed"
