@@ -201,12 +201,19 @@ static int read_debug_file() {
 }
 
 static void get_cpu_stats(cpu_stats *s) {
+    /* Zero first so a partial fscanf (kernel format drift, truncated read)
+     * cannot let stack garbage leak into the delta math in get_cpu_usage. */
+    memset(s, 0, sizeof(*s));
     FILE *f = fopen("/proc/stat", "r");
     if (!f) exit(1);
-    fscanf(f, "cpu %llu %llu %llu %llu %llu %llu %llu %llu",
-           &s->user, &s->nice, &s->system, &s->idle,
-           &s->iowait, &s->irq, &s->softirq, &s->steal);
+    int matched = fscanf(f, "cpu %llu %llu %llu %llu %llu %llu %llu %llu",
+                         &s->user, &s->nice, &s->system, &s->idle,
+                         &s->iowait, &s->irq, &s->softirq, &s->steal);
     fclose(f);
+    if (matched != 8) {
+        fprintf(stderr, "sidecar: /proc/stat parse failure (matched %d of 8 fields)\n",
+                matched);
+    }
 }
 
 static int parse_loadavg(loadavg_t *loadavg) {
@@ -283,7 +290,9 @@ static int read_sys_int(const char *path) {
     int value = -1;
     file = fopen(path, "r");
     if (file) {
-        fscanf(file, "%d", &value);
+        if (fscanf(file, "%d", &value) != 1) {
+            value = -1;
+        }
         fclose(file);
     }
     return value;
