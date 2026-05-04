@@ -4,7 +4,7 @@ Splinter acts as a ringless, compute-less hypervisor where inference and governa
 
 It offers the following functionality at L3 speeds, in a form that fits inside most CPU instruction hot paths:
 
- - Key/Value storage indexed by bloom, user-defined bitmask feature flags abnd user-defined namespaces along with references to the boundaries of the data in the shared, mediated pool,
+ - Key/Value storage indexed by bloom, user-defined bitmask feature flags and user-defined namespaces along with references to the boundaries of the data in the shared, mediated pool,
  - Atomic bitwise and math operations in-place on BIGUINT keys,
  - Vector storage with side-car embeddings that run on the bus driven by signal events and eventfd-backed or poll-driven watches, 
  - Knowledge graph through 64 bloom tags and tandem slots that allow storing data at egdes, 
