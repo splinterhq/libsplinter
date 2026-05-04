@@ -38,4 +38,4 @@ The current status of the research is:
  - Meta-style Lua keys `__on_write, __on_read, etc` are an exercise for the client, but a standard base protocol should at least be defined in the paper,
  - A lot of documentation and a design-oriented approach to helping people understand it as a new kind of co-architecture. A "service lane" or the hallways behind the stores at the malls, are great metaphors that understate it just enough to make it comfortable while not concealing what it unlocks.
 
-Splinter is expected to be 100% operational (but still needing documentation) by mid-May to early June 2026. Further development is not planned after 1.2.0.
+Splinter is expected to be 100% operational (but still needing documentation) by mid-May to early June 2026. Further public development is not planned after 1.2.0.
