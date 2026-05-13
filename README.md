@@ -1,6 +1,6 @@
 # Splinter's Executive Summary
 
-Splinter acts as a ringless or single-ring, compute-less hypervisor where inference and governance swim in adjacent lanes in the same mediated, lock-free pool.
+Splinter acts as a ringless or single-ring, agent "hypervisor" where inference and governance swim in adjacent lanes in the same mediated, lock-free pool.
 
 It offers the following functionality at L3 speeds, in a form that fits inside most CPU instruction hot paths:
 
