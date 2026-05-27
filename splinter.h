@@ -720,11 +720,26 @@ int splinter_set_named_type(const char *key, uint16_t mask);
  * @return uint64
  */
 inline uint64_t splinter_now(void) {
+#if defined(__x86_64__) || defined(__i386__)
+    // rdtsc: cycle counter, non-invariant on older throttled CPUs
     uint32_t lo, hi;
-    // 'rdtsc' reads the 64-bit cycle counter into EDX:EAX
-    // USUALLY (watch out on older throttled mobile CPUs, ask me how I know!)
     __asm__ __volatile__ ("rdtsc" : "=a" (lo), "=d" (hi));
     return ((uint64_t)hi << 32) | lo;
+#elif defined(__aarch64__)
+    // virtual counter; fixed-frequency, userspace-accessible on Linux
+    uint64_t val;
+    __asm__ __volatile__ ("mrs %0, cntvct_el0" : "=r" (val));
+    return val;
+#elif defined(__arm__)
+    // 64-bit physical counter; may be trapped+emulated on older kernels
+    uint32_t lo, hi;
+    __asm__ __volatile__ ("mrrc p15, 1, %0, %1, c14" : "=r" (lo), "=r" (hi));
+    return ((uint64_t)hi << 32) | lo;
+#else
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+    return (uint64_t)ts.tv_sec * 1000000000ULL + ts.tv_nsec;
+#endif
 }
 
 /**
