@@ -1,8 +1,10 @@
 # Splinter's Executive Summary
 
-Splinter acts as a ringless or single-ring (trust), agent "hypervisor" where inference and governance swim in adjacent lanes in the same mediated, lock-free pool.
+Splinter creates a hypervisor-like high speed non-blocking inference engine that features its own built in vector, atomics, cache, graph and KV store along with cooperative sharded logic for computation that remains sympathetic to the host Linux kernel. Splinter puts your governance in the same CPU hot path and memory lane as inference, and works on X86_64, ARM and RISC cpu architectures. It's also an eventfd-driven pub/sub platform that can do things like make SQLITE3 tables subscribable coupled with inotify.
 
-It offers the following functionality at L3 speeds, in a form that fits inside most CPU instruction hot paths:
+Put simply, it's a semantic substrate that can run thousands of context or classification windows for multimodal inference simultaneously with 100% non-blocking thoroughput (20 Million operations/sec on modern ARM-based Chromebooks). 
+
+It offers the following functionality at L3 speeds, in a tiny and very embeddable form factor:
 
  - Key/Value storage indexed by bloom, user-defined bitmask feature flags and user-defined namespaces along with references to the boundaries of the data in the shared, mediated pool,
  - Atomic bitwise and math operations in-place on BIGUINT keys,
