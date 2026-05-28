@@ -3,7 +3,7 @@ set -e
 
 help() {
     echo "$0 configures your Splinter build for you."
-    echo "Use: $0 [options], Where [optiona] are:"
+    echo "Use: $0 [options], Where [options] are:"
     echo "--with-lua"
     echo "--with-wasm"
     echo "--with-rust"
@@ -13,17 +13,68 @@ help() {
     echo ""
     echo "--dev can be passed as the only flag to just enable everything."
     echo ""
+    echo "--install-deb-deps   Install all Debian/Ubuntu packages needed to"
+    echo "                     build Splinter and its source-built dependencies"
+    echo "                     (llama.cpp, WASMEdge, Lua, NUMA, Valgrind)."
+    echo "                     Requires sudo. Exits after installation."
+    echo ""
     echo "Once done, you can run 'make' / 'make install' / etc."
     echo "To force re-compile, run 'rm -rf build'."
     echo ""
     echo "Valgrind is auto-detected during configuration."
 }
 
+install_deb_deps() {
+    if ! command -v apt-get &>/dev/null; then
+        echo "Error: apt-get not found. This option requires a Debian/Ubuntu system." >&2
+        exit 1
+    fi
+
+    DEB_PACKAGES=(
+        # Core build toolchain
+        build-essential g++ cmake ninja-build pkg-config
+        git curl wget unzip ca-certificates
+
+        # Valgrind
+        valgrind
+
+        # llama.cpp build dependencies
+        libopenblas-dev libopenblas0 liblapack-dev
+
+        # Lua 5.4 (latest packaged release)
+        lua5.4 liblua5.4-dev
+
+        # WASMEdge build-from-source dependencies
+        llvm-dev lld liblld-dev libzstd-dev
+
+        # NUMA
+        libnuma-dev numactl
+
+	# MISC
+	libclang-dev
+    )
+
+    echo "Updating package lists…"
+    sudo apt-get update -qq
+
+    echo "Installing: ${DEB_PACKAGES[*]}"
+    sudo apt-get install -y "${DEB_PACKAGES[@]}"
+
+    echo ""
+    echo "All dependency packages installed."
+    echo "You can now run './configure [options]' followed by 'make'."
+}
+
 CONFIG=""
 
-for arg in "$@"; do 
+for arg in "$@"; do
     [ "${arg}" == "--help" ] && {
         help
+        exit 0
+    }
+
+    [ "${arg}" == "--install-deb-deps" ] && {
+        install_deb_deps
         exit 0
     }
 
