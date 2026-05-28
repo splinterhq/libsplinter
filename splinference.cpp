@@ -52,7 +52,7 @@ volatile sig_atomic_t keep_running = 1;
 // Helper to check if a vector is zeroed out
 bool needs_embedding(const float* vec, size_t len) {
     double sum = 0.0;
-    for (size_t i = 0; i < len; i++) sum += vec[i] * vec[i];
+    for (size_t i = 0; i < len; i++) sum += (double)vec[i] * vec[i];
     return std::sqrt(sum) < 1e-6; // Effectively zero
 }
 
