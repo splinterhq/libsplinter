@@ -53,4 +53,7 @@ Splinter is open-source because transparent, text-driven governance and systemic
 Once version 1.2.0 ships (Target: Mid-May/Early June 2026), the core repository will move into long-term **maintenance mode**. It will receive continuous updates, performance optimizations, and community-driven enhancements and fixes to existing features, but the feature set will remain broadly locked. Splinter can't
 keep its original identity and be a kitchen sink.
 
-**Splinter will never be abandoned.** By design, memory lifecycle management is kept ruthlessly clean: long-term, high-priority semantic stores are explicitly tracked via Git, while transient working memory scratchpads are purged safely by the operator using standard development tooling like `make distclean`. Commercial development will focus entirely on the high-level semantic classification layers and application ecosystems built *on top* of this bedrock, leaving the open substrate pristine, public, and free.
+**Splinter will never be abandoned.** By design, memory lifecycle management is kept ruthlessly clean: long-term, high-priority semantic stores are explicitly tracked via Git, while transient working memory scratchpads are purged safely by the operator using standard development tooling like `make distclean`. Commercial development will focus entirely on the high-level semantic classification layers and application ecosystems built *on top* of this bedrock, leaving the open substrate pristine, public, and free. 
+
+After 1.2.0, improvements would be so specific to the author's use case that very few others would benefit from
+them. For the most part, even the commercial code will remain open, just no longer part of _this_ project.
