@@ -43,7 +43,7 @@ all the Debian packages you need to build Splinter's optional dependencies.
 A typical build:
 
 ```
-./configure --enable-llama --enable-vectors --enable-lua --enable-wasm --enable-numa
+./configure --with-llama --with-vectors --with-lua --with-wasm --with-numa
 make
 sudo -E make install
 ```
