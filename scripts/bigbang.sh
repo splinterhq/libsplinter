@@ -7,7 +7,6 @@
 
 set -euo pipefail
 
-# ── Colours ──────────────────────────────────────────────────────────────────
 BOLD='\033[1m'
 CYAN='\033[0;36m'
 GREEN='\033[0;32m'
@@ -16,20 +15,19 @@ RED='\033[0;31m'
 DIM='\033[2m'
 RESET='\033[0m'
 
-# ── Configuration ─────────────────────────────────────────────────────────────
 LOG="$HOME/splinter_install.log"
 LLAMA_SRC="/tmp/llama_cpp_src"
 SPLINTER_SRC="/tmp/libsplinter_install"
 GGUF_DIR="/usr/local/share/gguf"
-NOMIC_MODEL="nomic-embed-text-v1.Q6_K.gguf"
-NOMIC_URL="https://huggingface.co/nomic-ai/nomic-embed-text-v1-GGUF/resolve/main/${NOMIC_MODEL}?download=true"
+# Switch between v1 and v1.5 models here by changing the model filename and URL.
+#NOMIC_MODEL="nomic-embed-text-v1.Q6_K.gguf"
+NOMIC_MODEL="nomic-embed-text-v1.5.Q6_K.gguf"
+#NOMIC_URL="https://huggingface.co/nomic-ai/nomic-embed-text-v1-GGUF/resolve/main/${NOMIC_MODEL}?download=true"
+NOMIC_URL="https://huggingface.co/nomic-ai/nomic-embed-text-v1.5-GGUF/resolve/main/nomic-embed-text-v1.5.Q6_K.gguf?download=true"
 SPLINTER_REPO="https://github.com/splinterhq/libsplinter.git"
 LLAMA_REPO="https://github.com/ggerganov/llama.cpp.git"
 NPROC=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 2)
 
-# ── Logging ──────────────────────────────────────────────────────────────────
-# Redirect all output through tee so the log captures everything the terminal sees.
-# We open the log file before the exec so the path is resolved relative to $HOME.
 touch "$LOG"
 exec > >(tee -a "$LOG") 2>&1
 
@@ -59,7 +57,6 @@ confirm_sudo() {
     printf "\n"
 }
 
-# ── 0. Opening banner ─────────────────────────────────────────────────────────
 printf "\n${BOLD}${CYAN}"
 cat <<'BANNER'
   ____  ____  _     ___ _   _ _____ _____ ____
@@ -74,7 +71,24 @@ printf "  Full-stack installer for ${BOLD}Debian / Ubuntu${RESET}\n"
 printf "  Log: ${DIM}%s${RESET}\n\n" "$LOG"
 log "bigbang.sh started"
 
-# ── 1. Platform check ─────────────────────────────────────────────────────────
+cat <<'INTRO'
+Welcome to the Big Bang Installer for Splinter!
+This script will set up a complete environment for Splinter inference and 
+classificiation development on Debian or Ubuntu systems. It will:
+  - Check your platform and sudo access
+  - Install necessary system packages
+  - Build and install llama.cpp from source
+  - Build and install Splinter from source
+  - Download a Nomic GGUF model for use with Splinter
+  - Provide a summary of installed components and next steps
+To abort this process, press Ctrl-C now. Otherwise, hit [enter] to continue and 
+enjoy the show!
+
+You can watch the installation log in real time at: ${BOLD}$LOG${RESET}
+INTRO
+
+read nothing
+
 section "Platform Check"
 
 [[ -f /etc/os-release ]] || die "Cannot detect OS. This script requires Debian or Ubuntu."
@@ -97,7 +111,6 @@ if ! sudo -v 2>/dev/null; then
 fi
 ok "sudo access confirmed."
 
-# ── 2. System packages ────────────────────────────────────────────────────────
 section "Installing System Packages"
 
 APT_PACKAGES=(
@@ -123,7 +136,6 @@ log "Installing: ${APT_PACKAGES[*]}"
 sudo apt-get install -y "${APT_PACKAGES[@]}"
 ok "System packages installed."
 
-# ── 3. Deno ───────────────────────────────────────────────────────────────────
 section "Installing Deno"
 
 if command -v deno &>/dev/null; then
@@ -150,7 +162,6 @@ else
     ok "Deno installed: $(deno --version 2>/dev/null | head -1)"
 fi
 
-# ── 4. Build llama.cpp ────────────────────────────────────────────────────────
 section "Building llama.cpp from Source"
 
 [[ -d "$LLAMA_SRC" ]] && { warn "Removing stale build dir $LLAMA_SRC"; rm -rf "$LLAMA_SRC"; }
@@ -177,7 +188,6 @@ log "Building with $NPROC jobs (this will take a few minutes)…"
 cmake --build "$LLAMA_SRC/build" --config Release -j"$NPROC"
 ok "llama.cpp built."
 
-# ── 5. Install llama.cpp (sudo gate) ──────────────────────────────────────────
 section "Installing llama.cpp"
 confirm_sudo "About to install llama.cpp libraries and headers to /usr/local and run ldconfig."
 
@@ -188,7 +198,6 @@ log "ldconfig…"
 sudo ldconfig
 ok "llama.cpp installed to /usr/local; ldconfig complete."
 
-# ── 6. Build Splinter ─────────────────────────────────────────────────────────
 section "Building Splinter (embeddings + llama)"
 
 [[ -d "$SPLINTER_SRC" ]] && { warn "Removing stale $SPLINTER_SRC"; rm -rf "$SPLINTER_SRC"; }
@@ -204,7 +213,6 @@ log "Building Splinter with $NPROC jobs…"
 make -j"$NPROC"
 ok "Splinter built."
 
-# ── 7. Install Splinter (sudo gate) ───────────────────────────────────────────
 section "Installing Splinter"
 confirm_sudo "About to install Splinter to /usr/local/bin and run ldconfig."
 
@@ -212,7 +220,6 @@ log "sudo -E make install…"
 sudo -E make install
 ok "Splinter installed."
 
-# ── 8. Nomic Embed Text GGUF model ────────────────────────────────────────────
 section "Installing Nomic Embed Text v1 Model"
 
 sudo mkdir -p "$GGUF_DIR"
@@ -238,7 +245,10 @@ fi
 [[ -d /gguf ]] || sudo ln -s "$GGUF_DIR" /gguf
 ok "Convenience symlink: /gguf -> $GGUF_DIR"
 
-# ── 9. Summary ────────────────────────────────────────────────────────────────
+# force is necesary to update via git.
+sudo ln -sf "$GGUF_DIR/$NOMIC_MODEL" "$GGUF_DIR/nomic.gguf" 2>/dev/null || true
+ok "Alias symlink: nomic.gguf -> $NOMIC_MODEL"
+
 section "All Done"
 cd "$HOME"    # leave the tmp build dir
 
@@ -251,16 +261,17 @@ printf "    Nomic GGUF    →  %s/%s\n" "$GGUF_DIR" "$NOMIC_MODEL"
 printf "    /gguf         →  %s  (convenience symlink)\n" "$GGUF_DIR"
 printf "    Deno          →  $(command -v deno 2>/dev/null || echo '~/.deno/bin/deno')\n"
 printf "    Log           →  %s\n\n" "$LOG"
-
-log "bigbang.sh completed successfully."
-
-# ── VMS-style finale ──────────────────────────────────────────────────────────
 printf "${BOLD}${GREEN}"
-figlet -f banner -c "SPLINTER"
 printf "\n"
-printf "  %% SYSTEM: SPLINTER/INFERENCE NODE — ALL SUBSYSTEMS NOMINAL\n"
-printf "  %% TYPE 'splinterctl --help' TO CONTINUE.\n"
-printf "  %% READY.\n\n"
+printf "  %% type 'splinterctl --help' TO CONTINUE.\n"
+printf "  %% visit https://splinterhq.github.io/cli for an overview.\n"
+printf "\n"
 figlet -c "Shall we play"
 figlet -c "a game?"
 printf "${RESET}\n"
+printf "Installation log : ${BOLD}%s${RESET}\n" "$LOG"
+printf "Splinter source  : ${BOLD}%s${RESET}\n" "$SPLINTER_SRC"
+printf "Llama.cpp source : ${BOLD}%s${RESET}\n" "$LLAMA_SRC"
+
+log "bigbang.sh completed successfully."
+log "To install all possible build dependencies, run $SPLINTER_SRC/configure --help."
