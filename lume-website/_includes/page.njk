@@ -37,6 +37,19 @@
       {% endif %}
     </div>
 
+    {% if title == "Language Bindings (FFI)" or parent == "Language Bindings (FFI)" %}
+    <nav class="spl-subnav">
+      <span class="spl-subnav-label">// bindings</span>
+      <a href="/bindings/" {% if title == "Language Bindings (FFI)" %}class="active"{% endif %}>overview</a>
+      <a href="/bindings/rust/" {% if title == "Rust" %}class="active"{% endif %}>rust</a>
+      <a href="/bindings/java/" {% if title == "Java" %}class="active"{% endif %}>java</a>
+      <a href="/bindings/python/" {% if title == "Python 3" %}class="active"{% endif %}>python</a>
+      <a href="/bindings/typescript/" {% if title == "TypeScript" %}class="active"{% endif %}>typescript</a>
+      <a href="/bindings/lua/" {% if title == "Lua" %}class="active"{% endif %}>lua</a>
+      <a href="/bindings/shell/" {% if title == "Shell" %}class="active"{% endif %}>shell</a>
+    </nav>
+    {% endif %}
+
     {{ content | safe }}
 
     <div class="spl-page-nav">
