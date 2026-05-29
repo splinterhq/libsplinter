@@ -77,6 +77,14 @@ endif()
 
 add_compile_options(-O3 -Wall -Wextra -D_GNU_SOURCE -fPIC)
 
+# Resolve install dirs early so CMAKE_INSTALL_FULL_LIBDIR is available before
+# target creation. This lets us bake the install RPATH into binaries at build
+# time via BUILD_WITH_INSTALL_RPATH, avoiding the patchelf dependency that
+# cmake's RPATH_CHANGE file() command requires on ELF platforms.
+include(GNUInstallDirs)
+set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_FULL_LIBDIR}")
+set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+
 if(WITH_EMBEDDINGS)
     add_definitions(-DSPLINTER_EMBEDDINGS)
     add_definitions(-DHAVE_EMBEDDINGS)
@@ -163,8 +171,6 @@ if(WITH_LLAMA)
 endif()
 
 # --- Installation Logic ---
-include(GNUInstallDirs)
-
 install(TARGETS splinter_shared splinter_p_shared
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
