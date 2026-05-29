@@ -30,6 +30,27 @@ Splinter is accompanied by a minimalist, bare-metal C toolchain designed for pro
 * **`splinterctl` & `splinterpctl`**: A lightning-fast CLI and REPL that completely isolates administrative interaction from core storage performance.
 * **`sidecar`**: A DevOps monitoring tool providing real-time visibility into the semantic bus, tracking active slots, bid windows, and `evProcessor` tension metrics.
 
+## Building
+
+On Debian/Ubuntu you can run `scripts/bigbang.sh` to automatically install Splinter with vector storage
+and `llama.cpp` from source and install both on your system. This will also download Nomic Text 1.5 for 
+you from Hugging Face, which is all you need to get started with Splinter as a semantic breadboard.
+
+If you want to build advanced things (lua, WASMEdge, NUMA) then run `./configure --help` to see how to 
+enable those options. A `--install-deb-deps` option is provided by the script to automatically install
+all the Debian packages you need to build Splinter's optional dependencies.
+
+A typical build:
+
+```
+./configure --enable-llama --enable-vectors --enable-lua --enable-wasm --enable-numa
+make
+sudo -E make install
+```
+
+Valgrind will be used during `make tests` if you have it on your system. See `splinter_chi_sao` for
+benchmarks.
+
 ## Performance Under Fire
 
 Tested rigorously under strict hardware constraints (including fanless, low-tier Chromebook development environments):
