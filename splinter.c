@@ -134,6 +134,15 @@ int splinter_create(const char *name_or_path, size_t slots, size_t max_value_sz)
     H->slots = (uint32_t)slots;
     H->max_val_sz = (uint32_t)max_value_sz;
     H->val_sz = total_sz;
+
+    /*
+     * map_fd() derived VALUES from H->slots, but on a fresh create the mapping
+     * is zero-filled so H->slots read as 0 there, leaving VALUES aliased onto
+     * the slot array. Now that the header is populated, recompute it so the
+     * value arena starts after the slots. (splinter_open() is unaffected: it
+     * maps a store whose header already carries the real slot count.)
+     */
+    VALUES = (uint8_t *)(S + H->slots);
     atomic_store_explicit(&H->val_brk, 0, memory_order_relaxed);
     atomic_store_explicit(&H->epoch, 1, memory_order_relaxed);
     atomic_store_explicit(&H->core_flags, 0, memory_order_relaxed);
