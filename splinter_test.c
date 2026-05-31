@@ -134,7 +134,7 @@ int main(void) {
   TEST("correct number of keys", key_count == 3);
   TEST("unset key", splinter_unset("key2") >= 0);
 
-  TEST("get mop mode before test (should be zero)", (splinter_get_mop() == 0));
+  TEST("get mop mode before test (new stores default to hybrid)", (splinter_get_mop() == 1));
   TEST("set mop mode to hybrid", splinter_set_mop(1) == 0);
   TEST("get mop mode is hybrid", splinter_get_mop() == 1);
   TEST("turn off mop", splinter_set_mop(0) == 0);

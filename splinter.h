@@ -534,10 +534,10 @@ void splinter_close(void);
 // To prevent this while respecting the "Centerline" of performance, it offers
 // three modes of "Auto Scrubbing":
 //
-// 0. None (Default): Behavior similar to a file system. Fastest throughput 
+// 0. None: Behavior similar to a file system. Fastest throughput
 //    (3.3M+ ops/sec on old HW) with zero energetic waste.
 //
-// 1. Hybrid (Fast Mop): Zero out the incoming length plus a 64-byte aligned 
+// 1. Hybrid (Fast Mop, Default): Zero out the incoming length plus a 64-byte aligned
 //    "slop" region. This prevents SIMD/Vectorized loads from seeing stale 
 //    data without the cost of a full boil.
 //

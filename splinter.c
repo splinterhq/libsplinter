@@ -145,7 +145,8 @@ int splinter_create(const char *name_or_path, size_t slots, size_t max_value_sz)
     VALUES = (uint8_t *)(S + H->slots);
     atomic_store_explicit(&H->val_brk, 0, memory_order_relaxed);
     atomic_store_explicit(&H->epoch, 1, memory_order_relaxed);
-    atomic_store_explicit(&H->core_flags, 0, memory_order_relaxed);
+    /* New stores default to hybrid scrub (mop mode 1): see splinter_set_mop(). */
+    atomic_store_explicit(&H->core_flags, SPL_SYS_AUTO_SCRUB | SPL_SYS_HYBRID_SCRUB, memory_order_relaxed);
     atomic_store_explicit(&H->user_flags, 0, memory_order_relaxed);
     atomic_store_explicit(&H->parse_failures, 0, memory_order_relaxed);
     atomic_store_explicit(&H->last_failure_epoch, 0, memory_order_relaxed);
