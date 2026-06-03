@@ -157,6 +157,18 @@ int splinter_create(const char *name_or_path, size_t slots, size_t max_value_sz)
     atomic_store_explicit(&H->event_bus.owner_fd,  -1, memory_order_relaxed);
     atomic_store_explicit(&H->event_bus.owner_pid,  0, memory_order_relaxed);
 
+    // Zero the cooperative-memory-scheduling bid table (Logic Shard election).
+    for (size_t b = 0; b < SPLINTER_MAX_SHARDS; b++) {
+        atomic_store_explicit(&H->shard_bids[b].shard_id,     0, memory_order_relaxed);
+        atomic_store_explicit(&H->shard_bids[b].pid,          0, memory_order_relaxed);
+        atomic_store_explicit(&H->shard_bids[b].intent,       SPL_INTENT_NONE, memory_order_relaxed);
+        atomic_store_explicit(&H->shard_bids[b].priority,     0, memory_order_relaxed);
+        atomic_store_explicit(&H->shard_bids[b]._pad[0],      0, memory_order_relaxed);
+        atomic_store_explicit(&H->shard_bids[b]._pad[1],      0, memory_order_relaxed);
+        atomic_store_explicit(&H->shard_bids[b].duration_tsc, 0, memory_order_relaxed);
+        atomic_store_explicit(&H->shard_bids[b].claimed_at,   0, memory_order_relaxed);
+    }
+
     size_t i;
     for (i = 0; i < slots; ++i) {
         atomic_fetch_or(&S[i].type_flag, SPL_SLOT_DEFAULT_TYPE);
@@ -1001,4 +1013,295 @@ int splinter_append(const char *key, const void *data, size_t data_len, size_t *
         return 0;
     }
     return -1;
+}
+
+/* 
+ * Logic Shard Election & Voluntary Yield
+ *
+ * A fixed 32-slot bid table in the header coordinates cooperative memory
+ * advisement. The election is a read-only O(32) scan deterministic from the
+ * static bid data, so every shard independently computes the same sovereign
+ * without a central arbiter. See splinter.h for the protocol contract.
+ *
+ * Memory ordering mirrors the slot-`hash` discipline: shard_id is the
+ * publication point (acq_rel on CAS claim, release on clear, acquire on every
+ * lookup/election read); descriptive fields are release on write, acquire on
+ * read (hint-grade). Bid operations never bump H->epoch — they are scheduling
+ * coordination metadata, not data writes, and must not perturb the watchers.
+ */
+/**
+ * @brief Map an abstract splinter_intent_t to a POSIX_MADV_* advice constant.
+ * Used by the daemons to translate a declared intent into the raw advice int
+ * that splinter_madvise() forwards to posix_madvise().
+ */
+static int spl_intent_to_advice(uint8_t intent) __attribute__((unused));
+static int spl_intent_to_advice(uint8_t intent) {
+    switch (intent) {
+        case SPL_INTENT_WILLNEED:   return POSIX_MADV_WILLNEED;
+        case SPL_INTENT_SEQUENTIAL: return POSIX_MADV_SEQUENTIAL;
+        case SPL_INTENT_RANDOM:     return POSIX_MADV_RANDOM;
+        case SPL_INTENT_DONTNEED:   return POSIX_MADV_DONTNEED;
+        case SPL_INTENT_NONE:
+        default:                    return POSIX_MADV_NORMAL;
+    }
+}
+
+/**
+ * @brief True if the bid in slot b has outlived its declared window.
+ * Unsigned subtraction; relies on splinter_now() monotonicity (the same
+ * assumption the timing-backfill paths already make).
+ */
+static int spl_bid_expired(const struct splinter_shard_bid *bid, uint64_t now) {
+    uint64_t claimed = atomic_load_explicit(&bid->claimed_at,   memory_order_acquire);
+    uint64_t dur     = atomic_load_explicit(&bid->duration_tsc, memory_order_acquire);
+    return (now - claimed) > dur;
+}
+
+int splinter_shard_claim_ex(uint32_t shard_id, uint32_t pid, uint8_t intent,
+                            uint8_t priority, uint64_t duration_tsc,
+                            uint64_t claimed_at) {
+    if (!H || shard_id == 0) return -2;
+
+    /* First pass: refresh if we already own a slot (idempotent re-claim). */
+    for (size_t b = 0; b < SPLINTER_MAX_SHARDS; b++) {
+        struct splinter_shard_bid *bid = &H->shard_bids[b];
+        if (atomic_load_explicit(&bid->shard_id, memory_order_acquire) == shard_id) {
+            atomic_store_explicit(&bid->pid,          pid,          memory_order_release);
+            atomic_store_explicit(&bid->intent,       intent,       memory_order_release);
+            atomic_store_explicit(&bid->priority,     priority,     memory_order_release);
+            atomic_store_explicit(&bid->duration_tsc, duration_tsc, memory_order_release);
+            atomic_store_explicit(&bid->claimed_at,   claimed_at,   memory_order_release);
+            return 0;
+        }
+    }
+
+    /* Second pass: CAS-claim the first empty slot. */
+    for (size_t b = 0; b < SPLINTER_MAX_SHARDS; b++) {
+        struct splinter_shard_bid *bid = &H->shard_bids[b];
+        uint32_t expected = 0;
+        if (atomic_compare_exchange_strong_explicit(&bid->shard_id, &expected, shard_id,
+                                                    memory_order_acq_rel,
+                                                    memory_order_relaxed)) {
+            /* Slot is ours; publish the descriptive fields (release) after the
+             * shard_id CAS. A racing election may see shard_id but stale fields
+             * for one election; the next election corrects it (see header note). */
+            atomic_store_explicit(&bid->pid,          pid,          memory_order_release);
+            atomic_store_explicit(&bid->intent,       intent,       memory_order_release);
+            atomic_store_explicit(&bid->priority,     priority,     memory_order_release);
+            atomic_store_explicit(&bid->duration_tsc, duration_tsc, memory_order_release);
+            atomic_store_explicit(&bid->claimed_at,   claimed_at,   memory_order_release);
+            return 0;
+        }
+    }
+
+    errno = ENOSPC;
+    return -1;
+}
+
+int splinter_shard_claim(uint32_t shard_id, uint8_t intent,
+                         uint8_t priority, uint64_t duration_tsc) {
+    return splinter_shard_claim_ex(shard_id, (uint32_t)getpid(), intent,
+                                   priority, duration_tsc, splinter_now());
+}
+
+int splinter_shard_rebid(uint32_t shard_id, uint8_t intent,
+                         uint8_t priority, uint64_t duration_tsc) {
+    if (!H || shard_id == 0) return -2;
+    for (size_t b = 0; b < SPLINTER_MAX_SHARDS; b++) {
+        struct splinter_shard_bid *bid = &H->shard_bids[b];
+        if (atomic_load_explicit(&bid->shard_id, memory_order_acquire) == shard_id) {
+            atomic_store_explicit(&bid->intent,       intent,       memory_order_release);
+            atomic_store_explicit(&bid->priority,     priority,     memory_order_release);
+            atomic_store_explicit(&bid->duration_tsc, duration_tsc, memory_order_release);
+            atomic_store_explicit(&bid->claimed_at,   splinter_now(), memory_order_release);
+            return 0;
+        }
+    }
+    return -1;
+}
+
+int splinter_shard_release(uint32_t shard_id) {
+    if (!H || shard_id == 0) return -2;
+    for (size_t b = 0; b < SPLINTER_MAX_SHARDS; b++) {
+        struct splinter_shard_bid *bid = &H->shard_bids[b];
+        if (atomic_load_explicit(&bid->shard_id, memory_order_acquire) == shard_id) {
+            /* Clear payload first, then release shard_id last so the slot only
+             * becomes claimable after its descriptive fields are cleared. */
+            atomic_store_explicit(&bid->pid,          0, memory_order_release);
+            atomic_store_explicit(&bid->intent,       SPL_INTENT_NONE, memory_order_release);
+            atomic_store_explicit(&bid->priority,     0, memory_order_release);
+            atomic_store_explicit(&bid->duration_tsc, 0, memory_order_release);
+            atomic_store_explicit(&bid->claimed_at,   0, memory_order_release);
+            atomic_store_explicit(&bid->shard_id,     0, memory_order_release);
+            return 0;
+        }
+    }
+    return -1;
+}
+
+uint32_t splinter_shard_election(uint8_t *out_intent) {
+    if (out_intent) *out_intent = SPL_INTENT_NONE;
+    if (!H) return 0;
+
+    uint64_t now = splinter_now();
+    int live_protective = 0;   /* any unexpired WILLNEED/SEQUENTIAL present? */
+
+    /* Pass 1: detect protective bids for the DONTNEED soft bumper. */
+    for (size_t b = 0; b < SPLINTER_MAX_SHARDS; b++) {
+        struct splinter_shard_bid *bid = &H->shard_bids[b];
+        if (atomic_load_explicit(&bid->shard_id, memory_order_acquire) == 0) continue;
+        if (spl_bid_expired(bid, now)) continue;
+        uint8_t it = atomic_load_explicit(&bid->intent, memory_order_acquire);
+        if (it == SPL_INTENT_WILLNEED || it == SPL_INTENT_SEQUENTIAL) {
+            live_protective = 1;
+            break;
+        }
+    }
+
+    /* Pass 2: pick the winner. */
+    int have_best = 0;
+    uint32_t best_id = 0;
+    uint8_t  best_intent = SPL_INTENT_NONE;
+    uint8_t  best_prio = 0;
+    uint64_t best_claimed = 0;
+    uint32_t best_pid = 0;
+
+    for (size_t b = 0; b < SPLINTER_MAX_SHARDS; b++) {
+        struct splinter_shard_bid *bid = &H->shard_bids[b];
+        uint32_t id = atomic_load_explicit(&bid->shard_id, memory_order_acquire);
+        if (id == 0) continue;
+        if (spl_bid_expired(bid, now)) continue;
+
+        uint8_t  it = atomic_load_explicit(&bid->intent,     memory_order_acquire);
+        uint8_t  pr = atomic_load_explicit(&bid->priority,   memory_order_acquire);
+        uint64_t ca = atomic_load_explicit(&bid->claimed_at, memory_order_acquire);
+        uint32_t pd = atomic_load_explicit(&bid->pid,        memory_order_acquire);
+
+        /* DONTNEED soft bumper: cannot win while live protective bids exist. */
+        if (it == SPL_INTENT_DONTNEED && live_protective) continue;
+
+        int beats;
+        if (!have_best) {
+            beats = 1;
+        } else if (pr != best_prio) {
+            beats = (pr > best_prio);          /* higher priority wins */
+        } else if (ca != best_claimed) {
+            beats = (ca < best_claimed);       /* earlier claim wins */
+        } else {
+            beats = (pd < best_pid);           /* lowest pid wins */
+        }
+
+        if (beats) {
+            have_best = 1;
+            best_id = id; best_intent = it; best_prio = pr;
+            best_claimed = ca; best_pid = pd;
+        }
+    }
+
+    if (out_intent) *out_intent = have_best ? best_intent : SPL_INTENT_NONE;
+    return have_best ? best_id : 0;
+}
+
+int splinter_shard_is_sovereign(uint32_t shard_id) {
+    if (!H) return -2;
+    return (splinter_shard_election(NULL) == shard_id && shard_id != 0) ? 1 : 0;
+}
+
+int splinter_shard_table_snapshot(struct splinter_shard_bid_snapshot *out, size_t max) {
+    if (!H || !out) return -2;
+
+    uint64_t now = splinter_now();
+    uint8_t  sov_intent = SPL_INTENT_NONE;
+    uint32_t sovereign  = splinter_shard_election(&sov_intent);
+
+    size_t n = (max < SPLINTER_MAX_SHARDS) ? max : SPLINTER_MAX_SHARDS;
+    for (size_t b = 0; b < n; b++) {
+        struct splinter_shard_bid *bid = &H->shard_bids[b];
+        uint32_t id = atomic_load_explicit(&bid->shard_id, memory_order_acquire);
+        out[b].shard_id     = id;
+        out[b].pid          = atomic_load_explicit(&bid->pid,          memory_order_acquire);
+        out[b].intent       = atomic_load_explicit(&bid->intent,       memory_order_acquire);
+        out[b].priority     = atomic_load_explicit(&bid->priority,     memory_order_acquire);
+        out[b].duration_tsc = atomic_load_explicit(&bid->duration_tsc, memory_order_acquire);
+        out[b].claimed_at   = atomic_load_explicit(&bid->claimed_at,   memory_order_acquire);
+        out[b].expired      = (id != 0) ? spl_bid_expired(bid, now) : 1;
+        out[b].sovereign    = (id != 0 && id == sovereign) ? 1 : 0;
+    }
+    return (int)n;
+}
+
+int splinter_madvise(uint32_t shard_id, void *addr, size_t len,
+                     int advice, uint64_t timeout_ticks) {
+    /* Bound the re-election interval so a sovereign's expiry is noticed
+     * promptly even if no eventfd wake fires. ~5 ms. */
+    static const uint64_t EVENT_WAIT_CAP_MS = 5;
+
+    if (!H) return -2;
+    if (shard_id == 0) { errno = EINVAL; return -2; }
+
+    /* The caller must hold a bid to participate (it need not be sovereign). */
+    int present = 0;
+    for (size_t b = 0; b < SPLINTER_MAX_SHARDS; b++) {
+        if (atomic_load_explicit(&H->shard_bids[b].shard_id, memory_order_acquire) == shard_id) {
+            present = 1;
+            break;
+        }
+    }
+    if (!present) { errno = EINVAL; return -2; }
+
+    if (addr == NULL) {
+        addr = VALUES;
+        len  = (size_t)H->slots * (size_t)H->max_val_sz;
+    }
+
+    int has_deadline = (timeout_ticks != UINT64_MAX);
+    uint64_t deadline = splinter_now() + timeout_ticks;  /* unused when !has_deadline */
+
+    int bus_fd = splinter_event_bus_open();  /* -1 if not armed; poll-sleep fallback */
+
+    /* posix_madvise()/madvise() require a page-aligned start address. Round the
+     * start down to the enclosing page and extend the length to still cover the
+     * requested range, so callers (and the NULL == whole-arena case) need not
+     * worry about VALUES landing mid-page. */
+    {
+        long pg = sysconf(_SC_PAGESIZE);
+        if (pg > 0) {
+            uintptr_t a = (uintptr_t)addr;
+            uintptr_t aligned = a & ~((uintptr_t)pg - 1);
+            len += (size_t)(a - aligned);
+            addr = (void *)aligned;
+        }
+    }
+
+    for (;;) {
+        if (splinter_shard_election(NULL) == shard_id) {
+            int rc = posix_madvise(addr, len, advice);
+            if (bus_fd >= 0) splinter_event_bus_close(bus_fd);
+            if (rc == 0) return 0;
+            errno = rc;   /* posix_madvise returns the error number directly */
+            return -1;
+        }
+
+        if (timeout_ticks == 0) {            /* non-blocking defer */
+            if (bus_fd >= 0) splinter_event_bus_close(bus_fd);
+            errno = EAGAIN;
+            return -1;
+        }
+
+        if (has_deadline && splinter_now() >= deadline) {
+            if (bus_fd >= 0) splinter_event_bus_close(bus_fd);
+            errno = ETIMEDOUT;
+            return -1;
+        }
+
+        /* Block for a short capped interval so we re-elect on sovereign-window
+         * expiry even without an explicit wake. The eventfd path still wakes
+         * immediately on any bus write; the cap is just a safety net. */
+        if (bus_fd >= 0) {
+            splinter_event_bus_wait(bus_fd, EVENT_WAIT_CAP_MS);   /* ignore result; re-elect */
+        } else {
+            struct timespec ts = { .tv_sec = 0, .tv_nsec = (long)EVENT_WAIT_CAP_MS * NS_PER_MS };
+            nanosleep(&ts, NULL);
+        }
+    }
 }

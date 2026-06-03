@@ -100,10 +100,11 @@ pub const WINT_MAX: u32 = 4294967295;
 pub const __alignas_is_defined: u32 = 1;
 pub const __alignof_is_defined: u32 = 1;
 pub const SPLINTER_MAGIC: u32 = 1397509716;
-pub const SPLINTER_VER: u32 = 3;
+pub const SPLINTER_VER: u32 = 4;
 pub const SPLINTER_KEY_MAX: u32 = 64;
 pub const NS_PER_MS: u32 = 1000000;
 pub const SPLINTER_MAX_GROUPS: u32 = 64;
+pub const SPLINTER_MAX_SHARDS: u32 = 32;
 pub const SPLINTER_MAX_SLOTS: u32 = 1024;
 pub const SPLINTER_EVENT_BUS_MASK_WORDS: u32 = 16;
 pub const SPL_SYS_AUTO_SCRUB: u32 = 1;
@@ -316,6 +317,13 @@ unsafe extern "C" {
 unsafe extern "C" {
     pub fn atomic_flag_clear_explicit(arg1: *mut atomic_flag, arg2: memory_order);
 }
+pub const splinter_intent_t_SPL_INTENT_NONE: splinter_intent_t = 0;
+pub const splinter_intent_t_SPL_INTENT_WILLNEED: splinter_intent_t = 1;
+pub const splinter_intent_t_SPL_INTENT_SEQUENTIAL: splinter_intent_t = 2;
+pub const splinter_intent_t_SPL_INTENT_RANDOM: splinter_intent_t = 3;
+pub const splinter_intent_t_SPL_INTENT_DONTNEED: splinter_intent_t = 4;
+#[doc = " @brief Memory-intent classes for a shard bid (the `intent` field).\n  These mirror the POSIX_MADV_* advice classes. SPL_INTENT_NONE marks a\n  record whose owner has not yet declared (or has cleared) its intent.\n  DONTNEED is accepted as a bid but is governed by the soft bumper in\n  splinter_shard_election(): it cannot win while live WILLNEED/SEQUENTIAL\n  bids exist."]
+pub type splinter_intent_t = ::std::os::raw::c_uint;
 #[doc = " @brief Individual signal lane, aligned to prevent false sharing."]
 #[repr(C)]
 #[repr(align(64))]
@@ -349,6 +357,44 @@ const _: () = {
     ["Offset of field: splinter_event_bus::owner_pid"]
         [::std::mem::offset_of!(splinter_event_bus, owner_pid) - 132usize];
 };
+#[doc = " @brief One cooperative-memory-scheduling bid. 32 of these live in the\n header. Packed to ~32 bytes so all 32 fit in ~1 KB (intentionally NOT\n individually cache-line aligned: claims/releases are rare and elections\n are read-only, so false sharing on this table is a non-issue, and the\n thesis budgets ~1 KB, not 2 KB)."]
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct splinter_shard_bid {
+    #[doc = "< 0 = empty slot. Claimed via CAS."]
+    pub shard_id: atomic_uint_least32_t,
+    #[doc = "< getpid() of the claimant; PID tie-break."]
+    pub pid: atomic_uint_least32_t,
+    #[doc = "< splinter_intent_t."]
+    pub intent: atomic_uint_least8_t,
+    #[doc = "< 0-255, higher wins the election."]
+    pub priority: atomic_uint_least8_t,
+    #[doc = "< explicit padding; keep layout stable."]
+    pub _pad: [atomic_uint_least8_t; 2usize],
+    #[doc = "< declared window in splinter_now() ticks."]
+    pub duration_tsc: atomic_uint_least64_t,
+    #[doc = "< splinter_now() at claim / last re-bid."]
+    pub claimed_at: atomic_uint_least64_t,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of splinter_shard_bid"][::std::mem::size_of::<splinter_shard_bid>() - 32usize];
+    ["Alignment of splinter_shard_bid"][::std::mem::align_of::<splinter_shard_bid>() - 8usize];
+    ["Offset of field: splinter_shard_bid::shard_id"]
+        [::std::mem::offset_of!(splinter_shard_bid, shard_id) - 0usize];
+    ["Offset of field: splinter_shard_bid::pid"]
+        [::std::mem::offset_of!(splinter_shard_bid, pid) - 4usize];
+    ["Offset of field: splinter_shard_bid::intent"]
+        [::std::mem::offset_of!(splinter_shard_bid, intent) - 8usize];
+    ["Offset of field: splinter_shard_bid::priority"]
+        [::std::mem::offset_of!(splinter_shard_bid, priority) - 9usize];
+    ["Offset of field: splinter_shard_bid::_pad"]
+        [::std::mem::offset_of!(splinter_shard_bid, _pad) - 10usize];
+    ["Offset of field: splinter_shard_bid::duration_tsc"]
+        [::std::mem::offset_of!(splinter_shard_bid, duration_tsc) - 16usize];
+    ["Offset of field: splinter_shard_bid::claimed_at"]
+        [::std::mem::offset_of!(splinter_shard_bid, claimed_at) - 24usize];
+};
 #[doc = " @struct splinter_header\n @brief Defines the header structure for the shared memory region.\n\n This header contains metadata for the entire splinter store, including\n magic number for validation, version, and overall store configuration.\n\n NOTE: We add parse_failures/last_failure_epoch for diagnostics."]
 #[repr(C)]
 #[repr(align(64))]
@@ -380,10 +426,12 @@ pub struct splinter_header {
     pub __bindgen_padding_0: u64,
     pub signal_groups: [splinter_signal_node; 64usize],
     pub event_bus: splinter_event_bus,
+    pub __bindgen_padding_1: [u64; 7usize],
+    pub shard_bids: [splinter_shard_bid; 32usize],
 }
 #[allow(clippy::unnecessary_operation, clippy::identity_op)]
 const _: () = {
-    ["Size of splinter_header"][::std::mem::size_of::<splinter_header>() - 4416usize];
+    ["Size of splinter_header"][::std::mem::size_of::<splinter_header>() - 5440usize];
     ["Alignment of splinter_header"][::std::mem::align_of::<splinter_header>() - 64usize];
     ["Offset of field: splinter_header::magic"]
         [::std::mem::offset_of!(splinter_header, magic) - 0usize];
@@ -415,6 +463,8 @@ const _: () = {
         [::std::mem::offset_of!(splinter_header, signal_groups) - 128usize];
     ["Offset of field: splinter_header::event_bus"]
         [::std::mem::offset_of!(splinter_header, event_bus) - 4224usize];
+    ["Offset of field: splinter_header::shard_bids"]
+        [::std::mem::offset_of!(splinter_header, shard_bids) - 4416usize];
 };
 #[doc = " @struct splinter_slot\n @brief Defines a single key-value slot in the hash table.\n\n Each slot holds a key, its value's location and length, and metadata\n for concurrent access and change tracking.\n\n We changed val_len to atomic to avoid tearing on platforms where a plain\n 32-bit write could be observed partially by a reader."]
 #[repr(C)]
@@ -576,6 +626,44 @@ const _: () = {
 };
 #[doc = " @structure splinter_slot_snapshot\n @brief A structure to hold a snapshot of a single slot"]
 pub type splinter_slot_snapshot_t = splinter_slot_snapshot;
+#[doc = " @struct splinter_shard_bid_snapshot\n @brief Non-atomic mirror of a single bid slot for inspection/audit."]
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct splinter_shard_bid_snapshot {
+    pub shard_id: u32,
+    pub pid: u32,
+    pub intent: u8,
+    pub priority: u8,
+    pub duration_tsc: u64,
+    pub claimed_at: u64,
+    #[doc = "< computed at snapshot time vs splinter_now()"]
+    pub expired: ::std::os::raw::c_int,
+    #[doc = "< 1 if this record won the election at snapshot time"]
+    pub sovereign: ::std::os::raw::c_int,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of splinter_shard_bid_snapshot"]
+        [::std::mem::size_of::<splinter_shard_bid_snapshot>() - 40usize];
+    ["Alignment of splinter_shard_bid_snapshot"]
+        [::std::mem::align_of::<splinter_shard_bid_snapshot>() - 8usize];
+    ["Offset of field: splinter_shard_bid_snapshot::shard_id"]
+        [::std::mem::offset_of!(splinter_shard_bid_snapshot, shard_id) - 0usize];
+    ["Offset of field: splinter_shard_bid_snapshot::pid"]
+        [::std::mem::offset_of!(splinter_shard_bid_snapshot, pid) - 4usize];
+    ["Offset of field: splinter_shard_bid_snapshot::intent"]
+        [::std::mem::offset_of!(splinter_shard_bid_snapshot, intent) - 8usize];
+    ["Offset of field: splinter_shard_bid_snapshot::priority"]
+        [::std::mem::offset_of!(splinter_shard_bid_snapshot, priority) - 9usize];
+    ["Offset of field: splinter_shard_bid_snapshot::duration_tsc"]
+        [::std::mem::offset_of!(splinter_shard_bid_snapshot, duration_tsc) - 16usize];
+    ["Offset of field: splinter_shard_bid_snapshot::claimed_at"]
+        [::std::mem::offset_of!(splinter_shard_bid_snapshot, claimed_at) - 24usize];
+    ["Offset of field: splinter_shard_bid_snapshot::expired"]
+        [::std::mem::offset_of!(splinter_shard_bid_snapshot, expired) - 32usize];
+    ["Offset of field: splinter_shard_bid_snapshot::sovereign"]
+        [::std::mem::offset_of!(splinter_shard_bid_snapshot, sovereign) - 36usize];
+};
 pub const splinter_integer_op_t_SPL_OP_AND: splinter_integer_op_t = 0;
 pub const splinter_integer_op_t_SPL_OP_OR: splinter_integer_op_t = 1;
 pub const splinter_integer_op_t_SPL_OP_XOR: splinter_integer_op_t = 2;
@@ -848,5 +936,63 @@ unsafe extern "C" {
         data: *const ::std::os::raw::c_void,
         data_len: usize,
         new_len: *mut usize,
+    ) -> ::std::os::raw::c_int;
+}
+unsafe extern "C" {
+    #[doc = " @brief Claim a shard bid slot and declare memory intent.\n\n CAS-claims the first empty slot (or refreshes the caller's existing slot if\n shard_id already owns one), stamping pid=getpid() and claimed_at=splinter_now().\n\n @param shard_id     Caller-chosen non-zero shard identifier (unique per process).\n @param intent       splinter_intent_t advisement class.\n @param priority     0-255, higher wins elections.\n @param duration_tsc Declared sovereignty window in splinter_now() ticks.\n @return 0 on success, -1 if the table is full (errno=ENOSPC),\n         -2 on bad args / no store / shard_id==0.\n\n @note On a fresh claim the descriptive fields are published with\n       memory_order_release *after* the shard_id CAS makes the slot visible.\n       A racing election that observes the new shard_id but not-yet-stored\n       fields treats the bid as SPL_INTENT_NONE / priority 0 for at most one\n       election; the next election corrects it. Advisement is a hint, so this\n       is acceptable by design."]
+    pub fn splinter_shard_claim(
+        shard_id: u32,
+        intent: u8,
+        priority: u8,
+        duration_tsc: u64,
+    ) -> ::std::os::raw::c_int;
+}
+unsafe extern "C" {
+    #[doc = " @brief Advanced/testing claim: explicit pid and claimed_at.\n\n Identical to splinter_shard_claim() but lets a supervisor register a bid on\n behalf of another process, and lets tests construct deterministic election\n scenarios without sleeping. Production shards should prefer splinter_shard_claim().\n @return as splinter_shard_claim()."]
+    pub fn splinter_shard_claim_ex(
+        shard_id: u32,
+        pid: u32,
+        intent: u8,
+        priority: u8,
+        duration_tsc: u64,
+        claimed_at: u64,
+    ) -> ::std::os::raw::c_int;
+}
+unsafe extern "C" {
+    #[doc = " @brief Refresh (re-bid) an existing claim's window. Updates claimed_at to\n splinter_now() and optionally changes intent/priority/duration. This is the\n fairness re-bid: a shard that needs more time must re-bid rather than hold.\n @return 0 on success, -1 if shard_id holds no slot, -2 on bad args."]
+    pub fn splinter_shard_rebid(
+        shard_id: u32,
+        intent: u8,
+        priority: u8,
+        duration_tsc: u64,
+    ) -> ::std::os::raw::c_int;
+}
+unsafe extern "C" {
+    #[doc = " @brief Voluntarily release (yield) the caller's bid slot. Zeroes shard_id\n (marking the slot empty) last, after clearing the other fields.\n @return 0 on success, -1 if shard_id holds no slot, -2 on bad args/no store."]
+    pub fn splinter_shard_release(shard_id: u32) -> ::std::os::raw::c_int;
+}
+unsafe extern "C" {
+    #[doc = " @brief Run the read-only election scan and return the current sovereign.\n\n Highest-priority UNEXPIRED bid wins; ties broken by earliest claimed_at,\n then lowest pid. DONTNEED soft bumper: a DONTNEED bid is skipped as a winner\n while any unexpired WILLNEED or SEQUENTIAL bid exists.\n\n @param out_intent Optional; receives the winning bid's intent (or SPL_INTENT_NONE).\n @return the winning shard_id, or 0 if there is no current sovereign."]
+    pub fn splinter_shard_election(out_intent: *mut u8) -> u32;
+}
+unsafe extern "C" {
+    #[doc = " @brief Convenience: is shard_id the current sovereign?\n @return 1 if sovereign, 0 if not (including unknown/expired), -2 on no store."]
+    pub fn splinter_shard_is_sovereign(shard_id: u32) -> ::std::os::raw::c_int;
+}
+unsafe extern "C" {
+    #[doc = " @brief Copy a non-atomic snapshot of every bid slot for inspection/audit.\n @param out   Array of at least SPLINTER_MAX_SHARDS records.\n @param max   Capacity of out (capped at SPLINTER_MAX_SHARDS).\n @return number of records copied, or -2 on bad args/no store."]
+    pub fn splinter_shard_table_snapshot(
+        out: *mut splinter_shard_bid_snapshot,
+        max: usize,
+    ) -> ::std::os::raw::c_int;
+}
+unsafe extern "C" {
+    #[doc = " @brief Cooperative posix_madvise(): the voluntary-yield entry point.\n\n Runs the election. If shard_id is sovereign, issues posix_madvise(addr,len,advice)\n immediately and returns its result. If not sovereign:\n   - timeout_ticks == 0          -> do NOT block; return -1, errno=EAGAIN (defer).\n   - timeout_ticks == UINT64_MAX -> block until sovereign, then advise.\n   - else                        -> block up to timeout_ticks, re-electing on each wake.\n Blocking uses the eventfd broker when the bus owner has armed it\n (splinter_event_bus_open/wait); otherwise a TSC-polled nanosleep fallback.\n\n If addr==NULL, advises the whole value arena (VALUES .. VALUES+arena_sz).\n\n @return 0 on success (advisement issued), -1 on EAGAIN/timeout/posix_madvise\n         failure (errno set), -2 on bad args/no store/unknown shard_id."]
+    pub fn splinter_madvise(
+        shard_id: u32,
+        addr: *mut ::std::os::raw::c_void,
+        len: usize,
+        advice: ::std::os::raw::c_int,
+        timeout_ticks: u64,
     ) -> ::std::os::raw::c_int;
 }

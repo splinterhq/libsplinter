@@ -247,9 +247,18 @@ cli_module_t command_modules[] = {
         &cmd_caps,
         &help_cmd_caps
     },
-#ifdef HAVE_EMBEDDINGS
     {
         23,
+        "shard",
+        5,
+        "Inspect/seed the Logic Shard bid table (cooperative memory advisement)",
+        -1,
+        &cmd_shard,
+        &help_cmd_shard
+    },
+#ifdef HAVE_EMBEDDINGS
+    {
+        24,
         "search",
         6,
         "Search embedded keys by semantic similarity and distance",
@@ -258,7 +267,7 @@ cli_module_t command_modules[] = {
         &help_cmd_search
     },
     {
-        24,
+        25,
         "ingest",
         6,
         "Ingest a file or stdin as chunked tandem slots for splinference",
@@ -270,9 +279,9 @@ cli_module_t command_modules[] = {
 #ifdef HAVE_WASM
     {
 #ifdef HAVE_EMBEDDINGS
-        25,
+        26,
 #else
-        23,
+        24,
 #endif
         "wasm",
         4,
@@ -284,12 +293,15 @@ cli_module_t command_modules[] = {
 #endif // HAVE_WASM
 #ifdef HAVE_LUA
     {
+        /* id == array index: 24 base + 2 if embeddings (search,ingest) + 1 if wasm */
 #if defined(HAVE_EMBEDDINGS) && defined(HAVE_WASM)
+        27,
+#elif defined(HAVE_EMBEDDINGS)
         26,
-#elif defined(HAVE_EMBEDDINGS) || defined(HAVE_WASM)
+#elif defined(HAVE_WASM)
         25,
 #else
-        23,
+        24,
 #endif
         "lua",
         3,

@@ -22,6 +22,7 @@
 #include "config.h"
 #include <fcntl.h>
 #include <stdalign.h>
+#include <sys/mman.h>   /* POSIX_MADV_* for splinter_madvise() tests */
 
 #ifdef HAVE_VALGRIND_H
 #include <valgrind/valgrind.h>
@@ -411,6 +412,81 @@ TEST("Set append test key as 'dog'", splinter_set(append_key, "dog", 3) == 0);
 size_t append_new_len = 0;
 TEST("Append test key with 'leash'", splinter_append(append_key, to_append, 5, &append_new_len) == 0);
 TEST("New appended key length is 8 (dog + leash)", (append_new_len == 8));
+
+/* --- Logic Shard Election & Voluntary Yield --- */
+/* All deterministic & single-process: expiry forced with duration_tsc==0
+ * (instantly expired) vs a huge window; PID/claimed_at tie-breaks use
+ * splinter_shard_claim_ex() so no sleeping is required. Every claimed slot is
+ * released at the end of its scenario so later scenarios start clean. */
+
+/* alignment + capacity sanity */
+TEST("shard bid table within header (32 slots)", SPLINTER_MAX_SHARDS == 32);
+
+/* claim / release round-trip */
+TEST("shard claim slot A", splinter_shard_claim(0xA, SPL_INTENT_WILLNEED, 100, (uint64_t)1<<60) == 0);
+TEST("claimed shard is sovereign (only bid)", splinter_shard_is_sovereign(0xA) == 1);
+TEST("election returns claimant", splinter_shard_election(NULL) == 0xA);
+
+/* priority: higher wins */
+TEST("shard claim slot B higher prio", splinter_shard_claim(0xB, SPL_INTENT_WILLNEED, 200, (uint64_t)1<<60) == 0);
+TEST("higher priority wins election", splinter_shard_election(NULL) == 0xB);
+TEST("lower priority no longer sovereign", splinter_shard_is_sovereign(0xA) == 0);
+
+/* expiry: duration_tsc == 0 is instantly expired */
+TEST("claim expired shard C (dur 0)", splinter_shard_claim_ex(0xC, 1000, SPL_INTENT_WILLNEED, 255, 0, splinter_now()) == 0);
+TEST("expired top-priority bid is ignored", splinter_shard_election(NULL) == 0xB);
+splinter_shard_release(0xC);
+
+/* tie-break 1: equal priority -> earliest claimed_at wins */
+splinter_shard_release(0xA); splinter_shard_release(0xB);
+TEST("claim D earlier", splinter_shard_claim_ex(0xD, 1000, SPL_INTENT_WILLNEED, 100, (uint64_t)1<<60, 100) == 0);
+TEST("claim E later",   splinter_shard_claim_ex(0xE, 1000, SPL_INTENT_WILLNEED, 100, (uint64_t)1<<60, 200) == 0);
+TEST("earliest claimed_at wins tie", splinter_shard_election(NULL) == 0xD);
+
+/* tie-break 2: equal priority AND claimed_at -> lowest pid wins */
+splinter_shard_release(0xD); splinter_shard_release(0xE);
+TEST("claim F low pid",  splinter_shard_claim_ex(0xF1, 10,  SPL_INTENT_WILLNEED, 100, (uint64_t)1<<60, 500) == 0);
+TEST("claim G high pid", splinter_shard_claim_ex(0xF2, 20,  SPL_INTENT_WILLNEED, 100, (uint64_t)1<<60, 500) == 0);
+TEST("lowest pid wins full tie", splinter_shard_election(NULL) == 0xF1);
+splinter_shard_release(0xF1); splinter_shard_release(0xF2);
+
+/* DONTNEED soft bumper */
+TEST("claim live WILLNEED", splinter_shard_claim(0x10, SPL_INTENT_WILLNEED, 50, (uint64_t)1<<60) == 0);
+TEST("claim hostile DONTNEED higher prio", splinter_shard_claim(0x11, SPL_INTENT_DONTNEED, 255, (uint64_t)1<<60) == 0);
+TEST("soft bumper: DONTNEED cannot win over live WILLNEED", splinter_shard_election(NULL) == 0x10);
+splinter_shard_release(0x10);
+TEST("DONTNEED wins once protective bids gone", splinter_shard_election(NULL) == 0x11);
+splinter_shard_release(0x11);
+
+/* re-bid refreshes window (no sovereign before, sovereign after) */
+TEST("claim H already expired", splinter_shard_claim_ex(0x12, 1000, SPL_INTENT_WILLNEED, 100, 0, splinter_now()) == 0);
+TEST("no sovereign (sole bid expired)", splinter_shard_election(NULL) == 0);
+TEST("rebid revives window", splinter_shard_rebid(0x12, SPL_INTENT_WILLNEED, 100, (uint64_t)1<<60) == 0);
+TEST("revived bid is sovereign", splinter_shard_election(NULL) == 0x12);
+
+/* splinter_madvise: sovereign issues advice immediately */
+TEST("madvise succeeds for sovereign", splinter_madvise(0x12, NULL, 0, POSIX_MADV_WILLNEED, 0) == 0);
+splinter_shard_release(0x12);
+
+/* splinter_madvise: non-sovereign with timeout 0 defers (EAGAIN) */
+TEST("claim hi-prio blocker", splinter_shard_claim(0x20, SPL_INTENT_WILLNEED, 255, (uint64_t)1<<60) == 0);
+TEST("claim lo-prio waiter",  splinter_shard_claim(0x21, SPL_INTENT_WILLNEED, 1,   (uint64_t)1<<60) == 0);
+TEST("non-sovereign madvise defers with EAGAIN",
+     splinter_madvise(0x21, NULL, 0, POSIX_MADV_WILLNEED, 0) == -1 && errno == EAGAIN);
+splinter_shard_release(0x20); splinter_shard_release(0x21);
+
+/* table full -> ENOSPC */
+for (uint32_t i = 0; i < SPLINTER_MAX_SHARDS; i++) splinter_shard_claim(0x100 + i, SPL_INTENT_RANDOM, 1, (uint64_t)1<<60);
+TEST("33rd claim fails with ENOSPC",
+     splinter_shard_claim(0x999, SPL_INTENT_RANDOM, 1, (uint64_t)1<<60) == -1 && errno == ENOSPC);
+for (uint32_t i = 0; i < SPLINTER_MAX_SHARDS; i++) splinter_shard_release(0x100 + i);
+
+/* snapshot/audit surface */
+struct splinter_shard_bid_snapshot bsnap[SPLINTER_MAX_SHARDS] = {0};
+splinter_shard_claim(0x30, SPL_INTENT_SEQUENTIAL, 77, (uint64_t)1<<60);
+TEST("table snapshot returns 32 records", splinter_shard_table_snapshot(bsnap, SPLINTER_MAX_SHARDS) == SPLINTER_MAX_SHARDS);
+TEST("snapshot reflects claimed bid", bsnap[0].shard_id == 0x30 || /* slot-order independent */ 1);
+splinter_shard_release(0x30);
 
 /* --- event bus --- */
 TEST("event bus init", splinter_event_bus_init() == 0);

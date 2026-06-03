@@ -156,6 +156,9 @@ void help_cmd_uuid(unsigned int level);
 int cmd_caps(int argc, char *argv[]);
 void help_cmd_caps(unsigned int level);
 
+int cmd_shard(int argc, char *argv[]);
+void help_cmd_shard(unsigned int level);
+
 #ifdef HAVE_EMBEDDINGS
 int cmd_search(int argc, char *argv[]);
 void help_cmd_search(unsigned int level);

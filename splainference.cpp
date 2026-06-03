@@ -46,6 +46,32 @@ using atomic_int_least32_t  = std::atomic_int_least32_t;
 #include "splinter.h"
 #include "llama-cpp.h"
 
+#include <sys/mman.h>   // POSIX_MADV_* for splinter_madvise()
+
+// --- Logic Shard cooperative memory advisement -----------------------------
+// This is the live, latency-sensitive completion path. Per the thesis it
+// declares WILLNEED with a short window and re-bids frequently rather than
+// holding sovereignty across a long generation pass. High priority so it wins
+// over the embedding sidecar (40) and any maintenance shard. Advisement is
+// always non-blocking: a live completer never blocks waiting on a hint.
+#define SHARD_ID         0x5F1Au   // "SP-lain"
+#define SHARD_DUR_LIVE   (1ULL << 30)  // splinter_now() ticks; re-bid frequently
+#define SHARD_PRIO_LIVE  200
+// Re-bid every this many appended tokens at a flush boundary so the window
+// never lapses mid-request, without ever blocking on the advisement.
+#define SHARD_REBID_TOKENS 32
+
+// Translate a declared splinter_intent_t into a raw POSIX advice int.
+static inline int advice_for(uint8_t intent) {
+    switch (intent) {
+        case SPL_INTENT_WILLNEED:   return POSIX_MADV_WILLNEED;
+        case SPL_INTENT_SEQUENTIAL: return POSIX_MADV_SEQUENTIAL;
+        case SPL_INTENT_RANDOM:     return POSIX_MADV_RANDOM;
+        case SPL_INTENT_DONTNEED:   return POSIX_MADV_DONTNEED;
+        default:                    return POSIX_MADV_NORMAL;
+    }
+}
+
 // We use the last 3 labels since the highest quadrant
 // is down by one because the last one is reserved. This
 // is perfect for a "trifecta" and uses the odd group.
@@ -190,6 +216,18 @@ static uint64_t process_completion(
 
     debug_post(std::string("[splainference][START]: Processing key: ") + key);
 
+    // Refresh our short WILLNEED window for this request and warm the hot slot
+    // with a single non-blocking advisement. We never block on the advisement:
+    // a live completer defers rather than fighting another sovereign.
+    splinter_shard_rebid(SHARD_ID, SPL_INTENT_WILLNEED, SHARD_PRIO_LIVE, SHARD_DUR_LIVE);
+    {
+        size_t   warm_len = 0;
+        uint64_t warm_ep  = 0;
+        const void *warm = splinter_get_raw_ptr(key, &warm_len, &warm_ep);
+        splinter_madvise(SHARD_ID, (void *)warm, warm_len,
+                         POSIX_MADV_WILLNEED, /*timeout*/0);
+    }
+
     // --- Label transition: waiting -> servicing ---
     splinter_unset_label(key, SPLAIN_LABEL_WAITING);
     splinter_set_label(key,   SPLAIN_LABEL_SERVICING);
@@ -262,6 +300,7 @@ static uint64_t process_completion(
     std::string   chunk_buf;       // accumulates pieces until flush
     size_t        written   = prompt.size(); // bytes already in the slot
     int           token_run = 0;   // fallback flush counter
+    int           rebid_run = 0;   // tokens since last shard re-bid
     bool          oom       = false;
 
     while (keep_running) {
@@ -314,6 +353,14 @@ static uint64_t process_completion(
             written   = new_len;
             chunk_buf.clear();
             token_run = 0;
+
+            // Re-bid periodically at a flush boundary so our WILLNEED window
+            // never lapses while the request is active. Never blocks.
+            rebid_run += SPLAIN_TOKEN_FLUSH_MAX;
+            if (rebid_run >= SHARD_REBID_TOKENS) {
+                splinter_shard_rebid(SHARD_ID, SPL_INTENT_WILLNEED, SHARD_PRIO_LIVE, SHARD_DUR_LIVE);
+                rebid_run = 0;
+            }
         }
     }
 
@@ -435,6 +482,13 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    // Register as the high-priority live completion shard: WILLNEED with a short
+    // window, re-bid frequently (never held across a whole generation pass).
+    if (splinter_shard_claim(SHARD_ID, SPL_INTENT_WILLNEED, SHARD_PRIO_LIVE, SHARD_DUR_LIVE) != 0) {
+        std::cerr << "[Warn]: could not claim a shard bid slot (table full?); "
+                  << "continuing without cooperative advisement.\n";
+    }
+
     std::cout << "[Startup]: Loading GGUF model `" << model_path << "` ...\n";
     llama_backend_init();
 
@@ -497,6 +551,7 @@ int main(int argc, char **argv) {
     }
 
     if (oneshot) {
+        splinter_shard_release(SHARD_ID);
         llama_free(ctx);
         llama_model_free(model);
         llama_backend_free();
@@ -539,6 +594,7 @@ int main(int argc, char **argv) {
     std::cout << "\n[Signal]: Shutting down splainference safely...\n";
     debug_post("[splainference]: Daemon shutting down.");
 
+    splinter_shard_release(SHARD_ID);
     llama_free(ctx);
     llama_model_free(model);
     llama_backend_free();

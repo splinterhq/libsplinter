@@ -43,11 +43,37 @@ using atomic_int_least32_t  = std::atomic_int_least32_t;
 #define SPLINTER_EMBEDDINGS
 #endif
 
-// Now Splinter / llama (last) 
+// Now Splinter / llama (last)
 #include "splinter.h"
 #include "llama-cpp.h"
 
+#include <sys/mman.h>   // POSIX_MADV_* for splinter_madvise()
+
 volatile sig_atomic_t keep_running = 1;
+
+// --- Logic Shard cooperative memory advisement -----------------------------
+// This embedding sidecar registers as a well-behaved Logic Shard: it declares
+// WILLNEED at a low priority during the live loop (so the latency-sensitive
+// completer always preempts it) and SEQUENTIAL during the backfill sweep.
+// Its bid is non-blocking — it never fights a higher-priority WILLNEED holder.
+#define SHARD_ID           0x5F10u   // "SP-embed"
+// Declared windows in splinter_now() ticks. Re-bid frequently, so the window
+// only needs to outlast one loop iteration; backfill gets a much longer window.
+#define SHARD_DUR_LIVE     (1ULL << 30)
+#define SHARD_DUR_BACKFILL (1ULL << 36)
+#define SHARD_PRIO_LIVE     40        // below the completer (200)
+#define SHARD_PRIO_BACKFILL 20        // below live
+
+// Translate a declared splinter_intent_t into a raw POSIX advice int.
+static inline int advice_for(uint8_t intent) {
+    switch (intent) {
+        case SPL_INTENT_WILLNEED:   return POSIX_MADV_WILLNEED;
+        case SPL_INTENT_SEQUENTIAL: return POSIX_MADV_SEQUENTIAL;
+        case SPL_INTENT_RANDOM:     return POSIX_MADV_RANDOM;
+        case SPL_INTENT_DONTNEED:   return POSIX_MADV_DONTNEED;
+        default:                    return POSIX_MADV_NORMAL;
+    }
+}
 
 // Helper to check if a vector is zeroed out
 bool needs_embedding(const float* vec, size_t len) {
@@ -100,7 +126,14 @@ uint64_t process_key(const char* key, llama_context* ctx, const llama_vocab* voc
 
 void perform_backfill(llama_context* ctx, const llama_vocab* vocab) {
     std::cout << "Starting backfill for VARTEXT keys...\n";
-    
+
+    // This is the SEQUENTIAL sweep the thesis names. Re-bid as SEQUENTIAL for a
+    // long window, then issue a non-blocking advisement: if a live completer
+    // holds sovereignty we simply proceed without forcing our advice (deferring
+    // is correct; backfill is latency-tolerant and must not fight WILLNEED).
+    splinter_shard_rebid(SHARD_ID, SPL_INTENT_SEQUENTIAL, SHARD_PRIO_BACKFILL, SHARD_DUR_BACKFILL);
+    splinter_madvise(SHARD_ID, NULL, 0, POSIX_MADV_SEQUENTIAL, /*timeout*/0);
+
     char *keys[1024];
     size_t key_count = 0;
     if (splinter_list(keys, 1024, &key_count) != 0) return;
@@ -180,6 +213,13 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    // Register as a cooperating Logic Shard: WILLNEED at a low priority with a
+    // short window so the live completer (higher priority) always preempts us.
+    if (splinter_shard_claim(SHARD_ID, SPL_INTENT_WILLNEED, SHARD_PRIO_LIVE, SHARD_DUR_LIVE) != 0) {
+        std::cerr << "[Warn]: could not claim a shard bid slot (table full?); "
+                  << "continuing without cooperative advisement.\n";
+    }
+
     // Map the "embed this" convention label (bit 0 / 0x1) to our signal group
     // so that splinter_bump_slot() on a key with this label wakes us up.
     splinter_watch_label_register(1ULL, signal_group);
@@ -225,6 +265,7 @@ int main(int argc, char **argv) {
     }
 
     if (oneshot) {
+        splinter_shard_release(SHARD_ID);
         splinter_close();
         return 0;
     }
@@ -265,7 +306,13 @@ int main(int argc, char **argv) {
             continue;
         }
 
-        std::cout << "[Pulse Received]: Signal Count (" << current_signal_count << ") scanning bus for changed epochs ...\n";            
+        std::cout << "[Pulse Received]: Signal Count (" << current_signal_count << ") scanning bus for changed epochs ...\n";
+
+        // Re-bid to refresh our short WILLNEED window ("WILLNEED with a short
+        // window, re-bid frequently"), then a single non-blocking advisement to
+        // warm the arena. Non-blocking: if a completer is sovereign we defer.
+        splinter_shard_rebid(SHARD_ID, SPL_INTENT_WILLNEED, SHARD_PRIO_LIVE, SHARD_DUR_LIVE);
+        splinter_madvise(SHARD_ID, NULL, 0, POSIX_MADV_WILLNEED, /*timeout*/0);
 
         key_count = 0;
         
@@ -298,6 +345,7 @@ int main(int argc, char **argv) {
 
     std::cout << "\n[Signal Received]: Shutting down splinference daemon safely...\n";
 
+    splinter_shard_release(SHARD_ID);
     llama_free(ctx);
     llama_model_free(model);
     llama_backend_free();

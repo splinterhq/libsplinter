@@ -29,7 +29,7 @@ extern "C" {
 #define SPLINTER_MAGIC 0x534C4E54
 
 /** @brief Version of the splinter data format (not the library version). */
-#define SPLINTER_VER   3
+#define SPLINTER_VER   4   /* was 3: header now carries the shard bid table */
 /** @brief Maximum length of a key string, including null terminator. */
 #define SPLINTER_KEY_MAX        64
 /** @brief Nanoseconds per millisecond for time calculations. */
@@ -41,6 +41,25 @@ extern "C" {
 
 /** @brief The maximum number of watch signal groups for a slot */
 #define SPLINTER_MAX_GROUPS 64
+
+/** @brief Maximum simultaneously-loaded Logic Shards. Equal to the seqlock
+ *  writer ceiling — the bid table is never larger than the concurrency the
+ *  epoch protocol already supports. */
+#define SPLINTER_MAX_SHARDS 32
+
+/** @brief Memory-intent classes for a shard bid (the `intent` field).
+ *  These mirror the POSIX_MADV_* advice classes. SPL_INTENT_NONE marks a
+ *  record whose owner has not yet declared (or has cleared) its intent.
+ *  DONTNEED is accepted as a bid but is governed by the soft bumper in
+ *  splinter_shard_election(): it cannot win while live WILLNEED/SEQUENTIAL
+ *  bids exist. */
+typedef enum {
+    SPL_INTENT_NONE       = 0,
+    SPL_INTENT_WILLNEED   = 1,
+    SPL_INTENT_SEQUENTIAL = 2,
+    SPL_INTENT_RANDOM     = 3,
+    SPL_INTENT_DONTNEED   = 4
+} splinter_intent_t;
 
 /** @brief Compile-time slot cap for the event bus dirty mask (covers up to 1024 slots per word) */
 #define SPLINTER_MAX_SLOTS 1024
@@ -129,6 +148,23 @@ struct splinter_event_bus {
 };
 
 /**
+ * @brief One cooperative-memory-scheduling bid. 32 of these live in the
+ * header. Packed to ~32 bytes so all 32 fit in ~1 KB (intentionally NOT
+ * individually cache-line aligned: claims/releases are rare and elections
+ * are read-only, so false sharing on this table is a non-issue, and the
+ * thesis budgets ~1 KB, not 2 KB).
+ */
+struct splinter_shard_bid {
+    atomic_uint_least32_t shard_id;     /**< 0 = empty slot. Claimed via CAS. */
+    atomic_uint_least32_t pid;          /**< getpid() of the claimant; PID tie-break. */
+    atomic_uint_least8_t  intent;       /**< splinter_intent_t. */
+    atomic_uint_least8_t  priority;     /**< 0-255, higher wins the election. */
+    atomic_uint_least8_t  _pad[2];      /**< explicit padding; keep layout stable. */
+    atomic_uint_least64_t duration_tsc; /**< declared window in splinter_now() ticks. */
+    atomic_uint_least64_t claimed_at;   /**< splinter_now() at claim / last re-bid. */
+};
+
+/**
  * @struct splinter_header
  * @brief Defines the header structure for the shared memory region.
  *
@@ -172,6 +208,11 @@ struct splinter_header {
 
     // Event bus for kernel-assisted wake-up on epoch change
     alignas(64) struct splinter_event_bus event_bus;
+
+    // Cooperative memory-scheduling bid table (Logic Shard election).
+    // Placed last so prior field offsets are undisturbed. The whole array is
+    // 64-byte aligned (one fresh cache line) but records inside are packed.
+    alignas(64) struct splinter_shard_bid shard_bids[SPLINTER_MAX_SHARDS];
 };
 
 
@@ -275,6 +316,21 @@ typedef struct splinter_slot_snapshot {
     float embedding[SPLINTER_EMBED_DIM];
 #endif
 } splinter_slot_snapshot_t;
+
+/**
+ * @struct splinter_shard_bid_snapshot
+ * @brief Non-atomic mirror of a single bid slot for inspection/audit.
+ */
+struct splinter_shard_bid_snapshot {
+    uint32_t shard_id;
+    uint32_t pid;
+    uint8_t  intent;
+    uint8_t  priority;
+    uint64_t duration_tsc;
+    uint64_t claimed_at;
+    int      expired;   /**< computed at snapshot time vs splinter_now() */
+    int      sovereign; /**< 1 if this record won the election at snapshot time */
+};
 
 /**
  * @brief for atomic integer operations
@@ -932,6 +988,116 @@ int splinter_set_as_system(const char *key);
  * @return 0 on success, -1 if key not found or overflow, -2 if args invalid.
  */
 int splinter_append(const char *key, const void *data, size_t data_len, size_t *new_len);
+
+/* ---------------------------------------------------------------------------
+ * Logic Shard Election & Voluntary Yield (cooperative memory advisement).
+ *
+ * A fixed 32-slot bid table in the header lets independently-loaded shards
+ * declare their memory intent (WILLNEED / SEQUENTIAL / RANDOM / DONTNEED) and
+ * cooperatively decide who gets to issue posix_madvise() for a region. The
+ * election is a read-only O(32) scan deterministic from static bid data, so
+ * every shard computes the same sovereign without a central arbiter.
+ *
+ * Return-code convention: 0 success, -1 recoverable/contested (errno set,
+ * e.g. EAGAIN / ENOSPC / ETIMEDOUT), -2 caller error (NULL/invalid arg or no
+ * store mapped).
+ * ------------------------------------------------------------------------- */
+
+/**
+ * @brief Claim a shard bid slot and declare memory intent.
+ *
+ * CAS-claims the first empty slot (or refreshes the caller's existing slot if
+ * shard_id already owns one), stamping pid=getpid() and claimed_at=splinter_now().
+ *
+ * @param shard_id     Caller-chosen non-zero shard identifier (unique per process).
+ * @param intent       splinter_intent_t advisement class.
+ * @param priority     0-255, higher wins elections.
+ * @param duration_tsc Declared sovereignty window in splinter_now() ticks.
+ * @return 0 on success, -1 if the table is full (errno=ENOSPC),
+ *         -2 on bad args / no store / shard_id==0.
+ *
+ * @note On a fresh claim the descriptive fields are published with
+ *       memory_order_release *after* the shard_id CAS makes the slot visible.
+ *       A racing election that observes the new shard_id but not-yet-stored
+ *       fields treats the bid as SPL_INTENT_NONE / priority 0 for at most one
+ *       election; the next election corrects it. Advisement is a hint, so this
+ *       is acceptable by design.
+ */
+int splinter_shard_claim(uint32_t shard_id, uint8_t intent,
+                         uint8_t priority, uint64_t duration_tsc);
+
+/**
+ * @brief Advanced/testing claim: explicit pid and claimed_at.
+ *
+ * Identical to splinter_shard_claim() but lets a supervisor register a bid on
+ * behalf of another process, and lets tests construct deterministic election
+ * scenarios without sleeping. Production shards should prefer splinter_shard_claim().
+ * @return as splinter_shard_claim().
+ */
+int splinter_shard_claim_ex(uint32_t shard_id, uint32_t pid, uint8_t intent,
+                            uint8_t priority, uint64_t duration_tsc,
+                            uint64_t claimed_at);
+
+/**
+ * @brief Refresh (re-bid) an existing claim's window. Updates claimed_at to
+ * splinter_now() and optionally changes intent/priority/duration. This is the
+ * fairness re-bid: a shard that needs more time must re-bid rather than hold.
+ * @return 0 on success, -1 if shard_id holds no slot, -2 on bad args.
+ */
+int splinter_shard_rebid(uint32_t shard_id, uint8_t intent,
+                         uint8_t priority, uint64_t duration_tsc);
+
+/**
+ * @brief Voluntarily release (yield) the caller's bid slot. Zeroes shard_id
+ * (marking the slot empty) last, after clearing the other fields.
+ * @return 0 on success, -1 if shard_id holds no slot, -2 on bad args/no store.
+ */
+int splinter_shard_release(uint32_t shard_id);
+
+/**
+ * @brief Run the read-only election scan and return the current sovereign.
+ *
+ * Highest-priority UNEXPIRED bid wins; ties broken by earliest claimed_at,
+ * then lowest pid. DONTNEED soft bumper: a DONTNEED bid is skipped as a winner
+ * while any unexpired WILLNEED or SEQUENTIAL bid exists.
+ *
+ * @param out_intent Optional; receives the winning bid's intent (or SPL_INTENT_NONE).
+ * @return the winning shard_id, or 0 if there is no current sovereign.
+ */
+uint32_t splinter_shard_election(uint8_t *out_intent);
+
+/**
+ * @brief Convenience: is shard_id the current sovereign?
+ * @return 1 if sovereign, 0 if not (including unknown/expired), -2 on no store.
+ */
+int splinter_shard_is_sovereign(uint32_t shard_id);
+
+/**
+ * @brief Copy a non-atomic snapshot of every bid slot for inspection/audit.
+ * @param out   Array of at least SPLINTER_MAX_SHARDS records.
+ * @param max   Capacity of out (capped at SPLINTER_MAX_SHARDS).
+ * @return number of records copied, or -2 on bad args/no store.
+ */
+int splinter_shard_table_snapshot(struct splinter_shard_bid_snapshot *out, size_t max);
+
+/**
+ * @brief Cooperative posix_madvise(): the voluntary-yield entry point.
+ *
+ * Runs the election. If shard_id is sovereign, issues posix_madvise(addr,len,advice)
+ * immediately and returns its result. If not sovereign:
+ *   - timeout_ticks == 0          -> do NOT block; return -1, errno=EAGAIN (defer).
+ *   - timeout_ticks == UINT64_MAX -> block until sovereign, then advise.
+ *   - else                        -> block up to timeout_ticks, re-electing on each wake.
+ * Blocking uses the eventfd broker when the bus owner has armed it
+ * (splinter_event_bus_open/wait); otherwise a TSC-polled nanosleep fallback.
+ *
+ * If addr==NULL, advises the whole value arena (VALUES .. VALUES+arena_sz).
+ *
+ * @return 0 on success (advisement issued), -1 on EAGAIN/timeout/posix_madvise
+ *         failure (errno set), -2 on bad args/no store/unknown shard_id.
+ */
+int splinter_madvise(uint32_t shard_id, void *addr, size_t len,
+                     int advice, uint64_t timeout_ticks);
 
 #ifdef __cplusplus
 }
