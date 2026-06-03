@@ -58,16 +58,6 @@ Tested rigorously under strict hardware constraints (including fanless, low-tier
 * **Multi-Reader, Single-Writer (MRSW):** Sustains **3.2 million operations/second** with zero data corruption.
 * **Multi-Reader, Multi-Writer (MRMW):** Utilizing the disjointed-lane collision resolution protocol (`splinter_chi_sao`), 32 concurrent writers sustain **15.6 million operations/second** with zero data corruption.
 
-## Project Status & The Road to 1.2.0
-
-Splinter is currently >95% implemented with high test-coverage across its primary primitives. 
-
-### The 1.2.0 Milestone
-Version 1.2.0 represents the feature-complete graduation of the core engine. The final roadmap includes:
-* Finalizing Shard accounting and POSIX `madvise` univocality boundaries.
-* Integrating the `evProcessor` governance loop directly into active `splainference` RAG and data-narration workflows.
-* Standardizing the base protocol for client-side meta-keys (`__on_write`, `__on_read`) for Lua data-transformation.
-
 ### Governance and Open Source Commitment
 Splinter is open-source because transparent, text-driven governance and systemic bias auditing should be fundamental infrastructure, not a locked enterprise feature. 
 
