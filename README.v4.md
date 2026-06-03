@@ -1,7 +1,5 @@
 # Splinter Format v4 — Logic Shard Election & Voluntary Yield
 
-**Format version:** `SPLINTER_VER 4` (was 3) · **Status:** shipping
-
 Format v4 adds the **Logic Shard bid table** to the store header: a fixed,
 32-slot region that lets independently-loaded shards coordinate *memory intent*
 (`posix_madvise` advice) cooperatively, with no central arbiter, no syscall on
