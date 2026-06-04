@@ -1,6 +1,5 @@
 ---
 title: Splinter Logic Shards
-nav_order: 4
 metas:
   lang: en
   description: >-
@@ -15,37 +14,14 @@ metas:
   generator: true
 ---
 
-# What Are Splinter Logic Shards?
+# What Are Splinter Logic Shards? 
 
-Splinter's CLI is easily extended, but, you might want to link against
-_considerably more_ than Splinter's build system allows for, and it's usually
-just for one or several very specific tasks.
+Splinter logic shards orchestrate self-election & voluntary yield when it comes
+to worfklows with competing usage goals in the shared memory store. The highest
+priority shard with the workflow that's most complimentary to the current memory
+usage pattern is the one that typically runs.
 
-In short, you need to be able to load modules into the CLI architecture that can
-handle your custom processing, transformation, observation, _**whatever**_
-without having to wrangle linkage and that didn't need to be located in-tree to
-be compiled.
-
-If you want to develop a `foo` command, you should be able to just do so and
-point `splinterctl` or `splinter_cli` at the `.so` file and, provided it
-conforms to a symbol map, loads it.
-
-This gives you access to Splinter with all the CLI structure and whatever else
-you want to bring in, without having to modify Splinter or the tools.
-
-## The Solution: Loadable Shards (a type-punned derivative of a "splinter")
-
-Design constraints prevent making the CLI's module list dynamic; some platforms
-disallow heap allocation entirely so Splinter tries hard to not require it for
-anything essential, even in tooling.
-
-We need to instead have an optional dynamic module structure that can advertise
-and enter these 'shards' for the user. As long as they contain the correct entry
-points and metadata, they can be compiled anywhere `splinter.h` can be found.
-This `splinter_shard_t` will be the only coupling of tooling to the core store
-(found in the core header, not CLI).
-
-## Splinter Format v4 (NOW SHIPPING) — Logic Shard Election & Voluntary Yield
+This allows for headless, instant and fully-cooperative scheduling.
 
 Format v4 adds the **Logic Shard bid table** to the store header: a fixed,
 32-slot region that lets independently-loaded shards coordinate *memory intent*

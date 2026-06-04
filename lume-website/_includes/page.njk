@@ -15,6 +15,7 @@
   <a href="/" class="spl-logo">SPLINTER<span>⚡</span></a>
   <div class="spl-nav-links">
     <a href="/core/" {% if nav_order == 1 and not parent %}class="active"{% endif %}>core api</a>
+    <a href="/shards/" {% if title == "Splinter Logic Shards" or parent == "Splinter Logic Shards" %}class="active"{% endif %}>logic shards</a>
     <a href="/bindings/" {% if title == "Language Bindings (FFI)" or parent == "Language Bindings (FFI)" %}class="active"{% endif %}>ffi</a>
     <a href="/cli/" {% if title == "Command Line Interfaces" or parent == "Command Line Interfaces" %}class="active"{% endif %}>cli</a>
     <a href="/use-cases/">use cases</a>
