@@ -1,4 +1,4 @@
-# Splinter: A Cooperative Userspace Hypervisor for Semantic Workloads
+# Splinter: A Cooperative Userspace Hypervisor for Inference & Other Semantic Workloads
 
 Local Large Language Model (LLM) inference is currently choking on the "Socket and Lock" tax. Standard IPC tools and databases require heavy context switching, serialization, and kernel interrupts just to synchronize state. When you are generating text or evaluating semantic alignment at token speeds, that overhead isn't just a bottleneck—it's a wall. 
 
