@@ -117,11 +117,22 @@ uint64_t process_key(const char* key, llama_context* ctx, const llama_vocab* voc
 
     // commit
     float* embedding = llama_get_embeddings_seq(ctx, 0);
-    if (embedding && splinter_set_embedding(key, embedding) == 0) {
-        return current_epoch;
+    if (!embedding || splinter_set_embedding(key, embedding) != 0) {
+        return 0;
     }
 
-    return 0;
+    // splinter_set_embedding() advances the slot epoch by exactly 2
+    // (even -> odd -> even). Return THAT post-write epoch so the caller records
+    // it: otherwise the caller stores the pre-write epoch, the slot now reads
+    // two higher, and every subsequent pulse re-embeds this key forever (also
+    // re-pulsing __lane_dw_2). If the epoch isn't exactly current_epoch + 2, a
+    // content writer raced us during decode and our embedding is already stale —
+    // return 0 so the next scan re-embeds against the newest content.
+    uint64_t post_epoch = splinter_get_epoch(key);
+    if (post_epoch != current_epoch + 2) {
+        return 0;
+    }
+    return post_epoch;
 }
 
 void perform_backfill(llama_context* ctx, const llama_vocab* vocab) {
@@ -138,17 +149,28 @@ void perform_backfill(llama_context* ctx, const llama_vocab* vocab) {
     size_t key_count = 0;
     if (splinter_list(keys, 1024, &key_count) != 0) return;
 
+    size_t embedded = 0, failed = 0;
     for (size_t i = 0; i < key_count; ++i) {
         splinter_slot_snapshot_t snap = {};
         if (splinter_get_slot_snapshot(keys[i], &snap) != 0) continue;
 
         // only process if it's explicitly VARTEXT and hasn't been embedded yet
         if ((snap.type_flag & SPL_SLOT_TYPE_VARTEXT) && needs_embedding(snap.embedding, SPLINTER_EMBED_DIM)) {
-            std::cout << "Backfilling: " << keys[i] << "...\n";
-            process_key(keys[i], ctx, vocab);
+            std::cout << "Backfilling: " << keys[i] << "..." << std::flush;
+            // process_key() returns 0 on any failure/skip (no embedding produced,
+            // epoch raced, decode failed). Report the real outcome rather than
+            // assuming success.
+            if (process_key(keys[i], ctx, vocab) != 0) {
+                ++embedded;
+                std::cout << " ok\n";
+            } else {
+                ++failed;
+                std::cout << " FAILED (no vector written)\n";
+            }
         }
     }
-    std::cout << "Backfill complete.\n";
+    std::cout << "Backfill complete: " << embedded << " embedded, "
+              << failed << " failed.\n";
 }
 
 void handle_signal(int sig) {
@@ -245,6 +267,12 @@ int main(int argc, char **argv) {
 
     llama_context_params ctx_params = llama_context_default_params();
     ctx_params.embeddings = true;
+    // Force mean pooling. Without this, pooling_type stays UNSPECIFIED and falls
+    // back to whatever the GGUF declares; embedding GGUFs that omit the pooling
+    // metadata resolve to NONE, and llama_get_embeddings_seq() then returns NULL
+    // (see llama.h) — so process_key() silently writes nothing. Nomic embedding
+    // models use mean pooling, so pin it explicitly.
+    ctx_params.pooling_type = LLAMA_POOLING_TYPE_MEAN;
     // Match the context window the model was trained with so long VARTEXT
     // values aren't silently truncated at the llama default of 512 tokens.
     // Embeddings need the full sequence in one batch, so n_batch/n_ubatch
@@ -272,22 +300,33 @@ int main(int argc, char **argv) {
 
     if (processed_epochs.empty()) {
         std::cout << "[Startup]: Cold start detected; populating baseline epochs ...\n";
+        size_t pending = 0;
         splinter_list(keys, 1024, &key_count);
         for (size_t i = 0; i < key_count; ++i) {
             std::string key_str(keys[i]);
-            uint64_t current_epoch = splinter_get_epoch(keys[i]);
-            
+
             std::cout << "[Startup]: Checking key: `" << keys[i] << "` ...\n" << std::flush;
-            
-            auto it = processed_epochs.find(key_str);
-            if (it != processed_epochs.end() && it->second >= current_epoch) {
+
+            splinter_slot_snapshot_t snap = {};
+            if (splinter_get_slot_snapshot(keys[i], &snap) != 0) continue;
+            if (snap.epoch == 0) continue;
+
+            // Only baseline keys that already carry a vector. A key that still
+            // needs an embedding must NOT be recorded here: doing so marks it as
+            // "already processed" at its current epoch, so the live loop's
+            // `processed >= current` guard skips it forever and it never gets
+            // embedded unless its epoch changes again. Leaving it out keeps it
+            // pending so the next pulse to this group embeds it.
+            if (needs_embedding(snap.embedding, SPLINTER_EMBED_DIM)) {
+                ++pending;
                 continue;
             }
-
-            uint64_t observed_epoch = splinter_get_epoch(keys[i]);
-            if (observed_epoch != 0) {
-                processed_epochs[key_str] = observed_epoch;
-            }
+            processed_epochs[key_str] = snap.epoch;
+        }
+        if (pending > 0) {
+            std::cout << "[Startup]: " << pending << " key(s) still need embedding; "
+                      << "they will be embedded on the next pulse to group "
+                      << (int)signal_group << " (or run with --backfill-text-keys).\n";
         }
     }
 
@@ -334,7 +373,7 @@ int main(int argc, char **argv) {
                 int64_t tick_end = splinter_now();
                 size_t processing_delta = static_cast<size_t>(tick_end - tick_start);
                 splinter_set_slot_time(keys[i], SPL_TIME_CTIME, unix_timestamp, processing_delta);
-                processed_epochs[key_str] = observed_epoch;  // The epoch process_key captured, pre-write
+                processed_epochs[key_str] = observed_epoch;  // post-write epoch from process_key (slot's current even epoch)
                 // TODO - make this command line set-able (pulse after update)
                 splinter_pulse_keygroup("__lane_dw_2");
                 std::cout << "[Processed]: Key " << keys[i] << " embedded after update.\n" << std::flush;
