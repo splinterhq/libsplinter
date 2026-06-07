@@ -110,6 +110,15 @@ uint64_t process_key(const char* key, llama_context* ctx, const llama_vocab* voc
     }
 
     // inference
+    // Wipe any residual state from a prior key before decoding. Every key is
+    // decoded into seq_id 0, and Nomic is a non-causal (bidirectional) +
+    // mean-pooled embedding model, so leftover tokens from a longer previous
+    // sequence stay resident in the cache and get attended to here — silently
+    // contaminating the pooled embedding. Without this, the vector for a given
+    // text depends on what was decoded before it (processing order / history),
+    // so the same text yields different vectors run-to-run.
+    llama_memory_seq_rm(llama_get_memory(ctx), 0, -1, -1);
+
     llama_batch batch = llama_batch_get_one(tokens.data(), n_tokens);
     if (llama_decode(ctx, batch) != 0) {
         return 0;
