@@ -4,7 +4,17 @@ Local Large Language Model (LLM) inference is currently choking on the "Socket a
 
 Splinter dismantles that wall. It is a lock-free, cooperative userspace hypervisor designed from the ground up for strict mechanical sympathy with modern CPU cache hierarchies (x86_64, ARM, and RISC). It puts your governance, your vector storage, and your inference engine in the exact same physical memory lane. 
 
-Think of Splinter as a **semantic breadboard**. It provides a passive, shared-memory manifold where thousands of context or classification windows for multimodal inference run simultaneously with 100% non-blocking throughput. 
+Think of Splinter as a **semantic breadboard**. It provides a passive, shared-memory manifold where thousands of context or classification windows for multimodal inference run simultaneously with 100% non-blocking throughput. It provides the following to all processes using it:
+
+ - Vector storage
+ - Cache & KV Storage
+ - Atomic Integer Operations (similar to Redis)
+ - Ordered sets (Similar to Redis hashes, but designed specifically for Physics)
+ - Persistence or In-memory residence
+ - Eventfd-backed or poll-able pub/sub notifications
+ - Bloomable store with feature flags
+
+All in a size that stays in the CPU hot path, and doesn't require copying between services.
 
 ## The Core Concept: Cooperative Virtualization
 
@@ -12,7 +22,6 @@ Splinter treats your local workspace not as a database pipeline, but as an execu
 
 * **The Privilege Topology:** When run as `root`, Splinter is **ringless**, bypassing standard OS arbitration barriers to align directly with CPU L1/L3 cache lines and pin NUMA nodes. Under an underprivileged user, it acts as a **single-ring** virtualized environment, managing its own ecosystem of agents and shards without trapping down into Ring 0.
 * **Cooperative Scheduling:** Rather than using aggressive, preemptive hardware interrupts that cause CPU thrashing, Splinter coordinates access via an aligned 32-slot bid table. Shards check a shared sovereignty table and voluntarily yield memory regions using a protocol backed by POSIX `madvise` primitives.
-* **The Shell Block Hypercall:** Governance is handled natively via the operating system. When an agent signals an unaligned intent, the supervisor blocks it inside a native shell call. The kernel parks the thread at zero CPU or token cost—freezing the agent in place until the compliance protocol issues a green-light ACK to resume execution.
 
 ## Architectural Features
 
