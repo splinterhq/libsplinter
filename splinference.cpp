@@ -11,14 +11,8 @@
  * 
  *  - Multi-thread (one per signal group) operation to centralize model
  *    use. (Low Priority)
- * 
- *  - Uncertainty & Confidence Logging (High-entropy low-probability lysis 
- *    events) for governance. (High Priority)
  *
  *  - Implement argparse (see 3rdparty/) for argument parsing. (Low Priority)
- * 
- *  - Dynamically allocate keys[] array in main() based on the store's 
- *    geometry. (High Priority)
  */
 
 #include <atomic>
@@ -64,6 +58,12 @@ volatile sig_atomic_t keep_running = 1;
 #define SHARD_PRIO_LIVE     40        // below the completer (200)
 #define SHARD_PRIO_BACKFILL 20        // below live
 
+// Upper bound on the keys[] array we hand to splinter_list(). We size the array
+// to the store's actual slot geometry (see dynamic_key_capacity()), but never
+// allocate more than this regardless of how large the store declares itself.
+// This is expected to diverge from splainference's own ceiling over time.
+#define MAX_DYNAMIC_KEYS 500000u
+
 // Translate a declared splinter_intent_t into a raw POSIX advice int.
 static inline int advice_for(uint8_t intent) {
     switch (intent) {
@@ -73,6 +73,26 @@ static inline int advice_for(uint8_t intent) {
         case SPL_INTENT_DONTNEED:   return POSIX_MADV_DONTNEED;
         default:                    return POSIX_MADV_NORMAL;
     }
+}
+
+// Decide how many key slots to allocate for splinter_list(), based on the
+// store's declared geometry and capped at MAX_DYNAMIC_KEYS. If the store is
+// larger than we can read, warn once to stderr and read up to the cap. The
+// store must already be open before this is called.
+static size_t dynamic_key_capacity() {
+    splinter_header_snapshot_t hdr = {};
+    if (splinter_get_header_snapshot(&hdr) != 0) {
+        // Geometry unavailable; fall back to the hard ceiling so we still run.
+        return MAX_DYNAMIC_KEYS;
+    }
+    if (hdr.slots > MAX_DYNAMIC_KEYS) {
+        std::cerr << "[Warning]: store declares " << hdr.slots << " slots but this "
+                  << "build reads at most " << MAX_DYNAMIC_KEYS
+                  << "; only the first " << MAX_DYNAMIC_KEYS
+                  << " keys will be processed.\n";
+        return MAX_DYNAMIC_KEYS;
+    }
+    return hdr.slots;
 }
 
 // Helper to check if a vector is zeroed out
@@ -154,9 +174,9 @@ void perform_backfill(llama_context* ctx, const llama_vocab* vocab) {
     splinter_shard_rebid(SHARD_ID, SPL_INTENT_SEQUENTIAL, SHARD_PRIO_BACKFILL, SHARD_DUR_BACKFILL);
     splinter_madvise(SHARD_ID, NULL, 0, POSIX_MADV_SEQUENTIAL, /*timeout*/0);
 
-    char *keys[1024];
+    std::vector<char*> keys(dynamic_key_capacity());
     size_t key_count = 0;
-    if (splinter_list(keys, 1024, &key_count) != 0) return;
+    if (splinter_list(keys.data(), keys.size(), &key_count) != 0) return;
 
     size_t embedded = 0, failed = 0;
     for (size_t i = 0; i < key_count; ++i) {
@@ -190,7 +210,8 @@ void handle_signal(int sig) {
 
 int main(int argc, char **argv) {
     size_t key_count = -1;
-    char *keys[1024] = { 0 };
+    // Sized to the store's geometry once the bus is open (see below).
+    std::vector<char*> keys;
 
     // we need at least 4 arguments: <bin> <bus> <model> <group>
     if (argc < 4) {
@@ -243,6 +264,9 @@ int main(int argc, char **argv) {
         std::cerr << "Failed to connect to Splinter bus: " << bus_name << "\n";
         return 1;
     }
+
+    // Now that the bus is open, size the keys[] array to the store's geometry.
+    keys.resize(dynamic_key_capacity());
 
     // Register as a cooperating Logic Shard: WILLNEED at a low priority with a
     // short window so the live completer (higher priority) always preempts us.
@@ -310,7 +334,7 @@ int main(int argc, char **argv) {
     if (processed_epochs.empty()) {
         std::cout << "[Startup]: Cold start detected; populating baseline epochs ...\n";
         size_t pending = 0;
-        splinter_list(keys, 1024, &key_count);
+        splinter_list(keys.data(), keys.size(), &key_count);
         for (size_t i = 0; i < key_count; ++i) {
             std::string key_str(keys[i]);
 
@@ -364,7 +388,7 @@ int main(int argc, char **argv) {
 
         key_count = 0;
         
-        if (splinter_list(keys, 1024, &key_count) != 0) continue;
+        if (splinter_list(keys.data(), keys.size(), &key_count) != 0) continue;
         for (size_t i = 0; i < key_count; ++i) {
             std::string key_str(keys[i]);
             uint64_t current_epoch = splinter_get_epoch(keys[i]);
