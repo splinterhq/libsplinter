@@ -13,6 +13,8 @@ Think of Splinter as a **semantic breadboard**. It provides a passive, shared-me
  - Persistence or In-memory residence
  - Eventfd-backed or poll-able pub/sub notifications
  - Bloomable store with feature flags
+ - Self-elected univocality for shared region use and governance via POSIX advisement primitives
+ - A production-grade CLI/REPL for debugging and operations
 
 All in a size that stays in the CPU hot path, and doesn't require copying between services.
 
