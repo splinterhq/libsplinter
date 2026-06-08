@@ -58,6 +58,16 @@ volatile sig_atomic_t keep_running = 1;
 #define SHARD_PRIO_LIVE     40        // below the completer (200)
 #define SHARD_PRIO_BACKFILL 20        // below live
 
+// The scorer (semsage app/scorer) deposits each specimen under a fresh UUID and
+// sets the WAITING label (0x40) to mark the slot "awaiting inference". The label
+// lifecycle in splinter.h has the sidecar clear WAITING once the vector lands;
+// that cleared bit is the scorer's authoritative "THIS deposit was serviced"
+// signal. Without it the scorer falls back to magnitude-only polling, which on a
+// reused slot can mistake a prior tenant's residual vector for a fresh result
+// (stale scores against a fresh UUID + char count). Keep this in sync with
+// scorer.cpp's WAITING_LABEL.
+#define WAITING_LABEL 0x40ULL
+
 // Upper bound on the keys[] array we hand to splinter_list(). We size the array
 // to the store's actual slot geometry (see dynamic_key_capacity()), but never
 // allocate more than this regardless of how large the store declares itself.
@@ -407,6 +417,13 @@ int main(int argc, char **argv) {
                 size_t processing_delta = static_cast<size_t>(tick_end - tick_start);
                 splinter_set_slot_time(keys[i], SPL_TIME_CTIME, unix_timestamp, processing_delta);
                 processed_epochs[key_str] = observed_epoch;  // post-write epoch from process_key (slot's current even epoch)
+                // The vector is now committed (process_key confirmed the +2 epoch),
+                // so clear the client's WAITING label: this is the documented
+                // "sidecar clears WAITING" transition and the signal the scorer
+                // waits on to know its own deposit — not residue from a reused
+                // slot — was embedded. Harmless no-op for keys never labelled
+                // WAITING (e.g. backfilled corpus keys).
+                splinter_unset_label(keys[i], WAITING_LABEL);
                 // TODO - make this command line set-able (pulse after update)
                 splinter_pulse_keygroup("__lane_dw_2");
                 std::cout << "[Processed]: Key " << keys[i] << " embedded after update.\n" << std::flush;
