@@ -397,6 +397,7 @@ int splinter_get(const char *key, void *buf, size_t buf_sz, size_t *out_sz) {
                 memcpy(buf, VALUES + slot->val_off, len);
             }
 
+            atomic_thread_fence(memory_order_acquire);
             uint64_t end = atomic_load_explicit(&slot->epoch, memory_order_acquire);
             if (start == end && !(end & 1)) return 0;
 
