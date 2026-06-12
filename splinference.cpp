@@ -130,8 +130,20 @@ bool needs_embedding(const float* vec, size_t len) {
 // fully-formed marker (vector + bloom + value) rather than a half-written one.
 // Returns the post-bump epoch (treated as a successful service by the caller),
 // or 0 if a write failed.
-static uint64_t mark_context_exceeded(const char* key, uint32_t n_ctx) {
+static uint64_t mark_context_exceeded(const char* in_key, uint32_t n_ctx) {
     static const float zero_vec[SPLINTER_EMBED_DIM] = {0};
+
+    // The caller hands us keys[i] straight from splinter_list(), which aliases
+    // the slot's own key bytes in shared memory. splinter_set() below rewrites
+    // this slot, and shrinking a large VARTEXT value to the short diagnostic
+    // tears down and re-lays the slot — zeroing the very key bytes `in_key`
+    // points at mid-call. That left us re-keying on an empty string: the value
+    // write lands on "", the slot is effectively destroyed, set_label/bump/
+    // get_epoch all no-op on a missing key, and we return 0 (reported as a
+    // failed embed, no warning's key, specimen lost). Copy the key into stable
+    // storage up front and address the slot through that for every mutation.
+    const std::string key_str(in_key);
+    const char* key = key_str.c_str();
 
     char host[256] = {0};
     if (gethostname(host, sizeof(host) - 1) != 0) {
