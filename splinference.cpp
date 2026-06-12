@@ -24,6 +24,9 @@
 #include <csignal>
 #include <chrono>
 #include <thread>
+#include <ctime>
+#include <cstring>
+#include <unistd.h>   // gethostname() for the overflow marker
 
 // Bridge the C/C++ atomic divide before including the C header
 using atomic_uint_least64_t = std::atomic_uint_least64_t;
@@ -67,6 +70,14 @@ volatile sig_atomic_t keep_running = 1;
 // (stale scores against a fresh UUID + char count). Keep this in sync with
 // scorer.cpp's WAITING_LABEL.
 #define WAITING_LABEL 0x40ULL
+
+// Bloom label stamped on a slot whose VARTEXT value tokenizes to more than the
+// model's context window. We can't embed an oversized sequence (llama_decode
+// would abort), so instead of throwing we zero the vector, overwrite the value
+// with a human-readable diagnostic, and raise this bit. The client is expected
+// to notice the zeroed vector, test for this bloom, and finally read the value
+// to learn the limit and when/where it was hit.
+#define CONTEXT_EXCEEDED_LABEL 0x80ULL
 
 // Upper bound on the keys[] array we hand to splinter_list(). We size the array
 // to the store's actual slot geometry (see dynamic_key_capacity()), but never
@@ -112,6 +123,44 @@ bool needs_embedding(const float* vec, size_t len) {
     return std::sqrt(sum) < 1e-6; // Effectively zero
 }
 
+// Handle a key whose tokenized value exceeds the context window. Per the
+// convention: zero the vector, overwrite the value with a diagnostic of the
+// form "context cannot exceed <N> YYYY-MM-DD-HH:MM:SS (<server>)", raise the
+// CONTEXT_EXCEEDED bloom, and only then bump the slot so the client wakes to a
+// fully-formed marker (vector + bloom + value) rather than a half-written one.
+// Returns the post-bump epoch (treated as a successful service by the caller),
+// or 0 if a write failed.
+static uint64_t mark_context_exceeded(const char* key, uint32_t n_ctx) {
+    static const float zero_vec[SPLINTER_EMBED_DIM] = {0};
+
+    char host[256] = {0};
+    if (gethostname(host, sizeof(host) - 1) != 0) {
+        std::strncpy(host, "unknown", sizeof(host) - 1);
+    }
+
+    char ts[32] = {0};
+    std::time_t now = std::time(nullptr);
+    std::tm tm_buf = {};
+    localtime_r(&now, &tm_buf);
+    std::strftime(ts, sizeof(ts), "%Y-%m-%d-%H:%M:%S", &tm_buf);
+
+    std::string msg = "context cannot exceed " + std::to_string(n_ctx) + " " +
+                      ts + " (" + host + ")";
+
+    // Zero the vector and replace the value before raising the bloom, so a
+    // client that observes the bloom never reads a stale vector or value.
+    if (splinter_set_embedding(key, zero_vec) != 0) return 0;
+    if (splinter_set(key, msg.c_str(), msg.size()) != 0) return 0;
+    splinter_set_label(key, CONTEXT_EXCEEDED_LABEL);
+    splinter_bump_slot(key);
+
+    std::cerr << "[Warning]: key `" << key << "` exceeds the " << n_ctx
+              << "-token context window; marked with the context-exceeded bloom "
+              << "instead of embedding.\n";
+
+    return splinter_get_epoch(key);
+}
+
 uint64_t process_key(const char* key, llama_context* ctx, const llama_vocab* vocab) {
     size_t val_len = 0;
     uint64_t current_epoch = splinter_get_epoch(key);
@@ -137,6 +186,16 @@ uint64_t process_key(const char* key, llama_context* ctx, const llama_vocab* voc
 
     if (splinter_get_epoch(key) != current_epoch) {
         return 0;
+    }
+
+    // Guard against an oversized sequence. n_ctx == n_batch == n_ubatch here
+    // (all pinned to the trained context in main()), so a value tokenizing past
+    // n_ctx can't be decoded in one batch — llama_decode would abort the process.
+    // Instead of letting that throw, stamp the slot with the context-exceeded
+    // marker and report it as serviced.
+    const uint32_t n_ctx = llama_n_ctx(ctx);
+    if (n_tokens > 0 && static_cast<uint32_t>(n_tokens) > n_ctx) {
+        return mark_context_exceeded(key, n_ctx);
     }
 
     // inference
