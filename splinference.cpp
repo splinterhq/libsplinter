@@ -206,8 +206,10 @@ uint64_t process_key(const char* key, llama_context* ctx, const llama_vocab* voc
     // Instead of letting that throw, stamp the slot with the context-exceeded
     // marker and report it as serviced.
     const uint32_t n_ctx = llama_n_ctx(ctx);
-    if (n_tokens > 0 && static_cast<uint32_t>(n_tokens) > n_ctx) {
-        return mark_context_exceeded(key, n_ctx);
+    uint32_t token_ceiling = n_ctx * 0.9;
+
+    if (n_tokens > 0 && static_cast<uint32_t>(n_tokens) >= token_ceiling) {
+        return mark_context_exceeded(key, token_ceiling);
     }
 
     // inference
@@ -498,6 +500,8 @@ int main(int argc, char **argv) {
                 // TODO - make this command line set-able (pulse after update)
                 splinter_pulse_keygroup("__lane_dw_2");
                 std::cout << "[Processed]: Key " << keys[i] << " embedded after update.\n" << std::flush;
+            } else {
+                std::cout  << "An error occurred while processing " << keys[i] << "or it was skipped.\n";
             }
         }
         last_signal_count = current_signal_count;
