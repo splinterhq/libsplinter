@@ -302,6 +302,10 @@ int splinter_unset(const char *key) {
             atomic_fetch_or(&slot->type_flag, SPL_SLOT_DEFAULT_TYPE);
             atomic_store_explicit(&slot->epoch, 0, memory_order_release);
             atomic_store_explicit(&slot->val_len, 0, memory_order_release);
+#ifdef SPLINTER_EMBEDDINGS
+            // This is necessary or overwrites may leave garbage at the end.
+            memset(slot->embedding, 0, sizeof(float) * SPLINTER_EMBED_DIM);
+#endif
             atomic_store_explicit(&slot->ctime, 0, memory_order_release);
             atomic_store_explicit(&slot->atime, 0, memory_order_release);
             atomic_store_explicit(&slot->user_flag, 0, memory_order_release);
@@ -354,6 +358,13 @@ int splinter_set(const char *key, const void *val, size_t len) {
             
             memcpy(dst, val, len);
             atomic_store_explicit(&slot->val_len, (uint32_t)len, memory_order_release);
+
+#ifdef SPLINTER_EMBEDDINGS
+            // Don't let previous embeddings hang around between writes
+            if (slot_hash == 0) {
+                memset(slot->embedding, 0, sizeof(float) * SPLINTER_EMBED_DIM);
+            }
+#endif
 
             slot->key[0] = '\0';
             strncpy(slot->key, key, SPLINTER_KEY_MAX - 1);
