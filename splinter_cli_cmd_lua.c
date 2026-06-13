@@ -7,6 +7,10 @@
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <time.h>
+#ifdef HAVE_EMBEDDINGS
+#include <math.h>
+#endif
 #include <lua5.4/lua.h>
 #include <lua5.4/lualib.h>
 #include <lua5.4/lauxlib.h>
@@ -228,11 +232,131 @@ static int lua_splinter_label(lua_State *L) {
     return 1;
 }
 
+/**
+ * @brief Pulse the IPC bus for a slot without doing any other work.
+ *
+ * Wraps splinter_bump_slot() so a script can wake splinference (or any
+ * watcher) after applying an EMBED_LABEL / writing an embedding. Returns
+ * true on success, false if the key was not found.
+ */
+static int lua_splinter_bump(lua_State *L) {
+    const char *key = luaL_checkstring(L, 1);
+
+    if (splinter_bump_slot(key) == 0) {
+        lua_pushboolean(L, 1);
+        return 1;
+    }
+
+    lua_pushboolean(L, 0);
+    return 1;
+}
+
+/**
+ * @brief Sleep for a number of milliseconds, yielding the CPU.
+ *
+ * Lets a polling script (e.g. one waiting on splinference to populate a
+ * slot) back off instead of spinning. Negative values are clamped to 0.
+ */
+static int lua_splinter_sleep(lua_State *L) {
+    lua_Integer ms = luaL_checkinteger(L, 1);
+    if (ms < 0) ms = 0;
+
+    struct timespec req = {
+        .tv_sec  = (time_t)(ms / 1000),
+        .tv_nsec = (long)((ms % 1000) * 1000000L)
+    };
+
+    /* Resume across signal interruptions so the full interval elapses. */
+    while (nanosleep(&req, &req) != 0 && errno == EINTR)
+        ;
+
+    return 0;
+}
+
+#ifdef HAVE_EMBEDDINGS
+/**
+ * @brief Retrieve a slot's embedding snapshot as a Lua array table.
+ *
+ * Returns a table of SPLINTER_EMBED_DIM floats (1-based) when the vector
+ * carries signal (magnitude > 1e-6), otherwise nil. An unpopulated slot
+ * reads back as a zero vector, which we treat as "no embedding".
+ */
+static int lua_splinter_get_embedding(lua_State *L) {
+    const char *key = luaL_checkstring(L, 1);
+    float vec[SPLINTER_EMBED_DIM];
+
+    if (splinter_get_embedding(key, vec) != 0) {
+        lua_pushnil(L);
+        return 1;
+    }
+
+    double sum = 0.0;
+    for (int i = 0; i < SPLINTER_EMBED_DIM; i++) {
+        sum += (double)vec[i] * (double)vec[i];
+    }
+
+    if (sqrt(sum) <= 1e-6) {
+        lua_pushnil(L);
+        return 1;
+    }
+
+    lua_createtable(L, SPLINTER_EMBED_DIM, 0);
+    for (int i = 0; i < SPLINTER_EMBED_DIM; i++) {
+        lua_pushnumber(L, (lua_Number)vec[i]);
+        lua_rawseti(L, -2, i + 1);
+    }
+
+    return 1;
+}
+
+/**
+ * @brief Write a Lua array table of SPLINTER_EMBED_DIM floats into a slot.
+ *
+ * The table must hold exactly SPLINTER_EMBED_DIM numeric entries (1-based);
+ * anything shorter is rejected so we never write a partial vector. Returns
+ * true on success, false if the underlying write fails.
+ */
+static int lua_splinter_set_embedding(lua_State *L) {
+    const char *key = luaL_checkstring(L, 1);
+    luaL_checktype(L, 2, LUA_TTABLE);
+
+    int n = (int)lua_rawlen(L, 2);
+    if (n != SPLINTER_EMBED_DIM) {
+        return luaL_error(L, "embedding table must hold exactly %d floats (got %d)",
+            SPLINTER_EMBED_DIM, n);
+    }
+
+    float vec[SPLINTER_EMBED_DIM];
+    for (int i = 0; i < SPLINTER_EMBED_DIM; i++) {
+        lua_rawgeti(L, 2, i + 1);
+        if (!lua_isnumber(L, -1)) {
+            lua_pop(L, 1);
+            return luaL_error(L, "embedding element %d is not a number", i + 1);
+        }
+        vec[i] = (float)lua_tonumber(L, -1);
+        lua_pop(L, 1);
+    }
+
+    if (splinter_set_embedding(key, vec) == 0) {
+        lua_pushboolean(L, 1);
+        return 1;
+    }
+
+    lua_pushboolean(L, 0);
+    return 1;
+}
+#endif // HAVE_EMBEDDINGS
+
 static const char *modname = "lua";
 
 void help_cmd_lua(unsigned int level) {
     (void) level;
-    printf("Usage: %s <script.lua>\n", modname);
+    printf("Usage: %s <script.lua> [args...]\n", modname);
+    puts("");
+    puts("Any args after the script are exposed to it via the standard Lua");
+    puts("'arg' table: arg[0] is the script path, arg[1..n] are the args.");
+    puts("");
+    puts("  lua tag.lua mykey 42   -->  arg[1]=\"mykey\", arg[2]=\"42\"");
     puts("");
 }
 
@@ -249,6 +373,12 @@ int luaopen_splinter(lua_State *L) {
         {"unwatch",    lua_splinter_unwatch},
         {"label",      lua_splinter_label},
         {"unset",      lua_splinter_unset},
+        {"bump",       lua_splinter_bump},
+        {"sleep",      lua_splinter_sleep},
+#ifdef HAVE_EMBEDDINGS
+        {"get_embedding", lua_splinter_get_embedding},
+        {"set_embedding", lua_splinter_set_embedding},
+#endif
         {NULL, NULL}
     };
     luaL_newlib(L, bus_funcs);
@@ -266,6 +396,17 @@ int cmd_lua(int argc, char *argv[]) {
 
     luaL_requiref(L, "splinter", luaopen_splinter, 1);
     lua_pop(L, 1);
+
+    /* Expose invocation args the standard Lua way: arg[0] is the script,
+     * arg[1..n] are whatever followed it (e.g. a key name to operate on). */
+    lua_createtable(L, argc - 2, 1);
+    lua_pushstring(L, argv[1]);
+    lua_rawseti(L, -2, 0);
+    for (int i = 2; i < argc; i++) {
+        lua_pushstring(L, argv[i]);
+        lua_rawseti(L, -2, i - 1);
+    }
+    lua_setglobal(L, "arg");
 
     if (luaL_dofile(L, argv[1]) != LUA_OK) {
         fprintf(stderr, "Lua Error: %s\n", lua_tostring(L, -1));
