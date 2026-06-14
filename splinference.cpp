@@ -48,6 +48,15 @@ using atomic_int_least32_t  = std::atomic_int_least32_t;
 
 volatile sig_atomic_t keep_running = 1;
 
+// --vector-training: treat every embedding slot as write-once. When set, the
+// sidecar only fills vectors that are still zeroed and refuses to overwrite a
+// vector that has already been established or computed (e.g. a centroid or
+// variance deposited out-of-band). The decisive check happens immediately
+// before the write in process_key(), so an ordinary backfill/pulse can't
+// clobber a computed vector that a racing writer landed mid-decode. Clients
+// that need to recompute must clear the slot's vector first.
+static bool vector_training = false;
+
 // --- Logic Shard cooperative memory advisement -----------------------------
 // This embedding sidecar registers as a well-behaved Logic Shard: it declares
 // WILLNEED at a low priority during the live loop (so the latency-sensitive
@@ -145,6 +154,17 @@ static uint64_t mark_context_exceeded(const char* in_key, uint32_t n_ctx) {
     const std::string key_str(in_key);
     const char* key = key_str.c_str();
 
+    // In write-once training mode this marker would zero (and overwrite) the
+    // slot. If the slot already carries a computed vector, leave it untouched
+    // rather than erasing it for an oversized value. Reported as skipped.
+    if (vector_training) {
+        float current[SPLINTER_EMBED_DIM];
+        if (splinter_get_embedding(key, current) == 0 &&
+            !needs_embedding(current, SPLINTER_EMBED_DIM)) {
+            return 0;
+        }
+    }
+
     char host[256] = {0};
     if (gethostname(host, sizeof(host) - 1) != 0) {
         std::strncpy(host, "unknown", sizeof(host) - 1);
@@ -229,7 +249,26 @@ uint64_t process_key(const char* key, llama_context* ctx, const llama_vocab* voc
 
     // commit
     float* embedding = llama_get_embeddings_seq(ctx, 0);
-    if (!embedding || splinter_set_embedding(key, embedding) != 0) {
+    if (!embedding) {
+        return 0;
+    }
+
+    // Write-once gate (--vector-training). Re-read the slot's current vector as
+    // the very last step before writing: only a still-zeroed vector may be
+    // filled. This is deliberately AFTER decode (not at slot selection) so that
+    // a centroid/variance — or a prior training pass — that a racing writer
+    // committed while we were tokenizing/decoding is honored and never
+    // clobbered. A non-zero vector means the slot is already owned; report it
+    // as skipped (return 0) and let a client clear the vector to redo it.
+    if (vector_training) {
+        float current[SPLINTER_EMBED_DIM];
+        if (splinter_get_embedding(key, current) == 0 &&
+            !needs_embedding(current, SPLINTER_EMBED_DIM)) {
+            return 0;
+        }
+    }
+
+    if (splinter_set_embedding(key, embedding) != 0) {
         return 0;
     }
 
@@ -298,7 +337,7 @@ int main(int argc, char **argv) {
 
     // we need at least 4 arguments: <bin> <bus> <model> <group>
     if (argc < 4) {
-        std::cerr << "Usage: " << argv[0] << " [--backfill-text-keys] [--oneshot] <bus_name> <path_to_nomic_gguf> <signal_group_id>\n";
+        std::cerr << "Usage: " << argv[0] << " [--backfill-text-keys] [--oneshot] [--vector-training] <bus_name> <path_to_nomic_gguf> <signal_group_id>\n";
         return 1;
     }
 
@@ -312,6 +351,8 @@ int main(int argc, char **argv) {
             backfill = true;
         } else if (arg == "--oneshot") {
             oneshot = true;
+        } else if (arg == "--vector-training") {
+            vector_training = true;
         } else {
             positionals.push_back(argv[i]);
         }
@@ -361,6 +402,11 @@ int main(int argc, char **argv) {
     // Map the "embed this" convention label (bit 0 / 0x1) to our signal group
     // so that splinter_bump_slot() on a key with this label wakes us up.
     splinter_watch_label_register(1ULL, signal_group);
+
+    if (vector_training) {
+        std::cout << "[Startup]: --vector-training active; vectors are write-once "
+                  << "(only zeroed slots will be filled, computed vectors are preserved).\n";
+    }
 
     std::cout << "[Startup]: Loading GGUF model `" << model_path << "` (this may take a moment) ...\n";
     llama_backend_init();
