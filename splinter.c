@@ -752,6 +752,42 @@ int splinter_bump_slot(const char *key) {
     return -1;
 }
 
+int splinter_retrain_slot(const char *key) {
+    if (!H || !key) return -2;
+    uint64_t h = fnv1a(key);
+    size_t idx = slot_idx(h, H->slots);
+    for (size_t i = 0; i < H->slots; ++i) {
+        struct splinter_slot *slot = &S[(idx + i) % H->slots];
+        if (atomic_load_explicit(&slot->hash, memory_order_acquire) == h &&
+            strncmp(slot->key, key, SPLINTER_KEY_MAX) == 0) {
+            /*
+             * Force the seqlock into the writer-active (odd) state, scrub the
+             * vectors, then republish at a known-good even epoch of 4. We store
+             * the epoch outright rather than CAS so a slot left odd by a dead or
+             * aborted trainer can still be reclaimed -- that is the whole point
+             * of retrain. A concurrent reader sees the odd epoch during the
+             * memset and retries; once it lands on 4 the slot is stable again.
+             *
+             * Epoch moving *backwards* is the documented signal that clients and
+             * watchers must revalidate the key. This runs even without embeddings
+             * compiled in, in which case it just resets the epoch and republishes.
+             */
+            atomic_store_explicit(&slot->epoch, 3, memory_order_release);
+            atomic_thread_fence(memory_order_release);
+#ifdef SPLINTER_EMBEDDINGS
+            memset(slot->embedding, 0, sizeof(float) * SPLINTER_EMBED_DIM);
+#endif
+            atomic_thread_fence(memory_order_release);
+            atomic_store_explicit(&slot->epoch, 4, memory_order_release);
+            atomic_fetch_add_explicit(&H->epoch, 1, memory_order_relaxed);
+            splinter_pulse_watchers(slot);
+            splinter_event_bus_notify((idx + i) % H->slots);
+            return 0;
+        }
+    }
+    return -1;
+}
+
 int splinter_set_label(const char *key, uint64_t mask) {
     if (!H || !key) return -2;
     uint64_t h = fnv1a(key);

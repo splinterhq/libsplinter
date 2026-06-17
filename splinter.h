@@ -843,6 +843,25 @@ uint64_t splinter_get_epoch(const char *key);
 int splinter_bump_slot(const char *key);
 
 /**
+ * @brief Reset a slot for retraining: scrub its vectors and republish.
+ *
+ * Forcibly zeroes the slot's embedding (when compiled with embeddings) and
+ * drives the seqlock back to a known-good even epoch of 4, releasing any
+ * sequence lock that may be stuck odd from a dead or aborted trainer. The
+ * epoch is stored outright rather than advanced, so this succeeds regardless
+ * of the slot's current state. Watchers and the event bus are pulsed so the
+ * change is republished.
+ *
+ * The epoch moving *backwards* is the documented signal to clients and
+ * watchers that the key must be revalidated. Works even when embeddings are
+ * not compiled in; in that case it simply resets the epoch and republishes.
+ *
+ * @param key Current key name associated with the slot.
+ * @return 0 on success, -1 if key not found, -2 on bad arguments.
+ */
+int splinter_retrain_slot(const char *key);
+
+/**
  * @brief Atomically apply a label mask to a slot's Bloom filter.
  * @return 0 on success, -1 if key not found.
  */

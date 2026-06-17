@@ -256,9 +256,18 @@ cli_module_t command_modules[] = {
         &cmd_shard,
         &help_cmd_shard
     },
-#ifdef HAVE_EMBEDDINGS
     {
         24,
+        "retrain",
+        7,
+        "Zero a key's vectors and flip its epoch back to 4 to republish it",
+        -1,
+        &cmd_retrain,
+        &help_cmd_retrain
+    },
+#ifdef HAVE_EMBEDDINGS
+    {
+        25,
         "search",
         6,
         "Search embedded keys by semantic similarity and distance",
@@ -267,7 +276,7 @@ cli_module_t command_modules[] = {
         &help_cmd_search
     },
     {
-        25,
+        26,
         "ingest",
         6,
         "Ingest a file or stdin as chunked tandem slots for splinference",
@@ -279,9 +288,9 @@ cli_module_t command_modules[] = {
 #ifdef HAVE_WASM
     {
 #ifdef HAVE_EMBEDDINGS
-        26,
+        27,
 #else
-        24,
+        25,
 #endif
         "wasm",
         4,
@@ -293,15 +302,15 @@ cli_module_t command_modules[] = {
 #endif // HAVE_WASM
 #ifdef HAVE_LUA
     {
-        /* id == array index: 24 base + 2 if embeddings (search,ingest) + 1 if wasm */
+        /* id == array index: 25 base (incl. retrain) + 2 if embeddings (search,ingest) + 1 if wasm */
 #if defined(HAVE_EMBEDDINGS) && defined(HAVE_WASM)
-        27,
+        28,
 #elif defined(HAVE_EMBEDDINGS)
-        26,
+        27,
 #elif defined(HAVE_WASM)
-        25,
+        26,
 #else
-        24,
+        25,
 #endif
         "lua",
         3,
@@ -480,6 +489,9 @@ static void completion(const char *buf, linenoiseCompletions *lc) {
         case 'o':
             linenoiseAddCompletion(lc, "orders");
             break;
+        case 'r':
+            linenoiseAddCompletion(lc, "retrain");
+            break;
         case 's':
             linenoiseAddCompletion(lc, "set");
 #ifdef HAVE_EMBEDDINGS
@@ -606,6 +618,10 @@ static char *hints(const char *buf, int *color, int *bold) {
 
     if (!strncmp(buf, "or", 6)) {
         return "ders ";
+    }
+
+    if (!strncasecmp(buf, "r", 7)) {
+        return "etrain ";
     }
 #ifdef HAVE_EMBEDDINGS
     if (!strncasecmp(buf, "sea", 6)) {

@@ -832,6 +832,10 @@ unsafe extern "C" {
     pub fn splinter_bump_slot(key: *const ::std::os::raw::c_char) -> ::std::os::raw::c_int;
 }
 unsafe extern "C" {
+    #[doc = " @brief Reset a slot for retraining: scrub its vectors and republish.\n\n Forcibly zeroes the slot's embedding (when compiled with embeddings) and\n drives the seqlock back to a known-good even epoch of 4, releasing any\n sequence lock that may be stuck odd from a dead or aborted trainer. The\n epoch is stored outright rather than advanced, so this succeeds regardless\n of the slot's current state. Watchers and the event bus are pulsed so the\n change is republished.\n\n The epoch moving *backwards* is the documented signal to clients and\n watchers that the key must be revalidated. Works even when embeddings are\n not compiled in; in that case it simply resets the epoch and republishes.\n\n @param key Current key name associated with the slot.\n @return 0 on success, -1 if key not found, -2 on bad arguments."]
+    pub fn splinter_retrain_slot(key: *const ::std::os::raw::c_char) -> ::std::os::raw::c_int;
+}
+unsafe extern "C" {
     #[doc = " @brief Atomically apply a label mask to a slot's Bloom filter.\n @return 0 on success, -1 if key not found."]
     pub fn splinter_set_label(
         key: *const ::std::os::raw::c_char,
