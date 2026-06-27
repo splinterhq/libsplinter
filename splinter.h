@@ -385,6 +385,16 @@ typedef enum {
  *   if (e1 != e2) { errno = EAGAIN; retry or abort; }
  *   // data is consistent
  *
+ * ONE WRINKLE — THE EPOCH CAN MOVE BACKWARD
+ * ------------------------------------------
+ * Epochs normally only advance. splinter_retrain_slot() deliberately drives a
+ * slot's epoch *backward* to a known-good even value (4), scrubbing its vector
+ * and republishing. This is the documented "revalidate me" signal for trainers,
+ * and it is the only sanctioned way to free a seqlock left stuck odd by a
+ * crashed writer. Your seqlock check (e1 != e2) catches it correctly — any
+ * change, forward OR backward, means retry/revalidate. Never assume the epoch
+ * is monotonic, and never cache a value across a backward jump.
+ *
  * EAGAIN IS NOT AN ERROR — IT IS A SIGNAL
  * ----------------------------------------
  * When any function returns -1 with errno == EAGAIN, the slot is
@@ -395,23 +405,44 @@ typedef enum {
  * When a function returns -2, the caller made an error (NULL key,
  * NULL store, invalid argument). Do not retry. Fix the call.
  *
+ * Other errno values you will meet are NOT contention and must not be retried
+ * verbatim: EMSGSIZE (a value or append exceeds max_val_sz — a geometry
+ * problem), ENOSPC (the store is full, or the 32-slot shard bid table is full),
+ * and ETIMEDOUT (a bounded cooperative-madvise wait expired). Only EAGAIN
+ * means "the same call will succeed once the writer leaves."
+ *
  * RISK TOPOLOGY — KNOW BEFORE YOU CALL
  * --------------------------------------
- * DESTRUCTIVE (epoch reset, data zeroed, watchers pulsed, slot freed):
- *   splinter_unset()
+ * DESTRUCTIVE (epoch reset/rewind, data or vectors zeroed, watchers pulsed):
+ *   splinter_unset()         — frees the slot, zeroes key+value, clears labels
+ *   splinter_retrain_slot()  — scrubs the embedding, drives the epoch *backward*
+ *   splinter_purge()         — sweeps stale bytes past val_len across every slot
  *
- * HIGH (permanent label state change, signal propagation):
+ * HIGH (permanent label state change, signal propagation, real syscalls):
  *   splinter_set_label(), splinter_unset_label(),
- *   splinter_watch_label_register(), splinter_bump_slot()
+ *   splinter_watch_label_register(), splinter_bump_slot(),
+ *   splinter_pulse_keygroup(), splinter_set_as_system(),
+ *   splinter_madvise()       — issues a real posix_madvise() if you win the election
  *
  * MEDIUM (value overwrite, epoch advance, watchers pulsed):
  *   splinter_set(), splinter_append(), splinter_set_embedding(),
- *   splinter_integer_op(), splinter_set_named_type()
+ *   splinter_integer_op(), splinter_set_named_type(),
+ *   splinter_set_slot_time(), splinter_client_set_tandem()
  *
- * LOW (read-only, no side effects, always safe to retry):
+ * CONFIG (mutate store or shard policy, not slot data — own them deliberately):
+ *   splinter_set_mop(), splinter_event_bus_init(),
+ *   splinter_shard_claim(), splinter_shard_claim_ex(),
+ *   splinter_shard_rebid(), splinter_shard_release()
+ *
+ * LOW (read-only or self-scoped, no cross-process data loss, safe to retry):
  *   splinter_get(), splinter_get_epoch(), splinter_get_embedding(),
- *   splinter_get_raw_ptr(), splinter_list(), splinter_get_signal_count(),
- *   splinter_get_header_snapshot(), splinter_get_slot_snapshot()
+ *   splinter_get_raw_ptr(), splinter_list(), splinter_poll(),
+ *   splinter_get_signal_count(), splinter_get_header_snapshot(),
+ *   splinter_get_slot_snapshot(), splinter_get_mop(),
+ *   splinter_shard_election(), splinter_shard_is_sovereign(),
+ *   splinter_shard_table_snapshot(),
+ *   splinter_event_bus_open(), splinter_event_bus_wait(),
+ *   splinter_event_bus_get_dirty()
  *
  * If your confidence in the correctness of your inputs is below ~0.90,
  * do not call DESTRUCTIVE or HIGH risk functions. Retrieve a slot
@@ -434,6 +465,14 @@ typedef enum {
  * splinter_get_signal_count(group_id) is your heartbeat check.
  * splinter_watch_register(key, group_id) subscribes a key to a group.
  * splinter_watch_label_register(bloom_mask, group_id) subscribes by label.
+ *
+ * Polling a counter is the floor. The kernel-assisted path is the EVENT BUS:
+ * the owner process calls splinter_event_bus_init() once to arm an eventfd; any
+ * process then calls splinter_event_bus_open() and blocks in
+ * splinter_event_bus_wait(fd, timeout_ms) until a write advances the global
+ * epoch. On wake, splinter_event_bus_get_dirty() hands you a bitmask of the
+ * slot indices that changed, so you scan only what moved instead of sweeping
+ * the whole store. Prefer this to a busy spin whenever you can afford to block.
  *
  * BLOOM LABELS — SEMANTIC ROUTING, NOT SEARCH
  * ---------------------------------------------
@@ -466,6 +505,39 @@ typedef enum {
  * The store is a flat arena of (slots × max_val_sz) bytes plus a header.
  * 64-byte alignment is mandatory for slot structures. If you modify slot
  * geometry in a fork, verify alignment with the provided test before use.
+ *
+ * STALE BYTES BEYOND val_len — THE MOP
+ * --------------------------------------
+ * A slot's value region is max_val_sz wide but only val_len bytes are live.
+ * splinter_get() always honors val_len, but splinter_get_raw_ptr() does not —
+ * the bytes past out_sz may be leftovers from a previous, longer write to the
+ * same slot. The store's "mop" mode governs scrubbing: 0 = off, 1 = hybrid
+ * (default; clears the new length plus a 64-byte-aligned slop region so SIMD
+ * loads can't see stale data), 2 = full boil (zeroes the whole slot, costlier).
+ * Query it with splinter_get_mop(). If you read raw and contamination matters
+ * (LLM memory, forensics, verifiable research) do not trust bytes beyond out_sz,
+ * and consider splinter_purge() during a quiescent maintenance window.
+ *
+ * COOPERATIVE MEMORY ADVISEMENT — DO NOT madvise() BEHIND THE BUS
+ * ----------------------------------------------------------------
+ * As of format v4 (SPLINTER_VER 4) the header carries a 32-slot Logic Shard bid
+ * table. When multiple processes share one store, independent posix_madvise()
+ * calls on the same arena make the kernel page-cache thrash and destroy L3
+ * residency. The cure is coordination, not a lock: declare intent with
+ * splinter_shard_claim() (WILLNEED / SEQUENTIAL / RANDOM / DONTNEED, a 0-255
+ * priority, and a duration in splinter_now() ticks), then issue advice through
+ * splinter_madvise() — never raw posix_madvise() on a shared store.
+ *
+ * The election (splinter_shard_election) is a read-only O(32) scan: every
+ * process computes the same sovereign from static bid data, with no arbiter.
+ * Only the sovereign's advice lands; non-sovereigns defer (EAGAIN), block, or
+ * time out depending on the timeout you pass. DONTNEED is a soft-bumped
+ * second-class citizen — it cannot win while any live WILLNEED/SEQUENTIAL bid
+ * exists, so treat it as maintenance-window-only. Bids never touch H->epoch, so
+ * claiming or releasing a bid does NOT perturb watchers. Latency-sensitive
+ * callers: short window, high priority, re-bid often, advise non-blocking.
+ * Backfills/sweeps: SEQUENTIAL, low priority, non-blocking, and accept deferral
+ * as the correct outcome rather than fighting a live completer.
  *
  * WHAT SPLINTER IS NOT DESIGNED FOR
  * -----------------------------------
@@ -515,6 +587,18 @@ typedef enum {
  *    a full slot snapshot and a confidence check against your own
  *    certainty about the intended target. When uncertain: read, do not write.
  *    When in doubt: surface to supervisor, do not proceed.
+ *
+ * 7. Do not call posix_madvise() (especially DONTNEED) on a shared store
+ *    directly. Go through the bid table (splinter_shard_claim + splinter_madvise)
+ *    so the election can arbitrate. A stray DONTNEED can evict another agent's
+ *    live working set; the soft bumper guards the worst case, not every case.
+ *    Re-bid to extend a window — never hold sovereignty by squatting.
+ *
+ * 8. splinter_retrain_slot() rewinds a slot's epoch and scrubs its vector.
+ *    Call it only when you own the training lifecycle for that key — a backward
+ *    epoch tells every watcher to discard what it cached. It is the right tool
+ *    to release a seqlock left stuck odd by a crashed trainer, and the wrong
+ *    tool for an ordinary refresh (use splinter_set / splinter_append instead).
  */
 
 /**
