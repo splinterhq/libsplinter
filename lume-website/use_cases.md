@@ -51,7 +51,7 @@ This turns the Bloom filter from a passive filter into a real-time event router
 based on the graph's state.
 
 It's limited also because there's no real way to write information at the edges,
-but it's also less than 1k lines of code.
+but it's also under 1.5k lines of core code.
 
 ### "Agentic Labeling" and Semantic Overlap
 

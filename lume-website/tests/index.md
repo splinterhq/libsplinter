@@ -19,7 +19,7 @@ metas:
 
 You can run Splinter's tests using `make tests`. If you have enabled Valgrind
 integration, splinter's unit and integration tests will also be scrutinized for
-leaks and access errors. For less than 1k lines of total core code, Splinter is
+leaks and access errors. For under 1.5k lines of core code, Splinter is
 extremely well-tested. Splinter uses CMake's test runner with a few scripts at
 the end.
 
