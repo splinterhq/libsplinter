@@ -1,81 +1,142 @@
-# Splinter: A Cooperative Userspace Hypervisor for Inference & Other Semantic Workloads
+# Splinter — A Cooperative Userspace Hypervisor for Inference & Other Semantic Workloads
 
-Local Large Language Model (LLM) inference is currently choking on the "Socket and Lock" tax. Standard IPC tools and databases require heavy context switching, serialization, and kernel interrupts just to synchronize state. When you are generating text or evaluating semantic alignment at token speeds, that overhead isn't just a bottleneck—it's a wall. 
+Local Large Language Model (LLM) inference is currently choking on the "Socket and Lock" tax. Standard IPC tools and databases require heavy context switching, serialization, and kernel interrupts just to synchronize state. When you are generating text or evaluating semantic alignment at token speeds, that overhead isn't just a bottleneck — it's a wall.
 
-Splinter dismantles that wall. It is a lock-free, cooperative userspace hypervisor designed from the ground up for strict mechanical sympathy with modern CPU cache hierarchies (x86_64, ARM, and RISC). It puts your governance, your vector storage, and your inference engine in the exact same physical memory lane. 
+Splinter dismantles that wall. It is a lock-free, cooperative userspace hypervisor built from the ground up for strict mechanical sympathy with modern CPU cache hierarchies (x86_64, ARM, and RISC). It puts your governance, your vector storage, and your inference engine in the exact same physical memory lane.
 
-Think of Splinter as a **semantic breadboard**. It provides a passive, shared-memory manifold where thousands of context or classification windows for multimodal inference run simultaneously with 100% non-blocking throughput. It provides the following to all processes using it:
+Think of Splinter as a **semantic breadboard**: a passive, shared-memory manifold where thousands of context or classification windows for multimodal inference run simultaneously with 100% non-blocking throughput. There is no central arbiter, no socket, and no copy — reads and writes happen at L3 cache speeds, directly on the hardware bus.
 
- - Vector storage
- - Cache & KV Storage
- - Atomic Integer Operations (similar to Redis)
- - Ordered sets (Similar to Redis hashes, but designed specifically for Physics)
- - Persistence or In-memory residence
- - Eventfd-backed or poll-able pub/sub notifications
- - Bloomable store with feature flags
- - Self-elected univocality for shared region use and governance via POSIX advisement primitives
- - A production-grade CLI/REPL for debugging and operations
+If this is your first stop, you're welcome here. Splinter is open source, actively researched, and built in the open. Whether you want to embed the library, drive the CLI, extend the toolchain, or just understand how a lock-free shared-memory substrate holds together, there's a place for you. See [**Collaborating**](#collaborating) below.
 
-All in a size that stays in the CPU hot path, and doesn't require copying between services.
+## What Splinter Gives You
+
+Every process that maps a Splinter store gets the same primitives, with no daemon in between:
+
+- **Key/value storage** — a fixed-geometry, memory-mapped hash store with FNV-1a keys.
+- **Vector & embedding storage** — per-slot embeddings with semantic similarity/distance search (optional build).
+- **KV & cache residence** — persistent on disk or purely in-memory, your choice at creation.
+- **Atomic integer operations** — in-place `AND`/`OR`/`XOR`/`NOT`/`INC`/`DEC` on `BIGUINT` keys, Redis-style but with no round trip.
+- **Ordered sets** — tandem keys (e.g. `car`, `car.1`, `car.2`) for storing related vectors or physics-style ordered data under one base key.
+- **Named slot types** — `VOID`, `BIGINT`, `BIGUINT`, `JSON`, `BINARY`, `IMGDATA`, `AUDIO`, `VARTEXT`.
+- **Bloom labels** — a 64-bit label mask per slot for O(slots) semantic routing and batch enumeration (not a hot-path index — routing, not search).
+- **Pub/sub notifications** — 64 signal groups you can poll, plus an `eventfd`-backed event bus with a per-slot dirty mask so watchers wake only on what actually changed.
+- **Cooperative memory advisement** — a 32-slot Logic Shard bid table where processes declare `madvise` intent and elect a sovereign, so independent `posix_madvise()` calls never thrash the page cache.
+- **Self-elected univocality** — governance of shared regions via POSIX advisement primitives, with no lock and no arbiter; every process computes the same sovereign from the same static bid data.
+- **A production-grade CLI/REPL** — for debugging, operations, ingestion, and inspection.
+
+All of it stays small enough to live in the CPU hot path, and none of it requires copying between services.
 
 ## The Core Concept: Cooperative Virtualization
 
 Splinter treats your local workspace not as a database pipeline, but as an execution topology:
 
-* **The Privilege Topology:** When run as `root`, Splinter is **ringless**, bypassing standard OS arbitration barriers to align directly with CPU L1/L3 cache lines and pin NUMA nodes. Under an underprivileged user, it acts as a **single-ring** virtualized environment, managing its own ecosystem of agents and shards without trapping down into Ring 0.
-* **Cooperative Scheduling:** Rather than using aggressive, preemptive hardware interrupts that cause CPU thrashing, Splinter coordinates access via an aligned 32-slot bid table. Shards check a shared sovereignty table and voluntarily yield memory regions using a protocol backed by POSIX `madvise` primitives.
+- **The Privilege Topology** — When run as `root`, Splinter is **ringless**, bypassing standard OS arbitration barriers to align directly with CPU L1/L3 cache lines and pin NUMA nodes. Under an unprivileged user it acts as a **single-ring** virtualized environment, managing its own ecosystem of agents and shards without trapping down into Ring 0.
+- **Cooperative Scheduling** — Rather than aggressive, preemptive hardware interrupts that cause CPU thrashing, Splinter coordinates access via an aligned 32-slot bid table. Shards check a shared sovereignty table and voluntarily yield memory regions using a protocol backed by POSIX `madvise` primitives.
+
+## The One Invariant: The Seqlock
+
+Splinter has no protection layer between processes, so it relies on one rule that every reader and writer honors. Each slot carries a 64-bit **epoch** counter:
+
+- **Even epoch** — the slot is stable, safe to read or write.
+- **Odd epoch** — a writer is active; the slot is in transition.
+
+Read the epoch before you touch a slot, read it again after, and if it moved, the read was torn — retry. That's the entire seqlock protocol; readers never block writers, and L3 cache residency stays pristine.
+
+`EAGAIN` is therefore a **signal, not an error**: the slot is momentarily contested, so back off and try again. (`splinter_retrain_slot()` is the one sanctioned exception that drives an epoch *backward* to republish a scrubbed slot — your `e1 != e2` check catches it correctly.) The public header, `splinter.h`, opens with a full **AI Primer** that lays out the invariants, the risk topology of every API call, and the operational geometry — it's worth reading before your first write, whether you're human or an agent.
 
 ## Architectural Features
 
-* **Zero-Copy Substrate:** Multi-dimensional arrays mapped via `mmap` are treated as raw, continuous memory lanes. Client-side WASM engines (via WASMEdge) or local Lua scripts execute fixed-width SIMD instructions directly over the shared pointers without intermediate serialization.
-* **Mechanical Sympathy:** Lock-free, 64-byte aligned architecture utilizing sequence locks (inspired by the Xen hypervisor) ensures readers never block writers, maintaining pristine L3 cache residency.
-* **In-Place Atomics:** Execute bitwise and mathematical operations directly on `BIGUINT` keys within the shared memory pool.
-* **Externalized Hippocampus:** Agents can dynamically spin up local semantic scratchpads in `.splinter/` to offload raw context retrieval from their expensive API windows, dropping token consumption by up to 45% while driving down hallucination rates.
+- **Zero-Copy Substrate** — Multi-dimensional arrays mapped via `mmap` are treated as raw, continuous memory lanes. Client-side WASM engines (via WASMEdge) or local Lua scripts execute fixed-width SIMD instructions directly over the shared pointers without intermediate serialization.
+- **Mechanical Sympathy** — A lock-free, 64-byte-aligned architecture using sequence locks (inspired by the Xen hypervisor) ensures readers never block writers, maintaining pristine L3 cache residency.
+- **In-Place Atomics** — Execute bitwise and mathematical operations directly on `BIGUINT` keys within the shared memory pool.
+- **The Mop** — A configurable scrubbing mode (off / hybrid / full boil) keeps stale bytes beyond a slot's live length from leaking into raw reads, which matters for LLM memory, forensics, and verifiable research.
+- **Externalized Hippocampus** — Agents can dynamically spin up local semantic scratchpads in `.splinter/` to offload raw context retrieval from their expensive API windows, dropping token consumption by up to 45% while driving down hallucination rates.
 
 ## The Splinter Toolchain
 
-Splinter is accompanied by a minimalist, bare-metal C toolchain designed for production-grade telemetry and control:
+Splinter ships with a minimalist, bare-metal C toolchain for production-grade telemetry and control:
 
-* **`splinference`**: An embedding inference engine that maps directly to the bus with no socket layer, managed natively by `systemd`.
-* **`splainference`**: A completion and conversational runtime that maps system prompts, generation windows, and active RAG contexts directly to the shared substrate.
-* **`splinterctl` & `splinterpctl`**: A lightning-fast CLI and REPL that completely isolates administrative interaction from core storage performance.
-* **`sidecar`**: A DevOps monitoring tool providing real-time visibility into the semantic bus, tracking active slots, bid windows, and `evProcessor` tension metrics.
+- **`splinference`** — An embedding inference engine that maps directly to the bus with no socket layer, managed natively by `systemd`.
+- **`splainference`** — A completion and conversational runtime that maps system prompts, generation windows, and active RAG contexts directly to the shared substrate.
+- **`splinterctl` & `splinterpctl`** — A lightning-fast CLI and REPL that completely isolate administrative interaction from core storage performance.
+- **`sidecar`** — A DevOps monitoring tool giving real-time visibility into the semantic bus, tracking active slots, bid windows, and `evProcessor` tension metrics.
+
+### The CLI at a Glance
+
+`splinterctl` runs one-shot or as a REPL. A representative slice of what's built in:
+
+| Command | Purpose |
+| --- | --- |
+| `use` / `init` | Open a store by name or path; initialize new stores. |
+| `set` / `get` / `unset` / `append` | Core key/value operations. |
+| `head` / `list` / `type` / `config` | Inspect metadata, keys, slot types, and bus/slot configuration. |
+| `math` | `incr`/`decr` and bitwise ops on named `biguint` keys. |
+| `orders` | Manage ordered vector sets (tandem keys) for a base key. |
+| `label` / `bind` | Set bloom-filter labels and bind them to signal-arena groups. |
+| `watch` / `bump` | Observe a key for changes; bump a slot's epoch on demand. |
+| `shard` | Inspect or seed the Logic Shard bid table (cooperative advisement). |
+| `retrain` | Zero a key's vectors and flip its epoch back to republish it. |
+| `search` / `ingest` | Semantic similarity search and chunked file/stdin ingestion *(embeddings build)*. |
+| `wasm` / `lua` | Run WASM via WASMEdge, or a Lua script *(optional builds)*. |
+| `export` | Export store data in various formats. |
+| `caps` / `uuid` / `hist` / `help` | Show compiled-in capabilities, generate UUIDv4s, manage history, get help. |
 
 ## Building
 
-On Debian/Ubuntu you can run `scripts/bigbang.sh` to automatically install Splinter with vector storage
-and `llama.cpp` from source and install both on your system. This will also download Nomic Text 1.5 for 
-you from Hugging Face, which is all you need to get started with Splinter as a semantic breadboard.
+On Debian/Ubuntu, `scripts/bigbang.sh` will build and install Splinter with vector storage and `llama.cpp` from source, then install both on your system. It also downloads Nomic Text 1.5 from Hugging Face for you — which is all you need to get started with Splinter as a semantic breadboard.
 
-If you want to build advanced things (lua, WASMEdge, NUMA) then run `./configure --help` to see how to 
-enable those options. A `--install-deb-deps` option is provided by the script to automatically install
-all the Debian packages you need to build Splinter's optional dependencies.
+For the advanced features (Lua, WASMEdge, NUMA), run `./configure --help` to see how to enable them. A `--install-deb-deps` option will automatically install the Debian packages needed to build Splinter's optional dependencies.
 
 A typical build:
 
-```
+```sh
 ./configure --with-llama --with-vectors --with-lua --with-wasm --with-numa
 make
 sudo -E make install
 ```
 
-Valgrind will be used during `make tests` if you have it on your system. See `splinter_chi_sao` for
-benchmarks.
+`make tests` runs the unit suite under Valgrind if it's installed on your system. See `splinter_chi_sao` for the collision-resolution benchmarks. There's a deeper architectural treatment in `splinter_thesis.pdf`, and full API docs live at <https://splinterhq.github.io>.
 
 ## Performance Under Fire
 
 Tested rigorously under strict hardware constraints (including fanless, low-tier Chromebook development environments):
 
-* **Multi-Reader, Single-Writer (MRSW):** Sustains **3.2 million operations/second** with zero data corruption.
-* **Multi-Reader, Multi-Writer (MRMW):** Utilizing the disjointed-lane collision resolution protocol (`splinter_chi_sao`), 32 concurrent writers sustain **15.6 million operations/second** with zero data corruption.
+- **Multi-Reader, Single-Writer (MRSW)** — sustains **3.2 million operations/second** with zero data corruption.
+- **Multi-Reader, Multi-Writer (MRMW)** — using the disjointed-lane collision-resolution protocol (`splinter_chi_sao`), 32 concurrent writers sustain **15.6 million operations/second** with zero data corruption.
 
-### Governance and Open Source Commitment
-Splinter is open-source because transparent, text-driven governance and systemic bias auditing should be fundamental infrastructure, not a locked enterprise feature. 
+On Tiger Lake i3 hardware this lands around ~937 cycles/op; on Zen 4/5 with the manifold pinned to L3, projected cost drops to single digits. The instruction path is kept deliberately minimal so the hot path fits in the CPU instruction cache.
 
-Once version 1.2.0 ships (Target: Mid-May/Early June 2026), the core repository will move into long-term **maintenance mode**. It will receive continuous updates, performance optimizations, and community-driven enhancements and fixes to existing features, but the feature set will remain broadly locked. Splinter can't
-keep its original identity and be a kitchen sink.
+## What Splinter Is *Not* For
 
-**Splinter will never be abandoned.** By design, memory lifecycle management is kept ruthlessly clean: long-term, high-priority semantic stores are explicitly tracked via Git, while transient working memory scratchpads are purged safely by the operator using standard development tooling like `make distclean`. Commercial development will focus entirely on the high-level semantic classification layers and application ecosystems built *on top* of this bedrock, leaving the open substrate pristine, public, and free. 
+Knowing the edges keeps everyone out of trouble:
 
-After 1.2.0, improvements would be so specific [to the author's use case](https://foreshock.io) that very few others would benefit from
-them. For the most part, even the commercial code will remain open, just no longer part of _this_ project.
+- Multi-machine replication — use a real database.
+- Durable ACID transactions — the seqlock is crash-consistent, not ACID.
+- Dynamic schema evolution at runtime — geometry (slot count, max value size) is fixed at creation.
+- High-cardinality keyspaces without a pre-planned slot count — there is no eviction.
+- Any workload where you cannot tolerate `EAGAIN` and retry.
+
+## Collaborating
+
+Contributions of every kind are genuinely welcome — code, docs, benchmarks, bindings, bug reports, and grounded "oddball" ideas. A few things keep the project healthy:
+
+- Add tests when new behavior needs them, and make sure existing tests pass.
+- Unit tests should run **Valgrind clean**.
+- For anything beyond trivial, be willing to help maintain it — and if it's outside the current development focus, open an issue to discuss first.
+- Ideas don't have to be conventional, but they should be grounded in real work you're doing or trying to do.
+
+Please read `CODE_OF_CONDUCT.md` and `CONTRIBUTING.md` before opening a pull request. **One important note on pace:** the maintainer is a brain-cancer survivor doing active research, so PRs may surge forward and then go quiet for a week or more. That's normal here. The maintainer isn't reachable via chat or social platforms (including Discord) — GitHub issues and pull requests are the way in. It's nothing personal; it's just how the work gets done well.
+
+## Governance and Open-Source Commitment
+
+Splinter is open source because transparent, text-driven governance and systemic bias auditing should be fundamental infrastructure, not a locked enterprise feature.
+
+Once version 1.2.0 ships, the core repository moves into long-term **maintenance mode**: continuous updates, performance optimizations, and community-driven enhancements and fixes to existing features, but a broadly locked feature set. Splinter can't keep its original identity and also be a kitchen sink.
+
+**Splinter will never be abandoned.** Memory lifecycle management is kept ruthlessly clean by design — long-term, high-priority semantic stores are tracked via Git, while transient working scratchpads are purged safely with standard tooling like `make distclean`. Commercial development focuses entirely on the high-level semantic-classification layers and application ecosystems built *on top* of this bedrock, leaving the open substrate pristine, public, and free.
+
+After 1.2.0, further improvements would be so specific [to the author's use case](https://foreshock.io) that few others would benefit. Even most of that commercial code will remain open — just no longer part of *this* project.
+
+## License
+
+Apache 2.0 (MIT available on request). See `LICENSE.txt`.
