@@ -8,6 +8,16 @@ Think of Splinter as a **semantic breadboard**: a passive, shared-memory manifol
 
 If this is your first stop, you're welcome here. Splinter is open source, actively researched, and built in the open. Whether you want to embed the library, drive the CLI, extend the toolchain, or just understand how a lock-free shared-memory substrate holds together, there's a place for you. See [**Collaborating**](#collaborating) below.
 
+## Quick Install
+
+On **Debian / Ubuntu** (and derivatives), the Big Bang installer builds and installs the full stack — Splinter with embeddings, llama.cpp, and Lua — from source:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/splinterhq/libsplinter/main/scripts/bigbang.sh | bash
+```
+
+Sources are checked out under `/usr/local/src` so you can `git pull` and rebuild them later. For other platforms, or to choose your own feature flags, see [**Building**](#building) below.
+
 ## What Splinter Gives You
 
 Every process that maps a Splinter store gets the same primitives, with no daemon in between:

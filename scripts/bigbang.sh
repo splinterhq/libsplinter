@@ -16,14 +16,10 @@ DIM='\033[2m'
 RESET='\033[0m'
 
 LOG="$HOME/splinter_install.log"
-LLAMA_SRC="/tmp/llama_cpp_src"
-SPLINTER_SRC="/tmp/libsplinter_install"
-GGUF_DIR="/usr/local/share/gguf"
-# Switch between v1 and v1.5 models here by changing the model filename and URL.
-#NOMIC_MODEL="nomic-embed-text-v1.Q6_K.gguf"
-NOMIC_MODEL="nomic-embed-text-v1.5.Q6_K.gguf"
-#NOMIC_URL="https://huggingface.co/nomic-ai/nomic-embed-text-v1-GGUF/resolve/main/${NOMIC_MODEL}?download=true"
-NOMIC_URL="https://huggingface.co/nomic-ai/nomic-embed-text-v1.5-GGUF/resolve/main/nomic-embed-text-v1.5.Q6_K.gguf?download=true"
+# Sources live under /usr/local/src so they can be git-pulled and rebuilt later.
+SRC_ROOT="/usr/local/src"
+LLAMA_SRC="$SRC_ROOT/llama.cpp"
+SPLINTER_SRC="$SRC_ROOT/libsplinter"
 SPLINTER_REPO="https://github.com/splinterhq/libsplinter.git"
 LLAMA_REPO="https://github.com/ggerganov/llama.cpp.git"
 NPROC=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 2)
@@ -78,8 +74,7 @@ classificiation development on Debian or Ubuntu systems. It will:
   - Check your platform and sudo access
   - Install necessary system packages
   - Build and install llama.cpp from source
-  - Build and install Splinter from source
-  - Download a Nomic GGUF model for use with Splinter
+  - Build and install Splinter from source (embeddings + llama + lua)
   - Provide a summary of installed components and next steps
 To abort this process, press Ctrl-C now. Otherwise, hit [enter] to continue and 
 enjoy the show!
@@ -111,6 +106,14 @@ if ! sudo -v 2>/dev/null; then
 fi
 ok "sudo access confirmed."
 
+# Sources are kept under /usr/local/src so they can be updated (git pull) and
+# rebuilt later. Make the directory writable by the current user so subsequent
+# updates don't require sudo for the clone/build steps.
+log "Preparing source directory $SRC_ROOT…"
+sudo mkdir -p "$SRC_ROOT"
+sudo chown "$(id -u):$(id -g)" "$SRC_ROOT"
+ok "Source directory ready: $SRC_ROOT"
+
 section "Installing System Packages"
 
 APT_PACKAGES=(
@@ -127,6 +130,8 @@ APT_PACKAGES=(
     libopenblas-dev
     libopenblas0
     liblapack-dev
+    lua5.4
+    liblua5.4-dev
 )
 
 log "apt-get update"
@@ -198,16 +203,16 @@ log "ldconfig…"
 sudo ldconfig
 ok "llama.cpp installed to /usr/local; ldconfig complete."
 
-section "Building Splinter (embeddings + llama)"
+section "Building Splinter (embeddings + llama + lua)"
 
 [[ -d "$SPLINTER_SRC" ]] && { warn "Removing stale $SPLINTER_SRC"; rm -rf "$SPLINTER_SRC"; }
 
 log "Cloning libsplinter (shallow)…"
 git clone --depth=1 "$SPLINTER_REPO" "$SPLINTER_SRC"
 
-log "Configuring Splinter (--with-embeddings --with-llama)…"
+log "Configuring Splinter (--with-embeddings --with-llama --with-lua)…"
 cd "$SPLINTER_SRC"
-./configure --with-embeddings --with-llama
+./configure --with-embeddings --with-llama --with-lua
 
 log "Building Splinter with $NPROC jobs…"
 make -j"$NPROC"
@@ -220,45 +225,14 @@ log "sudo -E make install…"
 sudo -E make install
 ok "Splinter installed."
 
-section "Installing Nomic Embed Text v1 Model"
-
-sudo mkdir -p "$GGUF_DIR"
-
-if [[ -f "$GGUF_DIR/$NOMIC_MODEL" ]]; then
-    ok "Model already present: $GGUF_DIR/$NOMIC_MODEL"
-else
-    log "Downloading $NOMIC_MODEL (~108 MB) from Hugging Face…"
-    if command -v curl &>/dev/null; then
-        sudo curl -L --progress-bar "$NOMIC_URL" -o "$GGUF_DIR/$NOMIC_MODEL"
-    else
-        sudo wget -q --show-progress -O "$GGUF_DIR/$NOMIC_MODEL" "$NOMIC_URL"
-    fi
-    ok "$NOMIC_MODEL downloaded."
-fi
-
-# /gguf symlink — handle the case where it already exists as a directory.
-if [[ -L /gguf ]]; then
-    sudo rm /gguf
-elif [[ -d /gguf ]]; then
-    warn "/gguf exists as a real directory; leaving it in place."
-fi
-[[ -d /gguf ]] || sudo ln -s "$GGUF_DIR" /gguf
-ok "Convenience symlink: /gguf -> $GGUF_DIR"
-
-# force is necesary to update via git.
-sudo ln -sf "$GGUF_DIR/$NOMIC_MODEL" "$GGUF_DIR/nomic.gguf" 2>/dev/null || true
-ok "Alias symlink: nomic.gguf -> $NOMIC_MODEL"
-
 section "All Done"
-cd "$HOME"    # leave the tmp build dir
+cd "$HOME"    # leave the build dir
 
 printf "\n${BOLD}  Installed:${RESET}\n"
 printf "    llama.cpp     →  /usr/local/lib  /usr/local/include\n"
 printf "    splinter_cli  →  $(command -v splinter_cli 2>/dev/null || echo '/usr/local/bin/splinter_cli')\n"
 printf "    splinterctl   →  $(command -v splinterctl  2>/dev/null || echo '/usr/local/bin/splinterctl')\n"
 printf "    splinference  →  $(command -v splinference 2>/dev/null || echo '/usr/local/bin/splinference')\n"
-printf "    Nomic GGUF    →  %s/%s\n" "$GGUF_DIR" "$NOMIC_MODEL"
-printf "    /gguf         →  %s  (convenience symlink)\n" "$GGUF_DIR"
 printf "    Deno          →  $(command -v deno 2>/dev/null || echo '~/.deno/bin/deno')\n"
 printf "    Log           →  %s\n\n" "$LOG"
 printf "${BOLD}${GREEN}"
