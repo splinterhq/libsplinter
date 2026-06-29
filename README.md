@@ -44,6 +44,21 @@ Read the epoch before you touch a slot, read it again after, and if it moved, th
 
 `EAGAIN` is therefore a **signal, not an error**: the slot is momentarily contested, so back off and try again. (`splinter_retrain_slot()` is the one sanctioned exception that drives an epoch *backward* to republish a scrubbed slot — your `e1 != e2` check catches it correctly.) The public header, `splinter.h`, opens with a full **AI Primer** that lays out the invariants, the risk topology of every API call, and the operational geometry — it's worth reading before your first write, whether you're human or an agent.
 
+## Signals & Pub/Sub
+
+Splinter coordinates processes without ever having one notify another directly. It exposes **64 signal groups** (0–63), each a single atomic counter living in the shared header. A write doesn't push to subscribers — it pulses a counter:
+
+```
+write → splinter_pulse_watchers() → signal_group counter increments
+```
+
+There are two ways to consume those pulses, and you can mix them:
+
+- **Poll the counter (the floor).** `splinter_get_signal_count(group_id)` is your heartbeat: when the count changes, scan the slots subscribed to that group for moved epochs. Subscribe a key with `splinter_watch_register(key, group_id)`, or subscribe by label with `splinter_watch_label_register(bloom_mask, group_id)` so an entire semantic class wakes together. This path needs no syscalls and works anywhere.
+- **Block on the event bus (kernel-assisted).** The owner process arms an `eventfd` once with `splinter_event_bus_init()`. Any process then calls `splinter_event_bus_open()` and blocks in `splinter_event_bus_wait(fd, timeout_ms)` until a write advances the global epoch. On wake, `splinter_event_bus_get_dirty()` hands you a bitmask of exactly which slot indices changed, so you rescan only what moved instead of sweeping the whole store. The fd is a normal pollable descriptor, so it drops cleanly into an existing `poll`/`epoll` reactor alongside your other I/O.
+
+Prefer the event bus whenever you can afford to block — it trades a busy spin for a clean kernel wake. Bloom labels make this expressive: a client can set a `WAITING` label, a sidecar enumerates matches and transitions it through `SERVICING` to `READY`, and consumers wake on the corresponding signal group. Governance observes the bloom directly, so the whole handshake stays in shared memory with no broker in the middle.
+
 ## Architectural Features
 
 - **Zero-Copy Substrate** — Multi-dimensional arrays mapped via `mmap` are treated as raw, continuous memory lanes. Client-side WASM engines (via WASMEdge) or local Lua scripts execute fixed-width SIMD instructions directly over the shared pointers without intermediate serialization.
