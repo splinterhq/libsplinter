@@ -84,7 +84,7 @@ Splinter ships with a minimalist, bare-metal C toolchain for production-grade te
 - **`splinference`** — An embedding inference engine that maps directly to the bus with no socket layer, managed natively by `systemd`.
 - **`splainference`** — A completion and conversational runtime that maps system prompts, generation windows, and active RAG contexts directly to the shared substrate.
 - **`splinterctl` & `splinterpctl`** — A lightning-fast CLI and REPL that completely isolate administrative interaction from core storage performance.
-- **`sidecar`** — A DevOps monitoring tool giving real-time visibility into the semantic bus, tracking active slots, bid windows, and `evProcessor` tension metrics.
+- **`sidecar`** — A DevOps monitoring tool giving real-time visibility into the semantic bus, tracking active slots, bid windows, and arbitrary debug chatter.
 
 ### The CLI at a Glance
 
