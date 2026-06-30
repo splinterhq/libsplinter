@@ -1,5 +1,6 @@
 ---
-title: "splinter_watch_register | Splinter API"
+parent: "API Reference"
+title: "splinter_watch_register"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -19,10 +20,10 @@ splinter_watch_register("status", 3); /* subscribe "status" to group 3 */
 ### Return & Rationale
 
 **Return Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 Splinter has 64 signal groups (0-63). Subscribing a key to a group lets readers poll a single counter and then scan for changed epochs rather than sweeping the whole store.

@@ -1,5 +1,6 @@
 ---
-title: "splinter_open | Splinter API"
+title: "splinter_open"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -27,7 +28,7 @@ splinter_close();
 Returns 0 on success and -1 on failure (for example, when the store does not exist).
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 None

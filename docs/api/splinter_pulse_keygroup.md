@@ -1,5 +1,6 @@
 ---
-title: "splinter_pulse_keygroup | Splinter API"
+title: "splinter_pulse_keygroup"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -22,7 +23,7 @@ splinter_pulse_keygroup("status");
 Returns 0 on success, -2 on system failure, or -1 if the key is not found.
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 Classified as a HIGH-risk operation (signal propagation) in the AI Primer.

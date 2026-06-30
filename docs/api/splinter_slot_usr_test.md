@@ -1,5 +1,6 @@
 ---
-title: "splinter_slot_usr_test | Splinter API"
+title: "splinter_slot_usr_test"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -22,10 +23,10 @@ if (splinter_slot_usr_test(slot, SPL_FUSR1)) {
 ### Return & Rationale
 
 **Return Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 None

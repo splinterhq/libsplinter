@@ -1,5 +1,6 @@
 ---
-title: "splinter_get_signal_count | Splinter API"
+title: "splinter_get_signal_count"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -26,7 +27,7 @@ if (splinter_get_signal_count(3) != last) {
 Returns the 64-bit pulse count for `group_id` (0-63), or 0 if the group id is invalid.
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 Readers poll this counter; when it changes they scan for modified epochs. This is the polling floor of the pub/sub system, beneath the kernel-assisted event bus.

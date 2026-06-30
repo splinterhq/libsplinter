@@ -1,5 +1,6 @@
 ---
-title: "splinter_shard_rebid | Splinter API"
+title: "splinter_shard_rebid"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -23,7 +24,7 @@ splinter_shard_rebid(0x5F1A, SPL_INTENT_WILLNEED, 200, 50000);
 Returns 0 on success, -1 if `shard_id` holds no slot, or -2 on bad args.
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 This is the fairness re-bid: a shard that needs more time must re-bid rather than hold, so sovereignty is never retained by squatting.

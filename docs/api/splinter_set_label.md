@@ -1,5 +1,6 @@
 ---
-title: "splinter_set_label | Splinter API"
+title: "splinter_set_label"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -22,7 +23,7 @@ splinter_set_label("job:7", 0x1ULL); /* mark with label bit 0 */
 Returns 0 on success and -1 if the key is not found.
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 Bloom labels are persistent until explicitly cleared and drive semantic routing; governance observes the bloom directly. Labels are classified as HIGH-risk (permanent label state change) in the AI Primer.

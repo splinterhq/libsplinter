@@ -1,5 +1,6 @@
 ---
-title: "splinter_create | Splinter API"
+title: "splinter_create"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -26,7 +27,7 @@ if (splinter_create("mystore", 1024, 4096) != 0) {
 Returns 0 on success and -1 on failure (for example, when the store already exists).
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 Splinter has static geometry: the slot count and maximum value size are fixed at creation and cannot be resized on a live store, so they are chosen here. The new store's file permissions follow the process umask; set the `SPLINTER_DEFAULT_UMASK` environment variable to override them at creation time — see [Environment Variables](../environment.md).

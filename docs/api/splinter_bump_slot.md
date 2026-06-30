@@ -1,5 +1,6 @@
 ---
-title: "splinter_bump_slot | Splinter API"
+title: "splinter_bump_slot"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -20,10 +21,10 @@ splinter_bump_slot("mykey");
 ### Return & Rationale
 
 **Return Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 Advancing the epoch republishes a slot so watchers and the event bus observe a change, even when the value itself was not rewritten (for example after only labels were adjusted). It is classified as a HIGH-risk operation in the AI Primer.

@@ -1,5 +1,6 @@
 ---
-title: "splinter_slot_usr_snapshot | Splinter API"
+title: "splinter_slot_usr_snapshot"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -23,7 +24,7 @@ uint16_t flags = splinter_slot_usr_snapshot(slot);
 Returns the slot's user flags as a `uint16_t`.
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 None

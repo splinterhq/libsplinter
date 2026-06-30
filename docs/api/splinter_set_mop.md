@@ -1,5 +1,6 @@
 ---
-title: "splinter_set_mop | Splinter API"
+title: "splinter_set_mop"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -23,7 +24,7 @@ splinter_set_mop(2);
 Returns 0 on success, -1 on an invalid mode, and -2 if something is wrong with the store.
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 Because slots are a fixed `max_val_sz` wide but only `val_len` bytes are live, a shorter write can leave stale trailing bytes. Hybrid (1, the default) zeroes the new length plus a 64-byte-aligned slop region so SIMD loads cannot see stale data; full boil (2) zeroes the entire slot at higher cost.

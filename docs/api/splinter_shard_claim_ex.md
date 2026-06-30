@@ -1,5 +1,6 @@
 ---
-title: "splinter_shard_claim_ex | Splinter API"
+title: "splinter_shard_claim_ex"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---

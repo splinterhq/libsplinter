@@ -1,5 +1,6 @@
 ---
-title: "splinter_event_bus_close | Splinter API"
+title: "splinter_event_bus_close"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -24,7 +25,7 @@ splinter_event_bus_close(fd);
 This function returns no value (void).
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 None

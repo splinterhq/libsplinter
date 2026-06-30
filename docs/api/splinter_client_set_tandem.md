@@ -1,5 +1,6 @@
 ---
-title: "splinter_client_set_tandem | Splinter API"
+title: "splinter_client_set_tandem"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -24,7 +25,7 @@ splinter_client_set_tandem("car", vals, lens, 2); /* writes car, car.1 ... */
 Returns 0 on success, -1 on failure, or -2 if underlying basic I/O calls fail.
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 The helper manages the tandem-key naming convention (using the order accessor) so callers can store related ordered values — for example coupled vectors — under one base key.

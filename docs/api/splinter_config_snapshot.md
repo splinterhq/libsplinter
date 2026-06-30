@@ -1,5 +1,6 @@
 ---
-title: "splinter_config_snapshot | Splinter API"
+title: "splinter_config_snapshot"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -23,7 +24,7 @@ uint8_t flags = splinter_config_snapshot(hdr);
 Returns the bus configuration flags as a `uint8_t`.
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 None

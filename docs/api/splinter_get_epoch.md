@@ -1,5 +1,6 @@
 ---
-title: "splinter_get_epoch | Splinter API"
+title: "splinter_get_epoch"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -26,7 +27,7 @@ if (e1 != e2) { /* torn read — retry */ }
 Returns the 64-bit epoch, or 0 if the key is not found. An even epoch means the slot is stable; an odd epoch means a writer is active.
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 The epoch is the only thing standing between a reader and silent cross-process data corruption: check it before and after a read, and treat any change (forward or backward) as a torn read. Note that `splinter_retrain_slot` can drive an epoch backward.

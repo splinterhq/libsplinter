@@ -1,5 +1,6 @@
 ---
-title: "splinter_set_named_type | Splinter API"
+title: "splinter_set_named_type"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---

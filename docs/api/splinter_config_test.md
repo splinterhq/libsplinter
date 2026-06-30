@@ -1,5 +1,6 @@
 ---
-title: "splinter_config_test | Splinter API"
+title: "splinter_config_test"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -22,10 +23,10 @@ if (splinter_config_test(hdr, SPL_SYS_AUTO_SCRUB)) {
 ### Return & Rationale
 
 **Return Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 None

@@ -1,5 +1,6 @@
 ---
-title: "splinter_event_bus_wait | Splinter API"
+title: "splinter_event_bus_wait"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -26,7 +27,7 @@ if (splinter_event_bus_wait(fd, 1000) == 0) {
 Returns 0 if a change was detected, or -1 on timeout or error. `timeout_ms` of 0 is non-blocking and `UINT64_MAX` waits forever. On return the eventfd counter has been drained.
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 After a successful wait the caller should call `splinter_event_bus_get_dirty` to find which slots changed, scanning only what moved instead of sweeping the whole store. Prefer this over a busy spin whenever you can afford to block.

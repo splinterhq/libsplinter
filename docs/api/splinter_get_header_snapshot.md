@@ -1,5 +1,6 @@
 ---
-title: "splinter_get_header_snapshot | Splinter API"
+title: "splinter_get_header_snapshot"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -26,7 +27,7 @@ if (splinter_get_header_snapshot(&snap) == 0) {
 Returns 0 on success and -1 on failure.
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 The live header is atomic and shared across processes; copying a snapshot lets a client read geometry (slots, max value size) without risk, since static geometry cannot change at runtime.

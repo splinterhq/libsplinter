@@ -1,5 +1,6 @@
 ---
-title: "splinter_enumerate_matches | Splinter API"
+title: "splinter_enumerate_matches"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -25,7 +26,7 @@ splinter_enumerate_matches(0x1ULL, on_match, NULL);
 This function returns no value (void). It visits only slots where `(slot->bloom & mask) == mask`.
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 This is an O(slots) scan, not an O(1) index — it is intended for batch operations and semantic routing, not hot-path queries.

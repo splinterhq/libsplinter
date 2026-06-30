@@ -1,5 +1,6 @@
 ---
-title: "splinter_get_raw_ptr | Splinter API"
+title: "splinter_get_raw_ptr"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -30,7 +31,7 @@ if (p && !(e1 & 1)) {
 Returns a `const` pointer to the value data in shared memory, or NULL if the key is not found. `out_sz` receives the value length and `out_epoch` the epoch at lookup.
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 The pointer is live: another process can change or zero the memory between receiving and dereferencing it, so it must be paired with epoch verification and never held across a yield or sleep. Bytes beyond `out_sz` may be stale (see the mop modes), since raw access bypasses `val_len` checking.

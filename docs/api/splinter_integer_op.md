@@ -1,5 +1,6 @@
 ---
-title: "splinter_integer_op | Splinter API"
+title: "splinter_integer_op"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---

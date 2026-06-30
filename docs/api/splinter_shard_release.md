@@ -1,5 +1,6 @@
 ---
-title: "splinter_shard_release | Splinter API"
+title: "splinter_shard_release"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -22,7 +23,7 @@ splinter_shard_release(0x5F1A);
 Returns 0 on success, -1 if `shard_id` holds no slot, or -2 on bad args / no store.
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 Zeroing `shard_id` last (after the other fields) keeps the slot's transition to "empty" well-defined for a concurrent election scan.

@@ -1,5 +1,6 @@
 ---
-title: "splinter_list | Splinter API"
+title: "splinter_list"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -29,7 +30,7 @@ if (splinter_list(keys, hdr.slots, &count) == 0) {
 Returns 0 on success and -1 on failure. Writes at most `max_keys` key pointers and stores the count found in `out_count`.
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 Sizing `out_keys` to the store's slot count (from a header snapshot) guarantees room for every possible key.

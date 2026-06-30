@@ -1,5 +1,6 @@
 ---
-title: "Index | Splinter CLI"
+title: "Splinter CLI Reference"
+nav_order: 2
 date: 2026-06-30
 updated: 2026-06-30
 ---

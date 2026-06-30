@@ -1,5 +1,6 @@
 ---
-title: "unset | Splinter CLI"
+title: "unset"
+parent: "Splinter CLI Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---

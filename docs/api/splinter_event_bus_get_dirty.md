@@ -1,5 +1,6 @@
 ---
-title: "splinter_event_bus_get_dirty | Splinter API"
+title: "splinter_event_bus_get_dirty"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -24,7 +25,7 @@ splinter_event_bus_get_dirty(dirty, SPLINTER_EVENT_BUS_MASK_WORDS);
 This function returns no value (void). `out` must hold at least `words` `uint64_t` values; `words` is capped at `SPLINTER_EVENT_BUS_MASK_WORDS`.
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 Each set bit i in word w marks physical slot (w*64 + i) as written since the bus was initialized. Bits are never cleared by the library, so callers diff the snapshot against their own saved copy to find newly-dirtied slots.

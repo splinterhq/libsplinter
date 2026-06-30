@@ -1,5 +1,6 @@
 ---
-title: "splinter_set_embedding | Splinter API"
+title: "splinter_set_embedding"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -26,7 +27,7 @@ if (splinter_set_embedding("doc:42", vec) != 0) {
 Returns 0 on success and -1 on failure.
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 The embedding array is `SPLINTER_EMBED_DIM` (768) floats wide, matching the per-slot `embedding` field compiled in under `SPLINTER_EMBEDDINGS`.

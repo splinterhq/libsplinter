@@ -1,5 +1,6 @@
 ---
-title: Rust | Splinter FFI Bindings
+title: Rust
+parent: "Splinter Bindings Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---

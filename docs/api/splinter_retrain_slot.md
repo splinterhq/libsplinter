@@ -1,5 +1,6 @@
 ---
-title: "splinter_retrain_slot | Splinter API"
+title: "splinter_retrain_slot"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -23,7 +24,7 @@ splinter_retrain_slot("doc:42");
 Returns 0 on success, -1 if the key is not found, or -2 on bad arguments. The epoch is stored outright (not advanced), so it succeeds regardless of the slot's current state; watchers and the event bus are pulsed.
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 The epoch moving *backwards* is the documented signal to clients and watchers that the key must be revalidated, and it is the only sanctioned way to free a seqlock left stuck odd by a crashed writer. It is the wrong tool for an ordinary refresh (use `splinter_set` / `splinter_append`). Works even without embeddings compiled in, in which case it only resets the epoch and republishes. Classified as DESTRUCTIVE in the AI Primer.

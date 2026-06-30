@@ -1,5 +1,6 @@
 ---
-title: Language Bindings (FFI)
+title: Splinter Bindings Reference
+nav_order: 3
 date: 2026-06-30
 updated: 2026-06-30
 ---

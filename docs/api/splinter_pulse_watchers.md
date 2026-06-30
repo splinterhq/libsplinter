@@ -1,5 +1,6 @@
 ---
-title: "splinter_pulse_watchers | Splinter API"
+title: "splinter_pulse_watchers"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -23,7 +24,7 @@ splinter_pulse_watchers(slot);
 This function returns no value (void).
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 This is documented as an internal helper used to pulse the Signal Arena for a slot; writers do not notify readers directly — a write pulses a counter that watchers poll.

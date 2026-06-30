@@ -1,5 +1,6 @@
 ---
-title: "splinter_get_mop | Splinter API"
+title: "splinter_get_mop"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -23,7 +24,7 @@ int mode = splinter_get_mop();
 Returns 0 (off), 1 (hybrid), or 2 (full boil); returns -2 when no store is mapped.
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 None

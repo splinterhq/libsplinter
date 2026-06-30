@@ -1,5 +1,6 @@
 ---
-title: "splinter_open_or_create | Splinter API"
+title: "splinter_open_or_create"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -26,7 +27,7 @@ if (splinter_open_or_create("mystore", 1024, 4096) != 0) {
 Returns 0 on success and -1 on failure.
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 None

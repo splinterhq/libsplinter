@@ -1,5 +1,6 @@
 ---
 title: "Environment Variables"
+nav_order: 4
 date: 2026-06-30
 updated: 2026-06-30
 ---

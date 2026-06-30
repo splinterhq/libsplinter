@@ -1,5 +1,6 @@
 ---
-title: "splinter_open_numa | Splinter API"
+title: "splinter_open_numa"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -20,10 +21,10 @@ void *store = splinter_open_numa("mystore", 0); /* pin to NUMA node 0 */
 ### Return & Rationale
 
 **Return Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 Binding the mapping to one NUMA node keeps all pages for the arena and slots local to a single socket's memory controller, preserving cache and memory locality.

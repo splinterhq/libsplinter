@@ -1,5 +1,6 @@
 ---
-title: "splinter_watch_unregister | Splinter API"
+parent: "API Reference"
+title: "splinter_watch_unregister"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -19,10 +20,10 @@ splinter_watch_unregister("status", 3);
 ### Return & Rationale
 
 **Return Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 None

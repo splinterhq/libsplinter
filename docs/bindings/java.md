@@ -1,5 +1,6 @@
 ---
-title: Java | Splinter FFI Bindings
+title: Java
+parent: "Splinter Bindings Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---

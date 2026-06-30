@@ -1,5 +1,6 @@
 ---
-title: "splinter_event_bus_init | Splinter API"
+title: "splinter_event_bus_init"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---

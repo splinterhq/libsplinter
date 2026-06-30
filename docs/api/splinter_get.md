@@ -1,5 +1,6 @@
 ---
-title: "splinter_get | Splinter API"
+title: "splinter_get"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---

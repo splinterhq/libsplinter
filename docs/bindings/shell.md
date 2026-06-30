@@ -1,5 +1,6 @@
 ---
-title: POSIX Shell / Bash | Splinter FFI Bindings
+title: POSIX Shell / Bash
+parent: "Splinter Bindings Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---

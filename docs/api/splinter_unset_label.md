@@ -1,5 +1,6 @@
 ---
-title: "splinter_unset_label | Splinter API"
+title: "splinter_unset_label"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -22,7 +23,7 @@ splinter_unset_label("job:7", 0x1ULL); /* clear label bit 0 */
 Returns 0 on success and a negative value on failure.
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 Labels persist until explicitly cleared with this function; `splinter_unset` also clears them as part of slot destruction.

@@ -1,10 +1,10 @@
 ---
-title: "Splinter Documentation"
+title: "Splinter Overview"
 date: 2026-06-30
 updated: 2026-06-30
 ---
 
-# Splinter Documentation
+# Splinter - A Breadboard For Complex Vector Workloads
 
 **A Cooperative Userspace Hypervisor for Inference & Other Semantic Workloads.**
 

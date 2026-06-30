@@ -1,5 +1,6 @@
 ---
-title: "splinter_get_slot_snapshot | Splinter API"
+title: "splinter_get_slot_snapshot"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -26,7 +27,7 @@ if (splinter_get_slot_snapshot("mykey", &snap) == 0) {
 Returns 0 on success and -1 on failure.
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 None

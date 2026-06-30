@@ -1,5 +1,6 @@
 ---
-title: "splinter_config_clear | Splinter API"
+title: "splinter_config_clear"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -23,7 +24,7 @@ splinter_config_clear(hdr, SPL_SYS_AUTO_SCRUB);
 This function returns no value (void).
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 None

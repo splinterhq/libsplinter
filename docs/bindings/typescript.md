@@ -1,5 +1,6 @@
 ---
-title: TypeScript (Deno / Bun) | Splinter FFI Bindings
+title: TypeScript (Deno / Bun)
+parent: "Splinter Bindings Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---

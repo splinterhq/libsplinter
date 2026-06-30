@@ -1,5 +1,6 @@
 ---
-title: "splinter_purge | Splinter API"
+title: "splinter_purge"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -23,7 +24,7 @@ splinter_purge();
 This function returns no value (void).
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 Purge does not reclaim space; it only ensures the manifold is clean. It is designed to run as part of backfill runs once I/O slamming has stopped, and is classified as a DESTRUCTIVE operation in the AI Primer.

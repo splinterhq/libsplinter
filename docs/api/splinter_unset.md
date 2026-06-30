@@ -1,5 +1,6 @@
 ---
-title: "splinter_unset | Splinter API"
+parent: "API Reference"
+title: "splinter_unset"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -24,7 +25,7 @@ if (freed >= 0)
 Returns the length of the value deleted, -1 if the key is not found, or -2 on a NULL key/store.
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 Zeroing the hash first marks the slot writable in a single atomic operation; clearing the key and value regions afterward prevents stale data from lingering. This is classified as a DESTRUCTIVE operation in the AI Primer.

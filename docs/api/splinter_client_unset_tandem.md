@@ -1,5 +1,6 @@
 ---
-title: "splinter_client_unset_tandem | Splinter API"
+title: "splinter_client_unset_tandem"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -22,7 +23,7 @@ splinter_client_unset_tandem("car", 2); /* removes car and its 2 orders */
 This function returns no value (void).
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 None

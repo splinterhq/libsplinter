@@ -1,5 +1,6 @@
 ---
-title: "splinter_set_as_system | Splinter API"
+title: "splinter_set_as_system"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -19,10 +20,10 @@ splinter_set_as_system("__meta__");
 ### Return & Rationale
 
 **Return Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 Classified as a HIGH-risk operation (permanent state change) in the AI Primer.

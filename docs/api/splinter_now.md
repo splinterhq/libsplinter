@@ -1,5 +1,6 @@
 ---
-title: "splinter_now | Splinter API"
+title: "splinter_now"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -26,7 +27,7 @@ splinter_set_slot_time("foo", SPL_TIME_CTIME, t, now - waypoint);
 Returns the current 64-bit cycle counter value (`uint64_t`). On x86 it uses `rdtsc`; on aarch64 the virtual counter; on arm the 64-bit physical counter; otherwise it falls back to `clock_gettime(CLOCK_MONOTONIC_RAW)` in nanoseconds.
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 Accessing a wall clock is not something that can be done reasonably inside a seqlock, so cycle-counter waypoints let callers backfill ctime/atime stamps with a correction offset for the syscall cost.

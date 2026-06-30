@@ -1,5 +1,6 @@
 ---
-title: "splinter_shard_is_sovereign | Splinter API"
+title: "splinter_shard_is_sovereign"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -24,7 +25,7 @@ if (splinter_shard_is_sovereign(0x5F1A) == 1) {
 Returns 1 if sovereign, 0 if not (including unknown/expired), or -2 if no store is mapped.
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 None

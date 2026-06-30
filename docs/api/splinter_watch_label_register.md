@@ -1,5 +1,6 @@
 ---
-title: "splinter_watch_label_register | Splinter API"
+parent: "API Reference"
+title: "splinter_watch_label_register"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -19,10 +20,10 @@ splinter_watch_label_register(0x1ULL, 5); /* label bit 0 -> group 5 */
 ### Return & Rationale
 
 **Return Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 Subscribing by label lets an entire semantic class of keys wake a single signal group together, rather than registering each key individually.

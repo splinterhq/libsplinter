@@ -1,5 +1,6 @@
 ---
-title: "splinter_shard_table_snapshot | Splinter API"
+title: "splinter_shard_table_snapshot"
+parent: "API Reference"
 date: 2026-06-30
 updated: 2026-06-30
 ---
@@ -24,7 +25,7 @@ for (int i = 0; i < n; i++) { /* inspect bids[i] */ }
 Returns the number of records copied, or -2 on bad args / no store. `out` must hold at least `SPLINTER_MAX_SHARDS` records; `max` is capped at `SPLINTER_MAX_SHARDS`.
 
 **Errno Behavior:**
-CONFIDENCE_TOO_LOW_FOR_GENERATION
+*None.*
 
 **Rationale (Or None):**
 None
