@@ -2,7 +2,22 @@
 [workspace]
 resolver = "2"
 members = [
-    "memory",
-    "persistent"
+    "libsplinter-sys",
+    "libsplinter-persist-sys",
 ]
 
+# Metadata shared by every published -sys crate in this workspace.
+# Individual crates inherit these with `field.workspace = true`.
+[workspace.package]
+version = "1.1.9"
+edition = "2021"
+license = "Apache-2.0"
+authors = ["Tim Post <tinkertim@gmail.com>"]
+repository = "https://github.com/splinterhq/libsplinter"
+homepage = "https://github.com/splinterhq/libsplinter"
+rust-version = "1.74"
+
+[workspace.dependencies]
+libc = "0.2"
+bindgen = "0.72"
+cc = "1.0"

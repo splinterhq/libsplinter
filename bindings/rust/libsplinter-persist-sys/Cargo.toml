@@ -1,0 +1,34 @@
+[package]
+name = "libsplinter-persist-sys"
+description = "Native FFI bindings to libsplinter's persistent variant (splinter_p). Vendored C sources are built from source with SPLINTER_PERSISTENT; no system install required."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+readme = "README.md"
+keywords = ["ffi", "bindings", "splinter", "persistent", "ipc"]
+categories = ["external-ffi-bindings", "memory-management"]
+# Declares the native library this crate provides so Cargo can enforce a single
+# version in the dependency graph (the -sys convention).
+links = "splinter_p"
+# Only ship what the crate needs to build itself, including the vendored C.
+include = [
+    "src/**/*.rs",
+    "build.rs",
+    "csrc/**",
+    "README.md",
+    "Cargo.toml",
+]
+
+[lib]
+crate-type = ["rlib"]
+
+[build-dependencies]
+bindgen.workspace = true
+cc.workspace = true
+
+[dependencies]
+libc.workspace = true
