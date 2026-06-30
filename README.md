@@ -157,11 +157,9 @@ Please read `CODE_OF_CONDUCT.md` and `CONTRIBUTING.md` before opening a pull req
 
 Splinter is open source because transparent, text-driven governance and systemic bias auditing should be fundamental infrastructure, not a locked enterprise feature.
 
-Once version 1.2.0 ships, the core repository moves into long-term **maintenance mode**: continuous updates, performance optimizations, and community-driven enhancements and fixes to existing features, but a broadly locked feature set. Splinter can't keep its original identity and also be a kitchen sink.
+Once version 1.2.0 ships, the core repository moves into long-term **maintenance mode**: continuous updates, performance optimizations, and community-driven enhancements and fixes to existing features, but a broadly locked feature set. Splinter can't keep its original identity and also be a kitchen sink. As it stands now, Splinter is one of the most lean, efficient and deliberately-designed things in semantic infrastructure. Every single thing has a well-defined place and purpose. Adding literally *anything else* could compromise that.
 
-**Splinter will never be abandoned.** Memory lifecycle management is kept ruthlessly clean by design — long-term, high-priority semantic stores are tracked via Git, while transient working scratchpads are purged safely with standard tooling like `make distclean`. Commercial development focuses entirely on the high-level semantic-classification layers and application ecosystems built *on top* of this bedrock, leaving the open substrate pristine, public, and free.
-
-After 1.2.0, further improvements would be so specific [to the author's use case](https://foreshock.io) that few others would benefit. Even most of that commercial code will remain open — just no longer part of *this* project.
+After 1.2.0, further additions would be so specific [to the author's use case](https://foreshock.io) that few others would benefit. Most of the commercial code is also free software (like inference engines for models built on splinter as a file format) — just no longer part of *this* project.
 
 ## License
 
