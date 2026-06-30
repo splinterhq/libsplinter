@@ -10,7 +10,7 @@ If this is your first stop, you're welcome here. Splinter is open source, active
 
 ## Quick Install
 
-On **Debian / Ubuntu** (and derivatives), the Big Bang installer builds and installs the full semantic stack (Splinter with embeddings, llama.cpp, and Lua) from source:
+On **Debian / Ubuntu** (and derivatives), the Big Bang installer builds and installs the full semantic stack (Splinter with embeddings, llama.cpp, and Lua) from source. This will install all OS package dependencies neededto build splinter and its dependencies from source (takes ~15 minutes on average systems):
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/splinterhq/libsplinter/main/scripts/bigbang.sh | bash
