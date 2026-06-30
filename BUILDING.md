@@ -1,5 +1,15 @@
 # Building Splinter
 
+## Debian/Ubuntu Users
+
+You can use the scripts/bigbang installer to automatically install what's needed
+to use most of Splinter's semantic capabilities (llama.cpp, Lua, Vectors). It 
+will install all OS dependencies and build llama.cpp from source.
+
+You can then add things later, if you want.
+
+## Manual Installation
+
 Splinter uses CMake, and comes with a `configure` script to manage the various
 build options:
 
