@@ -10,7 +10,7 @@ If this is your first stop, you're welcome here. Splinter is open source, active
 
 ## Quick Install
 
-On **Debian / Ubuntu** (and derivatives), the Big Bang installer builds and installs the full stack — Splinter with embeddings, llama.cpp, and Lua — from source:
+On **Debian / Ubuntu** (and derivatives), the Big Bang installer builds and installs the full semantic stack (Splinter with embeddings, llama.cpp, and Lua) from source:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/splinterhq/libsplinter/main/scripts/bigbang.sh | bash
@@ -76,14 +76,14 @@ Prefer the event bus whenever you can afford to block — it trades a busy spin 
 - **Mechanical Sympathy** — A lock-free, 64-byte-aligned architecture using sequence locks (inspired by the Xen hypervisor) ensures readers never block writers, maintaining pristine L3 cache residency.
 - **In-Place Atomics** — Execute bitwise and mathematical operations directly on `BIGUINT` keys within the shared memory pool.
 - **The Mop** — A configurable scrubbing mode (off / hybrid / full boil) keeps stale bytes beyond a slot's live length from leaking into raw reads, which matters for LLM memory, forensics, and verifiable research.
-- **Externalized Hippocampus** — Agents can dynamically spin up local semantic scratchpads in `.splinter/` to offload raw context retrieval from their expensive API windows, dropping token consumption by up to 45% while driving down hallucination rates.
+- **Externalized Hippocampus** — AI Agents can dynamically spin up local semantic scratchpads in `.splinter/` to offload raw context retrieval from their expensive API windows, dropping token consumption by up to 45% while driving down hallucination rates.
 
 ## The Splinter Toolchain
 
 Splinter ships with a minimalist, bare-metal C toolchain for production-grade telemetry and control:
 
 - **`splinference`** — An embedding inference engine that maps directly to the bus with no socket layer, managed natively by `systemd`.
-- **`splainference`** — A completion and conversational runtime that maps system prompts, generation windows, and active RAG contexts directly to the shared substrate.
+- **`splainference`** — Demo concept of a completion and conversational runtime that maps system prompts, generation windows, and active RAG contexts directly to the shared substrate. An example for `llama.cpp` integrators.
 - **`splinterctl` & `splinterpctl`** — A lightning-fast CLI and REPL that completely isolate administrative interaction from core storage performance.
 - **`sidecar`** — A DevOps monitoring tool giving real-time visibility into the semantic bus, tracking active slots, bid windows, and arbitrary debug chatter.
 
