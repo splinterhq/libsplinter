@@ -1146,7 +1146,11 @@ static int spl_intent_to_advice(uint8_t intent) {
 static int spl_bid_expired(const struct splinter_shard_bid *bid, uint64_t now) {
     uint64_t claimed = atomic_load_explicit(&bid->claimed_at,   memory_order_acquire);
     uint64_t dur     = atomic_load_explicit(&bid->duration_tsc, memory_order_acquire);
-    return (now - claimed) > dur;
+    /* Half-open window: a bid is live while elapsed < dur and expires at dur.
+     * Using >= (not >) makes duration_tsc == 0 mean "instantly expired" even
+     * when the election reads the same tick the claim was stamped at, which a
+     * strict > leaves as a one-tick race on coarse/emulated TSC clocks. */
+    return (now - claimed) >= dur;
 }
 
 int splinter_shard_claim_ex(uint32_t shard_id, uint32_t pid, uint8_t intent,
