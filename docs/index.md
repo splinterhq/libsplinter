@@ -40,6 +40,9 @@ shared-memory substrate holds together — start with the section that fits.
   `dlopen()`-friendly library, so any runtime that can read a Linux DSO joins the
   same manifold as a first-class peer: Rust, TypeScript (Deno / Bun), Python, Java,
   Lua, and even POSIX shell.
+- [**Environment Variables**](environment.md) — runtime knobs honored by both the
+  library and the CLI, including `SPLINTER_DEFAULT_UMASK` (permissions of newly
+  created stores) and `SPLINTER_NS_PREFIX` (CLI key namespacing).
 
 ## The Design, In Depth
 

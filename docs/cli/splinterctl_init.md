@@ -32,7 +32,7 @@ $ splinterctl init mystore -s 4096 -l 8192
 ### Additional Information And Rationale
 
 **Additional Info (Or None):**
-If arguments are omitted, the compiled-in defaults are used. The built-in usage string refers to the value-length option as `--maxlen`, while the parser registers it as `-l` / `--length`.
+If arguments are omitted, the compiled-in defaults are used. The built-in usage string refers to the value-length option as `--maxlen`, while the parser registers it as `-l` / `--length`. The created store's file permissions follow the process umask; set the `SPLINTER_DEFAULT_UMASK` environment variable to override them at creation time — see [Environment Variables](../environment.md).
 
 **Rationale (Or None):**
 Splinter has static geometry: slot count and max value size are fixed at creation, so they are chosen here.

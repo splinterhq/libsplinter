@@ -29,7 +29,7 @@ Returns 0 on success and -1 on failure (for example, when the store already exis
 CONFIDENCE_TOO_LOW_FOR_GENERATION
 
 **Rationale (Or None):**
-Splinter has static geometry: the slot count and maximum value size are fixed at creation and cannot be resized on a live store, so they are chosen here.
+Splinter has static geometry: the slot count and maximum value size are fixed at creation and cannot be resized on a live store, so they are chosen here. The new store's file permissions follow the process umask; set the `SPLINTER_DEFAULT_UMASK` environment variable to override them at creation time — see [Environment Variables](../environment.md).
 
 ### See Also
 
