@@ -110,6 +110,41 @@ static int map_fd(int fd, size_t size) {
     return 0;
 }
 
+/*
+ * By default a new store (shm object or persistent file) is created with mode
+ * 0666 masked by the shell's umask. On most GNU systems that leaves the store
+ * readable by other local users, which can surprise anyone not steeped in UNIX
+ * permissions. We deliberately do NOT change that default, because the common
+ * case is local/automated use that may already lean on the inherited umask.
+ *
+ * As an opt-in, if SPLINTER_DEFAULT_UMASK is set in the environment we apply it
+ * as the process umask for the duration of creation only, then restore the
+ * previous one. The value is octal (e.g. "077" -> a private 0600 store).
+ * Operators can take it from there with the usual tools (chmod, etc.).
+ *
+ * Returns the previous umask when an override was applied (pass it to
+ * restore_env_umask), or (mode_t)-1 when nothing was changed. umask() only ever
+ * returns a valid 0..0777 mask, so (mode_t)-1 is an unambiguous "untouched"
+ * sentinel. Note: umask is process-global and not thread-safe, but store
+ * creation is a setup-time operation, consistent with the rest of this library.
+ */
+static mode_t apply_env_umask(void) {
+    const char *env = getenv("SPLINTER_DEFAULT_UMASK");
+    if (!env || !*env) return (mode_t)-1;
+
+    errno = 0;
+    char *end = NULL;
+    long val = strtol(env, &end, 8);
+    if (errno != 0 || end == env || *end != '\0' || val < 0 || val > 0777)
+        return (mode_t)-1;   /* unparseable / out of range: leave umask alone */
+
+    return umask((mode_t)val);
+}
+
+static void restore_env_umask(mode_t prev) {
+    if (prev != (mode_t)-1) umask(prev);
+}
+
 int splinter_create(const char *name_or_path, size_t slots, size_t max_value_sz) {
     int fd;
 
@@ -118,11 +153,20 @@ int splinter_create(const char *name_or_path, size_t slots, size_t max_value_sz)
         return -2;
     }
 
+    mode_t prev_umask = apply_env_umask();
 #ifdef SPLINTER_PERSISTENT
-    fd = open(name_or_path, O_RDWR | O_CREAT, 0666);
+    /*
+     * O_EXCL makes creation exclusive: if the store already exists, create fails
+     * with EEXIST rather than adopting and reinitializing (potentially wiping)
+     * it. Callers that want either-or use splinter_create_or_open(), which falls
+     * back to open() on that failure. O_NOFOLLOW refuses to create through a
+     * symlink planted at the path. This mirrors the shm_open() path below.
+     */
+    fd = open(name_or_path, O_RDWR | O_CREAT | O_EXCL | O_NOFOLLOW, 0666);
 #else
     fd = shm_open(name_or_path, O_RDWR | O_CREAT | O_EXCL, 0666);
 #endif
+    restore_env_umask(prev_umask);
     if (fd < 0) return -1;
     size_t region_sz = slots * max_value_sz;
     size_t total_sz  = sizeof(struct splinter_header) + slots * sizeof(struct splinter_slot) + region_sz;

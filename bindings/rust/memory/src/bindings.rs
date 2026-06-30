@@ -680,7 +680,7 @@ unsafe extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 unsafe extern "C" {
-    #[doc = " @brief Creates and initializes a new splinter store.\n @param name_or_path The name of the shared memory object or path to the file.\n @param slots The total number of key-value slots to allocate.\n @param max_value_sz The maximum size in bytes for any single value.\n @return 0 on success, -1 on failure (e.g., store already exists)."]
+    #[doc = " @brief Creates and initializes a new splinter store.\n @param name_or_path The name of the shared memory object or path to the file.\n @param slots The total number of key-value slots to allocate.\n @param max_value_sz The maximum size in bytes for any single value.\n @return 0 on success, -1 on failure (e.g., store already exists).\n @note Creation is exclusive (O_EXCL): if a store of the same name/path already\n       exists this fails (errno EEXIST) rather than adopting or reinitializing\n       it. In persistent mode the path is also opened O_NOFOLLOW, so a symlink\n       planted at that path is refused. Use splinter_open() to attach to an\n       existing store, or splinter_create_or_open() to do either.\n @note The store is created with mode 0666 masked by the process umask, so by\n       default it inherits the shell's umask (often world-readable on GNU\n       systems). Set SPLINTER_DEFAULT_UMASK in the environment to an octal mask\n       (e.g. \"077\" for a private 0600 store) to override this at creation time;\n       adjust further with chmod afterward. Applies to persistent mode too."]
     pub fn splinter_create(
         name_or_path: *const ::std::os::raw::c_char,
         slots: usize,

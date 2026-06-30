@@ -615,6 +615,16 @@ int splinter_get_slot_snapshot(const char *key, splinter_slot_snapshot_t *snapsh
  * @param slots The total number of key-value slots to allocate.
  * @param max_value_sz The maximum size in bytes for any single value.
  * @return 0 on success, -1 on failure (e.g., store already exists).
+ * @note Creation is exclusive (O_EXCL): if a store of the same name/path already
+ *       exists this fails (errno EEXIST) rather than adopting or reinitializing
+ *       it. In persistent mode the path is also opened O_NOFOLLOW, so a symlink
+ *       planted at that path is refused. Use splinter_open() to attach to an
+ *       existing store, or splinter_create_or_open() to do either.
+ * @note The store is created with mode 0666 masked by the process umask, so by
+ *       default it inherits the shell's umask (often world-readable on GNU
+ *       systems). Set SPLINTER_DEFAULT_UMASK in the environment to an octal mask
+ *       (e.g. "077" for a private 0600 store) to override this at creation time;
+ *       adjust further with chmod afterward. Applies to persistent mode too.
  */
 int splinter_create(const char *name_or_path, size_t slots, size_t max_value_sz);
 
